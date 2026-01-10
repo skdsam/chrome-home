@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "Custom Premium New Tab",
+  "version": "1.0",
+  "description": "A premium, customizable new tab page with shortcuts, search, and notifications.",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "geolocation",
+    "topSites",
+    "history"
+  ],
+  "chrome_url_overrides": {
+    "newtab": "newtab.html"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Save to New Tab"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}

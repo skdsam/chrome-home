@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Tab</title>
+    <link rel="stylesheet" href="newtab.css">
+    <!-- Google Fonts for premium look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@300;400;500;700&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <div class="background-container" id="bg-container">
+        <!-- Blobs for color (will change based on weather) -->
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+        <!-- Overlay for Rain/Snow/Clouds -->
+        <div id="weather-effects" class="weather-overlay"></div>
+    </div>
+
+    <!-- Header Controls (Top Right) -->
+    <div class="header-controls">
+        <!-- Weather Info -->
+        <div id="weather-display" class="control-btn"
+            style="width: auto; padding: 0 15px; border-radius: 20px; gap: 8px;">
+            <span id="weather-icon" style="font-size: 1.2rem;">Checking...</span>
+            <span id="weather-temp" style="font-size: 0.9rem;"></span>
+        </div>
+
+        <!-- Add Shortcut Button -->
+        <div id="add-shortcut-btn" class="control-btn" title="Add Shortcut">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+        </div>
+
+        <!-- Top Sites Trigger -->
+        <div id="top-sites-btn" class="control-btn" title="Top Sites">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon
+                    points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                </polygon>
+            </svg>
+        </div>
+
+        <!-- Notification Bell -->
+        <div id="notification-bell" class="control-btn notification-trigger">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+            <span id="notification-badge" class="badge hidden"></span>
+        </div>
+
+        <!-- User Profile -->
+        <div id="user-profile" class="control-btn profile-trigger">
+            <div class="avatar">
+                <img id="user-avatar-img" src="" alt="Profile" class="hidden">
+                <svg id="user-avatar-placeholder" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Panel -->
+    <div id="notification-panel" class="panel hidden">
+        <div class="panel-header">
+            <h3>Notifications</h3>
+            <button id="clear-notifications">Clear All</button>
+        </div>
+        <div id="notification-list" class="panel-content">
+            <!-- Notifications will be injected here -->
+            <div class="empty-state">No new notifications</div>
+        </div>
+    </div>
+
+    <!-- Top Sites Panel -->
+    <div id="top-sites-panel" class="panel hidden">
+        <div class="panel-header">
+            <h3>Recent Sites</h3>
+        </div>
+        <div id="top-sites-list" class="panel-content">
+            <!-- Top sites injected here -->
+        </div>
+    </div>
+
+    <!-- User Menu -->
+    <div id="user-menu" class="panel menu-panel hidden">
+        <ul class="menu-list">
+            <li data-action="change-avatar">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                    <circle cx="12" cy="13" r="4"></circle>
+                </svg>
+                Change Avatar
+            </li>
+            <hr style="border-color: rgba(255,255,255,0.1); margin: 5px 0;">
+            <li data-action="bookmarks">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                </svg>
+                Bookmarks
+            </li>
+            <li data-action="history">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                History
+            </li>
+            <li data-action="downloads">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Downloads
+            </li>
+            <li data-action="extensions">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line>
+                    <path
+                        d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+                    </path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+                Extensions
+            </li>
+            <hr style="border-color: rgba(255,255,255,0.1); margin: 5px 0;">
+            <li data-action="settings">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path
+                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                    </path>
+                </svg>
+                Settings
+            </li>
+        </ul>
+    </div>
+
+    <!-- Main Container -->
+    <main class="container">
+        <!-- Google Search -->
+        <div class="search-container">
+            <div class="logo">
+                <span class="logo-text">G</span>
+            </div>
+            <form id="search-form" action="https://www.google.com/search" method="GET">
+                <div class="search-bar">
+                    <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" name="q" placeholder="Search Google..." autocomplete="off">
+                </div>
+                <div class="search-options">
+                    <button type="button" data-type="web" class="active">Web</button>
+                    <button type="button" data-type="isch">Images</button>
+                    <button type="button" data-type="vid">Videos</button>
+                    <button type="button" data-type="nws">News</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Shortcuts Grid -->
+        <div id="shortcuts-grid" class="grid">
+            <!-- Shortcuts will be injected here -->
+        </div>
+    </main>
+
+    <!-- Modal for Add/Edit -->
+    <div id="modal-overlay" class="modal-overlay hidden">
+        <div class="modal">
+            <h2 id="modal-title">Add Shortcut</h2>
+            <form id="shortcut-form">
+                <div class="form-group">
+                    <label for="shortcut-url">URL</label>
+                    <input type="url" id="shortcut-url" placeholder="https://example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="shortcut-name">Name</label>
+                    <input type="text" id="shortcut-name" placeholder="Example" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="cancel-modal" class="btn-secondary">Cancel</button>
+                    <button type="submit" class="btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="notifications.js"></script>
+    <script src="weather.js"></script>
+    <script src="newtab.js"></script>
+</body>
+
+</html>
