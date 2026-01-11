@@ -531,12 +531,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // To make the whole card clickable except buttons, we add a clear overlay or just handle click
             card.innerHTML = `
+                <img src="${shortcut.icon}" alt="${shortcut.title}" class="shortcut-icon" onerror="this.src='icon-placeholder.png'">
+                <div class="shortcut-title">${shortcut.title}</div>
                 <div class="actions">
                     <button class="edit-btn" data-id="${shortcut.id}">✎</button>
                     <button class="delete-btn" data-id="${shortcut.id}">×</button>
                 </div>
-                <img src="${shortcut.icon}" alt="${shortcut.title}" class="shortcut-icon" onerror="this.src='icon-placeholder.png'">
-                <div class="shortcut-title">${shortcut.title}</div>
             `;
 
             // Navigation handler
