@@ -255,9 +255,21 @@
                     <option value="ita.1">Serie A</option>
                     <option value="fra.1">Ligue 1</option>
                 </select>
+                <button id="football-view-toggle" class="football-icon-btn" title="Toggle Standings">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="8" y1="6" x2="21" y2="6"></line>
+                        <line x1="8" y1="12" x2="21" y2="12"></line>
+                        <line x1="8" y1="18" x2="21" y2="18"></line>
+                        <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                        <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                        <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                    </svg>
+                </button>
             </div>
             <div id="football-loading" style="padding:20px; text-align:center; color:#888;">Loading...</div>
             <div id="football-matches" class="football-matches"></div>
+            <div id="football-standings" class="football-standings hidden"></div>
         </div>
     </div>
 

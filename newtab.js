@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const modalTitle = document.getElementById('modal-title');
     const notificationManager = new window.NotificationManager();
     const weatherManager = new window.WeatherManager();
+    // Moved here to fix init error
 
     // CLEANUP: Remove deprecated Gemini state if present
     chrome.storage.local.remove(['geminiState']);
@@ -247,7 +248,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- Top Sites Logic ---
     const topSitesBtn = document.getElementById('top-sites-btn');
     const topSitesPanel = document.getElementById('top-sites-panel');
-    const topSitesList = document.getElementById('top-sites-list');
+
 
     topSitesBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -841,8 +842,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const footballHeader = document.getElementById('football-header');
     const footballMinimizeBtn = document.getElementById('football-minimize');
     const footballLeagueSelect = document.getElementById('football-league-select');
-    const footballMatches = document.getElementById('football-matches');
+
+
     const footballLoading = document.getElementById('football-loading');
+    const footballStandings = document.getElementById('football-standings'); // Fix RefError
+    const footballViewToggle = document.getElementById('football-view-toggle'); // Fix RefError
 
     // State
     let footballState = {
@@ -852,7 +856,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             top: '100px',
             left: '340px'
         }, // Default offset from spotify
-        selectedLeague: 'eng.1' // Default EPL
+        selectedLeague: 'eng.1', // Default EPL
+        view: 'matches'
     };
 
     let footballInterval = null;
@@ -912,7 +917,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         // League Select
         if (footballLeagueSelect.value !== footballState.selectedLeague) {
             footballLeagueSelect.value = footballState.selectedLeague;
-            // Force refresh if changed via state load (unlikely but safe)
+        }
+
+        // View (Matches vs Table)
+        if (footballState.view === 'table') {
+            footballMatches.classList.add('hidden');
+            footballStandings.classList.remove('hidden');
+            // Update Icon to "List" (to go back)
+            footballViewToggle.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>';
+            footballViewToggle.title = "Show Matches";
+        } else {
+            footballMatches.classList.remove('hidden');
+            footballStandings.classList.add('hidden');
+            // Update Icon to "Table" (to go to table)
+            footballViewToggle.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line></svg>';
+            footballViewToggle.title = "Show Standings";
+        }
+
+        // Fetch Data if needed (generic refresh)
+        refreshFootballData();
+    }
+
+    function refreshFootballData() {
+        if (!footballState.isOpen) return;
+
+        if (footballState.view === 'table') {
+            fetchStandings(footballState.selectedLeague);
+        } else {
             fetchScores(footballState.selectedLeague);
         }
     }
@@ -949,8 +980,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         footballState.selectedLeague = e.target.value;
         saveFootballState();
-        fetchScores(footballState.selectedLeague);
+        refreshFootballData(); // Generic refresh
     });
+
+    // View Toggle Change
+    if (footballViewToggle) {
+        footballViewToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            bringToFront(footballWidget);
+            footballState.view = footballState.view === 'scores' ? 'table' : 'scores';
+            applyFootballState(); // Update UI
+            saveFootballState();
+            refreshFootballData(); // Fetch new data
+        });
+    }
 
     // API Key Function
     async function fetchScores(leagueCode) {
@@ -1031,6 +1074,79 @@ document.addEventListener('DOMContentLoaded', async () => {
             `;
             footballMatches.appendChild(item);
         });
+    }
+
+    async function fetchStandings(leagueCode) {
+        if (!footballState.isOpen || footballState.view !== 'table') return;
+
+        footballLoading.style.display = 'block';
+        footballStandings.innerHTML = '';
+
+        try {
+            // Standings API
+            const response = await fetch(`http://site.api.espn.com/apis/site/v2/sports/soccer/${leagueCode}/standings`);
+            const data = await response.json();
+            renderStandings(data);
+            footballLoading.style.display = 'none';
+        } catch (error) {
+            console.error('Error fetching standings:', error);
+            footballLoading.textContent = 'Error loading table';
+        }
+    }
+
+    function renderStandings(data) {
+        footballStandings.innerHTML = '';
+        if (!data || !data.children || !data.children[0] || !data.children[0].standings) {
+            footballStandings.innerHTML = '<div style="padding:20px; text-align:center; color:#888;">No standings available</div>';
+            return;
+        }
+
+        const entries = data.children[0].standings.entries;
+        const table = document.createElement('table');
+        table.className = 'standings-table';
+
+        // Header
+        table.innerHTML = `
+            <thead>
+                <tr>
+                    <th style="width:25px; text-align:center;">#</th>
+                    <th>Team</th>
+                    <th style="width:30px; text-align:center;">Pl</th>
+                    <th style="width:30px; text-align:right;">Pts</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        `;
+
+        const tbody = table.querySelector('tbody');
+
+        entries.forEach((entry, index) => {
+            const team = entry.team;
+            const stats = entry.stats;
+            // Key stats: points (name: "points"), gamesPlayed (name: "gamesPlayed")
+            const pointsStat = stats.find(s => s.name === 'points');
+            const playedStat = stats.find(s => s.name === 'gamesPlayed');
+            const rank = index + 1; // Or entry.stats...rank? entry usually sorted.
+
+            const row = document.createElement('tr');
+
+            // Highlight Logic (Premier League approx)
+            if (rank <= 4) row.classList.add('rank-top');
+            if (rank >= entries.length - 2) row.classList.add('rank-bottom');
+
+            row.innerHTML = `
+                <td class="standings-rank">${rank}</td>
+                <td class="standings-team">
+                    <img src="${team.logos && team.logos[0] ? team.logos[0].href : ''}" alt="${team.abbreviation}">
+                    <span>${team.shortDisplayName || team.name}</span>
+                </td>
+                 <td style="text-align:center; color:#aaa;">${playedStat ? playedStat.value : '-'}</td>
+                <td class="standings-pts">${pointsStat ? pointsStat.value : 0}</td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        footballStandings.appendChild(table);
     }
 
     function startFootballUpdates() {
@@ -1322,6 +1438,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const notesWidget = document.getElementById('notes-widget');
     const notesHeader = document.getElementById('notes-header');
     const notesMinimizeBtn = document.getElementById('notes-minimize');
+
     const notesInput = document.getElementById('notes-input');
 
     // State
