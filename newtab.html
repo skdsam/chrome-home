@@ -42,6 +42,17 @@
             </svg>
         </div>
 
+        <!-- My Sites Trigger -->
+        <div id="my-sites-btn" class="control-btn" title="My Sites">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="2" y1="12" x2="22" y2="12"></line>
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z">
+                </path>
+            </svg>
+        </div>
+
         <!-- Top Sites Trigger -->
         <div id="top-sites-btn" class="control-btn" title="Top Sites">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
@@ -50,6 +61,62 @@
                     points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
                 </polygon>
             </svg>
+        </div>
+
+        <!-- Widgets Trigger -->
+        <div id="widgets-btn" class="control-btn" title="Widgets" style="position: relative;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7"></rect>
+                <rect x="14" y="3" width="7" height="7"></rect>
+                <rect x="14" y="14" width="7" height="7"></rect>
+                <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+        </div>
+
+        <!-- Widgets Menu (Hidden) -->
+        <div id="widgets-menu" class="widgets-menu hidden">
+            <div id="spotify-btn" class="widget-menu-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M8 14.5c2.5-1 5.5-1 8 0"></path>
+                    <path d="M7 11.5c3-1.5 7-1.5 10 0"></path>
+                    <path d="M9 8.5c3-1.5 6-1.5 9 0"></path>
+                </svg>
+                <span>Spotify</span>
+            </div>
+            <div id="football-btn" class="widget-menu-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+                    <path d="M2 12h20"></path>
+                    <path d="M12 2v20"></path>
+                    <path d="M4.93 4.93l14.14 14.14"></path>
+                    <path d="M14.07 4.93L4.93 19.07"></path>
+                </svg>
+                <span>Football</span>
+            </div>
+            <div id="todo-btn" class="widget-menu-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 11l3 3L22 4"></path>
+                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                </svg>
+                <span>Todo List</span>
+            </div>
+            <div id="notes-btn" class="widget-menu-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+                <span>Quick Notes</span>
+            </div>
         </div>
 
         <!-- Notification Bell -->
@@ -62,18 +129,7 @@
             <span id="notification-badge" class="badge hidden"></span>
         </div>
 
-        <!-- User Profile -->
-        <div id="user-profile" class="control-btn profile-trigger">
-            <div class="avatar">
-                <img id="user-avatar-img" src="" alt="Profile" class="hidden">
-                <svg id="user-avatar-placeholder" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                    stroke-linejoin="round">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="12" cy="7" r="4"></circle>
-                </svg>
-            </div>
-        </div>
+
     </div>
 
     <!-- Notification Panel -->
@@ -98,67 +154,18 @@
         </div>
     </div>
 
-    <!-- User Menu -->
-    <div id="user-menu" class="panel menu-panel hidden">
-        <ul class="menu-list">
-            <li data-action="change-avatar">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                    <circle cx="12" cy="13" r="4"></circle>
-                </svg>
-                Change Avatar
-            </li>
-            <hr style="border-color: rgba(255,255,255,0.1); margin: 5px 0;">
-            <li data-action="bookmarks">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-                </svg>
-                Bookmarks
-            </li>
-            <li data-action="history">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <polyline points="12 6 12 12 16 14"></polyline>
-                </svg>
-                History
-            </li>
-            <li data-action="downloads">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="7 10 12 15 17 10"></polyline>
-                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                </svg>
-                Downloads
-            </li>
-            <li data-action="extensions">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line>
-                    <path
-                        d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
-                    </path>
-                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                </svg>
-                Extensions
-            </li>
-            <hr style="border-color: rgba(255,255,255,0.1); margin: 5px 0;">
-            <li data-action="settings">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="3"></circle>
-                    <path
-                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
-                    </path>
-                </svg>
-                Settings
-            </li>
-        </ul>
+    <!-- My Sites Panel -->
+    <div id="my-sites-panel" class="panel hidden">
+        <div class="panel-header">
+            <h3>My Sites</h3>
+            <button id="add-my-site-btn" style="color:var(--accent-color); font-weight:bold;">+ Add</button>
+        </div>
+        <div id="my-sites-list" class="panel-content">
+            <!-- My sites injected here -->
+        </div>
     </div>
+
+
 
     <!-- Main Container -->
     <main class="container">
@@ -176,6 +183,15 @@
                         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                     </svg>
                     <input type="text" name="q" placeholder="Search Google..." autocomplete="off">
+                    <button id="voice-search-btn" type="button" title="Search by voice">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                            <line x1="12" y1="19" x2="12" y2="23"></line>
+                            <line x1="8" y1="23" x2="16" y2="23"></line>
+                        </svg>
+                    </button>
                 </div>
                 <div class="search-options">
                     <button type="button" data-type="web" class="active">Web</button>
@@ -190,7 +206,87 @@
         <div id="shortcuts-grid" class="grid">
             <!-- Shortcuts will be injected here -->
         </div>
+        </div>
     </main>
+
+    <!-- Spotify Widget -->
+    <div id="spotify-widget" class="spotify-widget hidden">
+        <div class="spotify-header" id="spotify-header">
+            <span class="spotify-title">Spotify</span>
+            <div class="spotify-controls">
+                <button id="spotify-edit" title="Change Playlist">✎</button>
+                <button id="spotify-minimize">-</button>
+            </div>
+        </div>
+        <div class="spotify-content" id="spotify-content">
+            <!-- Spotify Embed -->
+            <iframe style="border-radius:12px"
+                src="https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M?utm_source=generator" width="100%"
+                height="152" frameBorder="0"
+                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy">
+            </iframe>
+        </div>
+    </div>
+
+    </div>
+
+    <!-- Football Widget -->
+    <div id="football-widget" class="spotify-widget football-widget hidden">
+        <div class="spotify-header" id="football-header">
+            <span class="spotify-title">
+                Football
+            </span>
+            <div class="spotify-controls">
+                <button id="football-minimize">-</button>
+            </div>
+        </div>
+        <div class="spotify-content football-content" id="football-content">
+            <div class="football-toolbar">
+                <select id="football-league-select" class="football-select">
+                    <option value="eng.1">Premier League</option>
+                    <option value="esp.1">La Liga</option>
+                    <option value="ger.1">Bundesliga</option>
+                    <option value="ita.1">Serie A</option>
+                    <option value="fra.1">Ligue 1</option>
+                    <option value="uefa.champions">Champions League</option>
+                </select>
+            </div>
+            <div id="football-loading" style="padding:20px; text-align:center; color:#888;">Loading...</div>
+            <div id="football-matches" class="football-matches"></div>
+        </div>
+    </div>
+
+    <!-- Todo Widget -->
+    <div id="todo-widget" class="spotify-widget todo-widget hidden">
+        <div class="spotify-header" id="todo-header">
+            <span class="spotify-title">Todo List</span>
+            <div class="spotify-controls">
+                <button id="todo-minimize">-</button>
+            </div>
+        </div>
+        <div class="spotify-content todo-content" id="todo-content">
+            <div class="todo-toolbar">
+                <input type="text" id="todo-input" class="todo-input" placeholder="Add a task...">
+                <button id="todo-add-btn" class="todo-add-btn">+</button>
+            </div>
+            <div id="todo-list" class="todo-list">
+                <!-- Todo items injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Notes Widget -->
+    <div id="notes-widget" class="spotify-widget notes-widget hidden">
+        <div class="spotify-header" id="notes-header">
+            <span class="spotify-title">Quick Notes</span>
+            <div class="spotify-controls">
+                <button id="notes-minimize">-</button>
+            </div>
+        </div>
+        <div class="spotify-content notes-content" id="notes-content">
+            <textarea id="notes-input" placeholder="Type something..."></textarea>
+        </div>
+    </div>
 
     <!-- Modal for Add/Edit -->
     <div id="modal-overlay" class="modal-overlay hidden">
