@@ -307,20 +307,7 @@ body {
     text-align: center;
 }
 
-.logo-text {
-    font-size: 5rem;
-    font-weight: 700;
-    margin-bottom: 20px;
-    display: inline-block;
-    background: linear-gradient(45deg, #4285F4, #DB4437, #F4B400, #0F9D58, #4285F4);
-    background-size: 400%;
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    color: transparent;
-    animation: google-colors 10s ease infinite;
-}
-
+/* Logo text removed, but keeping keyframes */
 @keyframes google-colors {
     0% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
@@ -330,7 +317,7 @@ body {
 .search-bar {
     position: relative;
     width: 100%;
-    background: rgba(0, 0, 0, 0.3); /* Darker background */
+    background: rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 50px;
@@ -346,10 +333,25 @@ body {
     box-shadow: 0 0 20px rgba(124, 77, 255, 0.1);
 }
 
-.search-icon {
+.search-google-icon {
     position: absolute;
     left: 20px;
-    color: #aaa;
+    font-family: 'Product Sans', 'Roboto', sans-serif; /* Google-ish font */
+    font-weight: 700;
+    font-size: 1.8rem; /* Scaled down from 5rem */
+    
+    /* Animation Properties */
+    background: linear-gradient(45deg, #4285F4, #DB4437, #F4B400, #0F9D58, #4285F4);
+    background-size: 400%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    animation: google-colors 10s ease infinite;
+    
+    user-select: none;
+    cursor: default;
+    line-height: 1;
 }
 
 input[type="text"] {
