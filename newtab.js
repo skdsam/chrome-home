@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const modalTitle = document.getElementById('modal-title');
     const notificationManager = new window.NotificationManager();
     const weatherManager = new window.WeatherManager();
-    // Moved here to fix init error
+    const topSitesList = document.getElementById('top-sites-list'); // Moved here to fix init error
 
     // CLEANUP: Remove deprecated Gemini state if present
     chrome.storage.local.remove(['geminiState']);
@@ -844,6 +844,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const footballLeagueSelect = document.getElementById('football-league-select');
 
 
+    const footballMatches = document.getElementById('football-matches');
     const footballLoading = document.getElementById('football-loading');
     const footballStandings = document.getElementById('football-standings'); // Fix RefError
     const footballViewToggle = document.getElementById('football-view-toggle'); // Fix RefError
