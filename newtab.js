@@ -9,6 +9,106 @@ document.addEventListener('DOMContentLoaded', async () => {
     const notificationManager = new window.NotificationManager();
     const weatherManager = new window.WeatherManager();
 
+    // CLEANUP: Remove deprecated Gemini state if present
+    chrome.storage.local.remove(['geminiState']);
+
+    // --- Settings & Data Logic ---
+    const settingsBtn = document.getElementById('settings-btn');
+    const settingsModalOverlay = document.getElementById('settings-modal-overlay');
+    const closeSettingsModalBtn = document.getElementById('close-settings-modal');
+    const recentSitesLimitInput = document.getElementById('recent-sites-limit');
+    const exportDataBtn = document.getElementById('export-data-btn');
+    const importDataBtn = document.getElementById('import-data-btn');
+    const importFileInput = document.getElementById('import-file-input');
+
+    // Default Limit Global
+    window.recentSitesLimit = 5;
+
+    // Load Limit
+    chrome.storage.local.get(['recentSitesLimit'], (result) => {
+        if (result.recentSitesLimit) {
+            window.recentSitesLimit = parseInt(result.recentSitesLimit);
+            recentSitesLimitInput.value = window.recentSitesLimit;
+            renderTopSites(); // Re-render with loaded limit
+        }
+    });
+
+    if (settingsBtn) {
+        settingsBtn.addEventListener('click', () => {
+            settingsModalOverlay.classList.remove('hidden');
+        });
+    }
+
+    if (closeSettingsModalBtn) {
+        closeSettingsModalBtn.addEventListener('click', () => {
+            settingsModalOverlay.classList.add('hidden');
+        });
+    }
+
+    settingsModalOverlay.addEventListener('click', (e) => {
+        if (e.target === settingsModalOverlay) {
+            settingsModalOverlay.classList.add('hidden');
+        }
+    });
+
+    // Recent Sites Limit Change
+    recentSitesLimitInput.addEventListener('change', () => {
+        let val = parseInt(recentSitesLimitInput.value);
+        if (val < 1) val = 1;
+        if (val > 50) val = 50; // Sane max
+        window.recentSitesLimit = val;
+        chrome.storage.local.set({
+            recentSitesLimit: val
+        });
+        renderTopSites(); // Refresh list immediately
+    });
+
+    // Export Data
+    exportDataBtn.addEventListener('click', () => {
+        chrome.storage.local.get(null, (items) => {
+            const dataStr = JSON.stringify(items, null, 2);
+            const blob = new Blob([dataStr], {
+                type: "application/json"
+            });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `newtab-settings-${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+    });
+
+    // Import Data
+    importDataBtn.addEventListener('click', () => {
+        importFileInput.click();
+    });
+
+    importFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const data = JSON.parse(event.target.result);
+                // Validation could go here
+                chrome.storage.local.clear(() => {
+                    chrome.storage.local.set(data, () => {
+                        alert('Settings imported successfully! Reloading...');
+                        location.reload();
+                    });
+                });
+            } catch (err) {
+                alert('Error parsing JSON file');
+                console.error(err);
+            }
+        };
+        reader.readAsText(file);
+    });
+
     // Init Weather
     weatherManager.init();
 
@@ -185,7 +285,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         seenHosts.add(hostname);
                         uniqueSites.push(item);
                     }
-                    if (uniqueSites.length >= 5) break;
+                    if (uniqueSites.length >= (window.recentSitesLimit || 5)) break;
                 } catch (e) {
                     continue;
                 }

@@ -130,6 +130,16 @@
         </div>
 
 
+        <!-- Settings Button -->
+        <div id="settings-btn" class="control-btn" title="Settings">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path
+                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                </path>
+            </svg>
+        </div>
     </div>
 
     <!-- Notification Panel -->
@@ -301,6 +311,31 @@
                     <button type="submit" class="btn-primary">Save</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal-overlay" class="modal-overlay hidden">
+        <div class="modal">
+            <h2 id="settings-modal-title">Settings</h2>
+            <div class="modal-content">
+                <div class="settings-group">
+                    <label for="recent-sites-limit">Recent Sites Limit</label>
+                    <input type="number" id="recent-sites-limit" min="1" max="20" value="5">
+                </div>
+                <hr style="border-color: rgba(255,255,255,0.1); margin: 20px 0;">
+                <div class="settings-group">
+                    <label>Data Management</label>
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <button id="export-data-btn" class="btn-primary">Export Data</button>
+                        <button id="import-data-btn" class="btn-secondary">Import Data</button>
+                        <input type="file" id="import-file-input" accept=".json" hidden>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" id="close-settings-modal" class="btn-secondary">Close</button>
+            </div>
         </div>
     </div>
 
