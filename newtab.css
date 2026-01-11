@@ -663,6 +663,10 @@ input[type="text"] {
     background: rgba(255, 255, 255, 0.05);
 }
 
+.football-select:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
 .football-select option {
     background: #1e1e24; /* Dark for dropdown options */
     color: #eee;
