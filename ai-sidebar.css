@@ -1,0 +1,135 @@
+/* AI Sidebar */
+.ai-sidebar {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%); /* Centered vertically initially, handled specifically by modifiers below */
+    width: 80px;
+    height: auto;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    z-index: 1000;
+    transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1), opacity 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 15px 0;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.ai-sidebar.hidden {
+    opacity: 0; 
+    pointer-events: none;
+}
+
+/* Positioning */
+.ai-sidebar.right {
+    right: 20px;
+    transform: translateY(-50%) translateX(0); /* Visible state */
+}
+
+/* Slide out logic - maybe we just keep it visible as a dock? 
+   The user said "slide in panel". Let's assume it's always docked on the side 
+   but can be toggled via settings. Or maybe it collapses?
+   Let's stick to a clean docked bar for now that is always there if enabled.
+*/
+
+.ai-sidebar-handle {
+    display: none; /* Not needed if it's a permanent dock */
+}
+
+.ai-sidebar-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+.ai-sidebar-content h3 {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 15px;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+}
+
+.ai-dock {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.ai-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.15);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ai-icon:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: scale(1.1);
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+}
+
+.ai-icon span.material-icons {
+    font-size: 24px;
+    margin-bottom: 2px;
+}
+
+.ai-icon .ai-name {
+    font-size: 0.6rem;
+    color: rgba(255, 255, 255, 0.8);
+    display: none; /* Show on hover maybe? */
+}
+
+/* Tooltip on hover */
+.ai-icon::after {
+    content: attr(title);
+    position: absolute;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    
+    /* Center vertical */
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.ai-sidebar.right .ai-icon::after {
+    right: 60px; /* Show to left of icon */
+}
+
+.ai-sidebar.left .ai-icon::after {
+    left: 60px; /* Show to right of icon */
+}
+
+.ai-icon:hover::after {
+    opacity: 1;
+}
+
+/* Left Position Modifier */
+.ai-sidebar.left {
+    left: 20px;
+    right: auto;
+    transform: translateY(-50%);
+}

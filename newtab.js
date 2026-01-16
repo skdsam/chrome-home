@@ -6,8 +6,119 @@ document.addEventListener('DOMContentLoaded', async () => {
     const shortcutForm = document.getElementById('shortcut-form');
     const cancelModalBtn = document.getElementById('cancel-modal');
     const modalTitle = document.getElementById('modal-title');
-    const notificationManager = new window.NotificationManager();
     const weatherManager = new window.WeatherManager();
+    const notificationManager = new window.NotificationManager();
+
+    // --- AI Sidebar Logic ---
+    class AISidebarManager {
+        constructor() {
+            this.sidebar = document.getElementById('ai-sidebar');
+            this.toggleSwitch = document.getElementById('ai-sidebar-toggle');
+            this.positionSelect = document.getElementById('ai-sidebar-position');
+            this.icons = document.querySelectorAll('.ai-icon');
+
+            this.state = {
+                enabled: true,
+                position: 'right'
+            };
+        }
+
+        async init() {
+            const stored = await window.storageManager.get(['aiSidebarConfig']);
+            if (stored.aiSidebarConfig) {
+                this.state = {
+                    ...this.state,
+                    ...stored.aiSidebarConfig
+                };
+            }
+
+            this.applyState();
+            this.setupListeners();
+        }
+
+        setupListeners() {
+            // Settings Toggle
+            if (this.toggleSwitch) {
+                this.toggleSwitch.checked = this.state.enabled;
+                this.toggleSwitch.addEventListener('change', () => {
+                    this.state.enabled = this.toggleSwitch.checked;
+                    this.saveAndApply();
+                });
+            }
+
+            // Settings Position
+            if (this.positionSelect) {
+                this.positionSelect.value = this.state.position;
+                this.positionSelect.addEventListener('change', () => {
+                    this.state.position = this.positionSelect.value;
+                    this.saveAndApply();
+                });
+            }
+
+            // Icon Clicks - Open Popup
+            this.icons.forEach(icon => {
+                icon.addEventListener('click', () => {
+                    const url = icon.getAttribute('data-url');
+                    const title = icon.getAttribute('title');
+                    this.openPopup(url, title);
+                });
+            });
+
+            // Sync Listener
+            chrome.storage.onChanged.addListener((changes) => {
+                if (changes.aiSidebarConfig) {
+                    this.state = changes.aiSidebarConfig.newValue;
+                    this.applyState();
+                    // Update UI controls
+                    if (this.toggleSwitch) this.toggleSwitch.checked = this.state.enabled;
+                    if (this.positionSelect) this.positionSelect.value = this.state.position;
+                }
+            });
+        }
+
+        async saveAndApply() {
+            await window.storageManager.set({
+                aiSidebarConfig: this.state
+            });
+            this.applyState();
+        }
+
+        applyState() {
+            if (!this.sidebar) return;
+
+            // 1. Visibility
+            if (this.state.enabled) {
+                this.sidebar.classList.remove('hidden');
+            } else {
+                this.sidebar.classList.add('hidden');
+            }
+
+            // 2. Position
+            this.sidebar.classList.remove('left', 'right');
+            this.sidebar.classList.add(this.state.position);
+        }
+
+        openPopup(url, title) {
+            // Dimensions for a "Mobile" feel
+            const width = 450;
+            const height = 700;
+            const left = (window.screen.width / 2) - (width / 2);
+            const top = (window.screen.height / 2) - (height / 2);
+
+            // Unique window name per service allows multiple to be open? 
+            // Or one shared sidebar window? User request implies "slide in panel", 
+            // so maybe one shared window acting as the "panel" is better?
+            // "slide in panel from the left or right... present in the slide in panel"
+            // Let's use specific names so you can have Claude AND Gemini open if you want.
+            const windowName = `AI_Popup_${title}`;
+
+            window.open(url, windowName, `width=${width},height=${height},top=${top},left=${left},resizable=yes,scrollbars=yes,status=no,toolbar=no,menubar=no,location=no`);
+        }
+    }
+
+    const aiSidebarManager = new AISidebarManager();
+    aiSidebarManager.init();
+
     const topSitesList = document.getElementById('top-sites-list'); // Moved here to fix init error
 
     // CLEANUP: Remove deprecated Gemini state if present

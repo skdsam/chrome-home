@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chrome Home</title>
     <link rel="stylesheet" href="newtab.css">
+    <link rel="stylesheet" href="ai-sidebar.css">
     <!-- Google Fonts for premium look -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -368,9 +369,56 @@
                         <input type="file" id="import-file-input" accept=".json" hidden>
                     </div>
                 </div>
+                <hr style="border-color: rgba(255,255,255,0.1); margin: 20px 0;">
+                <div class="settings-group">
+                    <label>AI Sidebar</label>
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <label for="ai-sidebar-toggle" style="margin-bottom: 0px; font-size: 0.9em;">Enable
+                            Sidebar</label>
+                        <label class="switch">
+                            <input type="checkbox" id="ai-sidebar-toggle" checked>
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <label for="ai-sidebar-position" style="font-size: 0.9em;">Position</label>
+                    <select id="ai-sidebar-position" class="football-select" style="width: 100%; margin-top: 5px;">
+                        <option value="right">Right</option>
+                        <option value="left">Left</option>
+                    </select>
+                </div>
             </div>
             <div class="modal-actions">
                 <button type="button" id="close-settings-modal" class="btn-secondary">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Sidebar -->
+    <div id="ai-sidebar" class="ai-sidebar hidden right">
+        <div class="ai-sidebar-handle">
+            <span class="material-icons">smart_toy</span>
+        </div>
+        <div class="ai-sidebar-content">
+            <h3>AI Tools</h3>
+            <div class="ai-dock">
+                <div class="ai-icon" data-url="https://gemini.google.com/app" title="Gemini">
+                    <!-- Placeholder Icon (G) -->
+                    <span class="material-icons" style="color: #4facfe;">psychology</span>
+                    <span class="ai-name">Gemini</span>
+                </div>
+                <div class="ai-icon" data-url="https://chatgpt.com/" title="ChatGPT">
+                    <span class="material-icons" style="color: #10a37f;">chat</span>
+                    <span class="ai-name">ChatGPT</span>
+                </div>
+                <div class="ai-icon" data-url="https://claude.ai/chats" title="Claude">
+                    <span class="material-icons" style="color: #d97757;">alternate_email</span>
+                    <span class="ai-name">Claude</span>
+                </div>
+                <div class="ai-icon" data-url="https://www.perplexity.ai/" title="Perplexity">
+                    <span class="material-icons" style="color: #2ebf91;">search</span>
+                    <span class="ai-name">Perplexity</span>
+                </div>
             </div>
         </div>
     </div>
