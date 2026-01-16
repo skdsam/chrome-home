@@ -1261,3 +1261,116 @@ input:checked + .slider:before {
 .slider.round:before {
     border-radius: 50%;
 }
+
+/* Tech News Widget */
+.tech-news-widget {
+    width: 380px;
+    max-height: 450px;
+}
+
+.tech-news-content {
+    max-height: 350px;
+    overflow-y: auto;
+    padding: 0 !important;
+}
+
+.news-source-select {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #ccc;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    margin-right: 5px;
+}
+
+.news-source-select:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+
+.news-loading {
+    padding: 30px;
+    text-align: center;
+    color: #888;
+    font-size: 0.9rem;
+}
+
+.news-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.news-item {
+    display: flex;
+    flex-direction: column;
+    padding: 12px 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+    transition: background 0.2s ease;
+    text-decoration: none;
+    color: inherit;
+}
+
+.news-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.news-item:last-child {
+    border-bottom: none;
+}
+
+.news-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #e0e0e0;
+    line-height: 1.4;
+    margin-bottom: 6px;
+}
+
+.news-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.75rem;
+    color: #888;
+}
+
+.news-score {
+    color: var(--accent-color);
+    font-weight: 600;
+}
+
+.news-source {
+    opacity: 0.7;
+}
+
+.news-time {
+    opacity: 0.6;
+}
+
+.news-error {
+    padding: 20px;
+    text-align: center;
+    color: #ff6b6b;
+    font-size: 0.85rem;
+}
+
+/* Custom scrollbar for news */
+.tech-news-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.tech-news-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.tech-news-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+}
+
+.tech-news-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+}

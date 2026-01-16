@@ -2266,12 +2266,171 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // --- Generic Z-Index Logic (Moved to end to ensure all elements exist) ---
-    const widgets = [spotifyWidget, footballWidget, todoWidget, notesWidget];
-    widgets.forEach(w => {
-        if (w) {
-            w.addEventListener('mousedown', () => bringToFront(w));
+    // --- Tech News Widget Logic ---
+    const techNewsBtn = document.getElementById('tech-news-btn');
+    const techNewsWidget = document.getElementById('tech-news-widget');
+    const techNewsHeader = document.getElementById('tech-news-header');
+    const techNewsMinimize = document.getElementById('tech-news-minimize');
+    const techNewsRefresh = document.getElementById('tech-news-refresh');
+    const newsSourceSelect = document.getElementById('news-source-select');
+    const techNewsList = document.getElementById('tech-news-list');
+    const techNewsLoading = document.getElementById('tech-news-loading');
+
+    let techNewsState = {
+        isOpen: false,
+        x: null,
+        y: null,
+        source: 'hackernews'
+    };
+
+    window.storageManager.get(['techNewsState']).then((result) => {
+        if (result.techNewsState) {
+            techNewsState = {
+                ...techNewsState,
+                ...result.techNewsState
+            };
+            if (newsSourceSelect) newsSourceSelect.value = techNewsState.source;
+            applyTechNewsState();
         }
+    });
+
+    function saveTechNewsState() {
+        window.storageManager.set({
+            techNewsState
+        });
+    }
+
+    function applyTechNewsState() {
+        if (!techNewsWidget) return;
+        techNewsState.isOpen ? techNewsWidget.classList.remove('hidden') : techNewsWidget.classList.add('hidden');
+        if (techNewsState.x !== null && techNewsState.y !== null) {
+            techNewsWidget.style.left = techNewsState.x + 'px';
+            techNewsWidget.style.top = techNewsState.y + 'px';
+            techNewsWidget.style.bottom = 'auto';
+            techNewsWidget.style.right = 'auto';
+        }
+    }
+
+    async function fetchNews(source) {
+        if (!techNewsLoading || !techNewsList) return;
+        techNewsLoading.classList.remove('hidden');
+        techNewsList.innerHTML = '';
+        try {
+            let items = [];
+            if (source === 'hackernews') {
+                const res = await fetch('https://hacker-news.firebaseio.com/v0/topstories.json');
+                const ids = await res.json();
+                const stories = await Promise.all(ids.slice(0, 10).map(id => fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`).then(r => r.json())));
+                items = stories.map(s => ({
+                    title: s.title,
+                    url: s.url || `https://news.ycombinator.com/item?id=${s.id}`,
+                    score: s.score,
+                    source: 'HN',
+                    time: timeAgo(s.time * 1000)
+                }));
+            } else if (source === 'devto') {
+                const res = await fetch('https://dev.to/api/articles?per_page=10&top=1');
+                const articles = await res.json();
+                items = articles.map(a => ({
+                    title: a.title,
+                    url: a.url,
+                    score: a.positive_reactions_count,
+                    source: 'DEV',
+                    time: timeAgo(new Date(a.published_at).getTime())
+                }));
+            } else {
+                items = [{
+                    title: 'Product Hunt requires API auth',
+                    url: 'https://producthunt.com',
+                    score: '-',
+                    source: 'PH',
+                    time: ''
+                }];
+            }
+            renderNews(items);
+        } catch (e) {
+            techNewsList.innerHTML = '<div class="news-error">Failed to load</div>';
+        } finally {
+            techNewsLoading.classList.add('hidden');
+        }
+    }
+
+    function timeAgo(ts) {
+        const s = Math.floor((Date.now() - ts) / 1000);
+        if (s < 60) return 'now';
+        const m = Math.floor(s / 60);
+        if (m < 60) return m + 'm';
+        const h = Math.floor(m / 60);
+        if (h < 24) return h + 'h';
+        return Math.floor(h / 24) + 'd';
+    }
+
+    function renderNews(items) {
+        if (!techNewsList) return;
+        techNewsList.innerHTML = items.map(i => `<a href="${i.url}" target="_blank" class="news-item"><div class="news-title">${i.title}</div><div class="news-meta"><span class="news-score">▲ ${i.score}</span><span class="news-source">${i.source}</span><span class="news-time">${i.time}</span></div></a>`).join('');
+    }
+
+    if (techNewsBtn) techNewsBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        widgetsMenu.classList.add('hidden');
+        techNewsState.isOpen = !techNewsState.isOpen;
+        if (techNewsState.isOpen) fetchNews(techNewsState.source);
+        applyTechNewsState();
+        saveTechNewsState();
+    });
+    if (techNewsMinimize) techNewsMinimize.addEventListener('click', () => {
+        techNewsState.isOpen = false;
+        applyTechNewsState();
+        saveTechNewsState();
+    });
+    if (techNewsRefresh) techNewsRefresh.addEventListener('click', () => fetchNews(techNewsState.source));
+    if (newsSourceSelect) newsSourceSelect.addEventListener('change', (e) => {
+        techNewsState.source = e.target.value;
+        fetchNews(techNewsState.source);
+        saveTechNewsState();
+    });
+
+    let isDraggingNews = false,
+        dragOffsetNewsX = 0,
+        dragOffsetNewsY = 0;
+    if (techNewsHeader) techNewsHeader.addEventListener('mousedown', (e) => {
+        if (e.target.tagName === 'BUTTON' || e.target.tagName === 'SELECT') return;
+        isDraggingNews = true;
+        const r = techNewsWidget.getBoundingClientRect();
+        dragOffsetNewsX = e.clientX - r.left;
+        dragOffsetNewsY = e.clientY - r.top;
+        document.addEventListener('mousemove', onMouseMoveNews);
+        document.addEventListener('mouseup', onMouseUpNews);
+        techNewsHeader.style.cursor = 'grabbing';
+    });
+
+    function onMouseMoveNews(e) {
+        if (!isDraggingNews) return;
+        let x = e.clientX - dragOffsetNewsX,
+            y = e.clientY - dragOffsetNewsY;
+        x = Math.max(0, Math.min(x, window.innerWidth - techNewsWidget.offsetWidth));
+        y = Math.max(0, Math.min(y, window.innerHeight - techNewsWidget.offsetHeight));
+        techNewsWidget.style.left = x + 'px';
+        techNewsWidget.style.top = y + 'px';
+        techNewsWidget.style.bottom = 'auto';
+        techNewsWidget.style.right = 'auto';
+    }
+
+    function onMouseUpNews() {
+        if (!isDraggingNews) return;
+        isDraggingNews = false;
+        techNewsHeader.style.cursor = 'grab';
+        document.removeEventListener('mousemove', onMouseMoveNews);
+        document.removeEventListener('mouseup', onMouseUpNews);
+        techNewsState.x = parseInt(techNewsWidget.style.left);
+        techNewsState.y = parseInt(techNewsWidget.style.top);
+        saveTechNewsState();
+    }
+
+    // --- Generic Z-Index Logic ---
+    const widgets = [spotifyWidget, footballWidget, todoWidget, notesWidget, techNewsWidget];
+    widgets.forEach(w => {
+        if (w) w.addEventListener('mousedown', () => bringToFront(w));
     });
 
 });
