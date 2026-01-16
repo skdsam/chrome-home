@@ -481,7 +481,7 @@ body {
     padding: 8px 0;
     min-width: 180px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
-    z-index: 100;
+    z-index: 9999; /* Above everything including shortcuts */
 }
 
 .search-engine-option {
