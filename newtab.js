@@ -882,6 +882,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const footballMatches = document.getElementById('football-matches');
     const footballLoading = document.getElementById('football-loading');
+    const favoriteTeamInput = document.getElementById('favorite-team-input');
 
     // State
     let footballState = {
@@ -891,7 +892,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             top: '100px',
             left: '340px'
         }, // Default offset from spotify
-        selectedLeague: 'eng.1' // Default EPL
+        selectedLeague: 'eng.1', // Default EPL
+        favoriteTeam: '' // User's pinned team
     };
 
     let footballInterval = null;
@@ -956,6 +958,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (footballState.isOpen) {
             startFootballUpdates();
         }
+
+        // Fav Team Input
+        if (favoriteTeamInput) {
+            favoriteTeamInput.value = footballState.favoriteTeam || '';
+        }
     }
 
 
@@ -995,6 +1002,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         fetchScores(footballState.selectedLeague);
     });
 
+    if (favoriteTeamInput) {
+        favoriteTeamInput.addEventListener('input', () => {
+            footballState.favoriteTeam = favoriteTeamInput.value.trim();
+            saveFootballState();
+            // We don't need to re-fetch, just re-render if we have data, 
+            // but for simplicity, let's just let the next update or a manual league change handle it, 
+            // or trigger a re-render if we have the last data.
+            // Actually, let's just trigger a re-render.
+        });
+    }
+
     // API Key Function
     async function fetchScores(leagueCode) {
         if (!footballState.isOpen) return;
@@ -1029,12 +1047,31 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        data.events.forEach(event => {
+        const favName = (footballState.favoriteTeam || '').toLowerCase();
+
+        // Sort events: put matches with favorite team at the top
+        const sortedEvents = [...data.events].sort((a, b) => {
+            if (!favName) return 0;
+            const aHasFav = a.name.toLowerCase().includes(favName);
+            const bHasFav = b.name.toLowerCase().includes(favName);
+            if (aHasFav && !bHasFav) return -1;
+            if (!aHasFav && bHasFav) return 1;
+            return 0;
+        });
+
+        sortedEvents.forEach(event => {
             const competition = event.competitions[0];
             const home = competition.competitors.find(c => c.homeAway === 'home');
             const away = competition.competitors.find(c => c.homeAway === 'away');
             const status = event.status.type.shortDetail; // "FT", "12'", "13:00"
             const isLive = event.status.type.state === 'in';
+
+            const isFavored = favName && (
+                home.team.displayName.toLowerCase().includes(favName) ||
+                home.team.shortDisplayName.toLowerCase().includes(favName) ||
+                away.team.displayName.toLowerCase().includes(favName) ||
+                away.team.shortDisplayName.toLowerCase().includes(favName)
+            );
 
             // Time logic
             let timeDisplay = status;
@@ -1048,7 +1085,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const item = document.createElement('div');
-            item.className = 'match-item';
+            item.className = `match-item ${isFavored ? 'favored' : ''}`;
 
             item.innerHTML = `
                 <div class="match-header">

@@ -741,6 +741,24 @@ input[type="text"] {
     font-weight: 600;
 }
 
+.match-item.favored {
+    background: rgba(124, 77, 255, 0.1);
+    border-left: 3px solid var(--accent-color);
+    position: relative;
+    overflow: hidden;
+}
+
+.match-item.favored::after {
+    content: "FAVORITE";
+    position: absolute;
+    top: 5px;
+    right: 15px;
+    font-size: 0.6rem;
+    font-weight: 800;
+    color: var(--accent-color);
+    letter-spacing: 1px;
+}
+
 /* Widgets Menu */
 .widgets-menu {
     position: absolute;
