@@ -164,6 +164,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 type: 'weather',
                 query: 'Nature'
             };
+            this.rotationInterval = null;
+            this.currentSlideIndex = 0;
         }
 
         async init() {
@@ -226,6 +228,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 this.mediaBg.classList.add('hidden');
                 this.weatherBlobs.classList.remove('hidden');
                 this.bgOverlay.style.background = 'rgba(0,0,0,0.1)';
+                this.stopRotation();
                 this.mediaBg.innerHTML = ''; // Clean up media
             } else {
                 this.mediaBg.classList.remove('hidden');
@@ -235,46 +238,60 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
+        stopRotation() {
+            if (this.rotationInterval) {
+                clearInterval(this.rotationInterval);
+                this.rotationInterval = null;
+            }
+        }
+
         async loadMedia() {
-            this.mediaBg.innerHTML = '';
+            this.stopRotation();
+            this.mediaBg.innerHTML = ''; // Reset container
 
             if (this.state.type === 'image') {
-                // Remove any previous video styles
-                this.mediaBg.style.backgroundSize = 'cover';
-                this.mediaBg.style.backgroundPosition = 'center';
+                // Create two slides for cross-fading
+                const slide1 = document.createElement('div');
+                slide1.className = 'bg-slide active';
+                const slide2 = document.createElement('div');
+                slide2.className = 'bg-slide';
 
-                // Add timestamp to force rotation/refresh so it changes every time or on reload
-                // Using loremflickr for better query matching
-                const timestamp = new Date().getTime();
-                const randomUrl = `https://loremflickr.com/1920/1080/${encodeURIComponent(this.state.query)}?lock=${timestamp}`;
+                this.mediaBg.appendChild(slide1);
+                this.mediaBg.appendChild(slide2);
 
-                // Preload image to avoid flash of black
-                const img = new Image();
-                img.onload = () => {
-                    this.mediaBg.style.backgroundImage = `url('${randomUrl}')`;
-                };
-                img.src = randomUrl;
+                this.currentSlideIndex = 0; // 0 means slide1 is visible, target slide2 next
+
+                // Initial Load
+                await this.loadImageToSlide(slide1);
+
+                // Start Rotation (e.g., every 60 seconds)
+                this.rotationInterval = setInterval(() => {
+                    this.rotateImage();
+                }, 60000);
+
             } else if (this.state.type === 'video') {
                 this.mediaBg.style.backgroundImage = 'none';
 
                 const query = this.state.query.toLowerCase();
 
-                // Stable Pexels URLs (Free to use)
-                let videoUrl = "https://videos.pexels.com/video-files/3129957/3129957-hd_1280_720_25fps.mp4"; // Default Space/Stars
+                // Stable Public CDN URLs (Pixabay/Mixkit) - Pexels sometimes 403s on hotlinking
+                // Default Space/Stars
+                let videoUrl = "https://cdn.pixabay.com/video/2020/06/18/42337-434079069_large.mp4";
 
                 if (query.includes('sea') || query.includes('ocean') || query.includes('beach')) {
-                    videoUrl = "https://videos.pexels.com/video-files/854209/854209-hd_1280_720_30fps.mp4"; // Waves
+                    videoUrl = "https://cdn.pixabay.com/video/2022/11/22/140111-774433990_large.mp4"; // Waves
                 } else if (query.includes('forest') || query.includes('nature') || query.includes('tree')) {
-                    videoUrl = "https://videos.pexels.com/video-files/1536322/1536322-hd_1920_1080_30fps.mp4"; // Forest
+                    videoUrl = "https://cdn.pixabay.com/video/2021/08/04/83896-583204961_large.mp4"; // Forest path
                 } else if (query.includes('city') || query.includes('urban') || query.includes('night')) {
-                    videoUrl = "https://videos.pexels.com/video-files/3129671/3129671-hd_1280_720_30fps.mp4"; // City Traffic
+                    videoUrl = "https://cdn.pixabay.com/video/2023/11/26/190847-888496464_large.mp4"; // City Blur
                 } else if (query.includes('cloud') || query.includes('sky')) {
-                    videoUrl = "https://videos.pexels.com/video-files/856972/856972-hd_1280_720_25fps.mp4"; // Clouds
+                    videoUrl = "https://cdn.pixabay.com/video/2024/02/09/200780-911689280_large.mp4"; // Sky Clouds
                 } else if (query.includes('rain')) {
-                    videoUrl = "https://videos.pexels.com/video-files/856279/856279-hd_1280_720_30fps.mp4"; // Rain
+                    videoUrl = "https://cdn.pixabay.com/video/2023/10/22/186175-877663236_large.mp4"; // Rain Window
                 }
 
                 const video = document.createElement('video');
+                video.className = 'active'; // Fade in effect needs active class now
                 video.autoplay = true;
                 video.muted = true;
                 video.loop = true;
@@ -313,6 +330,45 @@ document.addEventListener('DOMContentLoaded', async () => {
                     });
                 }
             }
+        }
+
+        async loadImageToSlide(slideElement) {
+            const timestamp = new Date().getTime();
+            // Using loremflickr with a lock for consistency per request but variety per timestamp
+            const randomUrl = `https://loremflickr.com/1920/1080/${encodeURIComponent(this.state.query)}?lock=${timestamp}`;
+
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    slideElement.style.backgroundImage = `url('${randomUrl}')`;
+                    resolve();
+                };
+                // Fallback in case of error
+                img.onerror = () => {
+                    console.error("Failed to load image");
+                    resolve(); // Resolve anyway to not break the chain
+                };
+                img.src = randomUrl;
+            });
+        }
+
+        async rotateImage() {
+            const slides = this.mediaBg.querySelectorAll('.bg-slide');
+            if (slides.length < 2) return;
+
+            const current = slides[this.currentSlideIndex];
+            const nextIndex = (this.currentSlideIndex + 1) % slides.length;
+            const next = slides[nextIndex];
+
+            // Load new image into 'next' (hidden) slide
+            await this.loadImageToSlide(next);
+
+            // Swap opacity
+            next.classList.add('active');
+            current.classList.remove('active');
+
+            // Update index
+            this.currentSlideIndex = nextIndex;
         }
     }
 
