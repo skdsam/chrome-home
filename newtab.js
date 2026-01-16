@@ -210,12 +210,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     this.state.interval = val;
                     this.saveAndApply();
 
-                    // Restart rotation immediately with new speed if we are in image mode
-                    if (this.state.type === 'image') {
+                    // Restart rotation immediately with new speed if we are in image or gradient mode
+                    if (this.state.type === 'image' || this.state.type === 'gradient') {
                         this.stopRotation();
                         const intervalMs = this.state.interval * 1000;
                         this.rotationInterval = setInterval(() => {
-                            this.rotateImage();
+                            if (this.state.type === 'image') this.rotateImage();
+                            if (this.state.type === 'gradient') this.loadRandomGradient();
                         }, intervalMs);
                     }
                 });
@@ -227,12 +228,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (this.state.type === 'weather') {
                 this.bgQueryGroup.classList.add('hidden');
             } else if (this.state.type === 'gradient') {
-                this.bgQueryGroup.classList.remove('hidden');
-                this.bgQueryLabel.textContent = 'Gradient Name (e.g. Sunset, Ocean, Neon)';
-                // Hide interval for gradients as they are CSS animations
+                this.bgQueryGroup.classList.add('hidden'); // Hide query for random gradients
                 if (this.bgIntervalInput) {
-                    this.bgIntervalInput.style.display = 'none';
-                    this.bgIntervalInput.previousElementSibling.style.display = 'none';
+                    this.bgIntervalInput.style.display = 'block'; // Show interval!
+                    this.bgIntervalInput.previousElementSibling.style.display = 'block';
                 }
             } else {
                 this.bgQueryGroup.classList.remove('hidden');
@@ -264,6 +263,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                 this.bgOverlay.style.background = 'rgba(0,0,0,0.1)';
                 this.stopRotation();
                 this.mediaBg.innerHTML = ''; // Clean up media
+            } else if (this.state.type === 'gradient') {
+                this.mediaBg.classList.remove('hidden');
+                this.weatherBlobs.classList.add('hidden');
+                this.bgOverlay.style.background = 'rgba(0,0,0,0.1)'; // Lighter overlay for gradients
+
+                this.stopRotation();
+
+                // Initial Load
+                this.loadRandomGradient();
+
+                const intervalMs = (this.state.interval || 60) * 1000;
+                this.rotationInterval = setInterval(() => {
+                    this.loadRandomGradient();
+                }, intervalMs);
             } else {
                 this.mediaBg.classList.remove('hidden');
                 this.weatherBlobs.classList.add('hidden');
@@ -304,38 +317,37 @@ document.addEventListener('DOMContentLoaded', async () => {
                 this.rotationInterval = setInterval(() => {
                     this.rotateImage();
                 }, intervalMs);
-
-            } else if (this.state.type === 'gradient') {
-                // Predefined Mesh Gradients
-                const gradients = {
-                    'Sunset': 'linear-gradient(45deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%)',
-                    'Ocean': 'linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%)',
-                    'Neon': 'linear-gradient(to right, #0f2027, #203a43, #2c5364)',
-                    'Playful': 'linear-gradient(to right, #8360c3, #2ebf91)',
-                    'Warm': 'linear-gradient(to right, #f77062, #fe5196)',
-                    'Aurora': 'linear-gradient(to right, #00c6ff, #0072ff)',
-                    'Candy': 'linear-gradient(to right, #ffecd2 0%, #fcb69f 100%)',
-                    'Deep': 'linear-gradient(to top, #30cfd0 0%, #330867 100%)'
-                };
-
-                // Fuzzy match or default
-                let gradientVal = gradients['Aurora']; // Default
-                const query = this.state.query.trim();
-
-                // Case-insensitive check
-                const match = Object.keys(gradients).find(key => key.toLowerCase() === query.toLowerCase());
-                if (match) {
-                    gradientVal = gradients[match];
-                }
-
-                const gradDiv = document.createElement('div');
-                gradDiv.className = 'gradient-bg';
-                gradDiv.style.background = gradientVal;
-                // Add size again for animation to work on specific gradients if needed
-                gradDiv.style.backgroundSize = '400% 400%';
-
-                this.mediaBg.appendChild(gradDiv);
             }
+        }
+
+        loadRandomGradient() {
+            // Predefined Mesh Gradients
+            const gradients = [
+                'linear-gradient(45deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%)', // Sunset
+                'linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%)', // Ocean
+                'linear-gradient(to right, #0f2027, #203a43, #2c5364)', // Neon
+                'linear-gradient(to right, #8360c3, #2ebf91)', // Playful
+                'linear-gradient(to right, #f77062, #fe5196)', // Warm
+                'linear-gradient(to right, #00c6ff, #0072ff)', // Aurora
+                'linear-gradient(to right, #ffecd2 0%, #fcb69f 100%)', // Candy
+                'linear-gradient(to top, #30cfd0 0%, #330867 100%)', // Deep
+                'linear-gradient(to right, #4facfe 0%, #00f2fe 100%)', // Malibu
+                'linear-gradient(to right, #43e97b 0%, #38f9d7 100%)', // Emerald
+                'linear-gradient(to right, #fa709a 0%, #fee140 100%)', // Fruit
+                'linear-gradient(to top, #c471f5 0%, #fa71cd 100%)' // Magic
+            ];
+
+            const randomGradient = gradients[Math.floor(Math.random() * gradients.length)];
+
+            // Clear current
+            this.mediaBg.innerHTML = '';
+
+            const gradDiv = document.createElement('div');
+            gradDiv.className = 'gradient-bg';
+            gradDiv.style.background = randomGradient;
+            gradDiv.style.backgroundSize = '400% 400%';
+
+            this.mediaBg.appendChild(gradDiv);
         }
 
         async loadImageToSlide(slideElement) {
