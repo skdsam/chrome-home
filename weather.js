@@ -89,7 +89,7 @@ class WeatherManager {
         return await res.json();
     }
 
-    applyWeather(data, locationName, lat, lon) {
+    async applyWeather(data, locationName, lat, lon) {
         const current = data.current;
         const code = current.weather_code;
         const isDay = current.is_day === 1;
@@ -100,8 +100,14 @@ class WeatherManager {
         const iconEl = document.getElementById('weather-icon');
         const tempEl = document.getElementById('weather-temp');
 
+        // Check background config
+        const bgStored = await window.storageManager.get('bgConfig');
+        const bgType = (bgStored.bgConfig && bgStored.bgConfig.type) || 'weather';
+
         // Reset
-        container.className = 'background-container';
+        if (bgType === 'weather') {
+            container.className = 'background-container';
+        }
         effects.innerHTML = '';
 
         let baseState = 'clear';
@@ -137,7 +143,9 @@ class WeatherManager {
         const timeSuffix = isDay ? '-day' : '-night';
         const finalState = `weather-${baseState}${timeSuffix}`;
 
-        container.classList.add(finalState);
+        if (bgType === 'weather') {
+            container.classList.add(finalState);
+        }
         iconEl.textContent = icon;
 
         // Display: "City, 20°C" or just "20°C" if city fails

@@ -18,11 +18,16 @@
 <body>
     <div class="background-container" id="bg-container">
         <!-- Blobs for color (will change based on weather) -->
-        <div class="blob blob-1"></div>
-        <div class="blob blob-2"></div>
-        <div class="blob blob-3"></div>
+        <div id="weather-blobs" class="weather-blobs">
+            <div class="blob blob-1"></div>
+            <div class="blob blob-2"></div>
+            <div class="blob blob-3"></div>
+        </div>
+        <!-- Media Backgrounds -->
+        <div id="media-bg" class="media-bg hidden"></div>
         <!-- Overlay for Rain/Snow/Clouds -->
         <div id="weather-effects" class="weather-overlay"></div>
+        <div id="bg-overlay" class="bg-overlay"></div>
     </div>
 
     <!-- Header Controls (Top Right) -->
@@ -334,6 +339,20 @@
                         <input type="checkbox" id="google-sync-toggle">
                         <span class="slider round"></span>
                     </label>
+                </div>
+                <hr style="border-color: rgba(255,255,255,0.1); margin: 20px 0;">
+                <div class="settings-group">
+                    <label for="bg-type-select">Background Type</label>
+                    <select id="bg-type-select" class="football-select" style="width: 100%; margin-top: 5px;">
+                        <option value="weather">Dynamic Weather</option>
+                        <option value="image">Unsplash Image</option>
+                        <option value="video">Cinematic Video</option>
+                    </select>
+                </div>
+                <div id="bg-query-group" class="settings-group hidden">
+                    <label for="bg-query-input" id="bg-query-label">Search Query</label>
+                    <input type="text" id="bg-query-input" placeholder="e.g. Nature, Space, Minimal"
+                        style="width: 100%; margin-top: 5px;">
                 </div>
                 <hr style="border-color: rgba(255,255,255,0.1); margin: 20px 0;">
                 <div class="settings-group">

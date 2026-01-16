@@ -149,6 +149,131 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Init Weather
     weatherManager.init();
 
+    // --- Background Customization Logic ---
+    class BackgroundManager {
+        constructor() {
+            this.bgTypeSelect = document.getElementById('bg-type-select');
+            this.bgQueryGroup = document.getElementById('bg-query-group');
+            this.bgQueryLabel = document.getElementById('bg-query-label');
+            this.bgQueryInput = document.getElementById('bg-query-input');
+            this.mediaBg = document.getElementById('media-bg');
+            this.weatherBlobs = document.getElementById('weather-blobs');
+            this.bgOverlay = document.getElementById('bg-overlay');
+
+            this.state = {
+                type: 'weather',
+                query: 'Nature'
+            };
+        }
+
+        async init() {
+            const stored = await window.storageManager.get('bgConfig');
+            if (stored.bgConfig) {
+                this.state = {
+                    ...this.state,
+                    ...stored.bgConfig
+                };
+            }
+
+            this.applyState();
+            this.setupListeners();
+        }
+
+        setupListeners() {
+            if (this.bgTypeSelect) {
+                this.bgTypeSelect.addEventListener('change', () => {
+                    this.state.type = this.bgTypeSelect.value;
+                    this.updateQueryVisibility();
+                    this.saveAndApply();
+                    // If switching back to weather, trigger weather update to restore blobs/state
+                    if (this.state.type === 'weather') {
+                        weatherManager.init();
+                    }
+                });
+            }
+
+            if (this.bgQueryInput) {
+                this.bgQueryInput.addEventListener('change', () => {
+                    this.state.query = this.bgQueryInput.value.trim() || 'Nature';
+                    this.saveAndApply();
+                });
+            }
+        }
+
+        updateQueryVisibility() {
+            if (!this.bgQueryGroup) return;
+            if (this.state.type === 'weather') {
+                this.bgQueryGroup.classList.add('hidden');
+            } else {
+                this.bgQueryGroup.classList.remove('hidden');
+                this.bgQueryLabel.textContent = this.state.type === 'image' ? 'Image Topic' : 'Video Topic';
+            }
+        }
+
+        async saveAndApply() {
+            await window.storageManager.set({
+                bgConfig: this.state
+            });
+            this.applyState();
+        }
+
+        applyState() {
+            if (this.bgTypeSelect) this.bgTypeSelect.value = this.state.type;
+            if (this.bgQueryInput) this.bgQueryInput.value = this.state.query;
+            this.updateQueryVisibility();
+
+            if (this.state.type === 'weather') {
+                this.mediaBg.classList.add('hidden');
+                this.weatherBlobs.classList.remove('hidden');
+                this.bgOverlay.style.background = 'rgba(0,0,0,0.1)';
+                this.mediaBg.innerHTML = ''; // Clean up media
+            } else {
+                this.mediaBg.classList.remove('hidden');
+                this.weatherBlobs.classList.add('hidden');
+                this.bgOverlay.style.background = 'rgba(0,0,0,0.3)';
+                this.loadMedia();
+            }
+        }
+
+        async loadMedia() {
+            this.mediaBg.innerHTML = '';
+            if (this.state.type === 'image') {
+                const url = `https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1920&q=80&q=${encodeURIComponent(this.state.query)}`;
+                // Better: Use a random image from a collection based on query
+                const randomUrl = `https://loremflickr.com/1920/1080/${encodeURIComponent(this.state.query)}`;
+                this.mediaBg.style.backgroundImage = `url('${randomUrl}')`;
+            } else if (this.state.type === 'video') {
+                const query = this.state.query.toLowerCase();
+                let videoUrl = "https://assets.mixkit.co/videos/preview/mixkit-stars-in-the-night-sky-slow-motion-from-below-34444-large.mp4"; // Default
+
+                if (query.includes('sea') || query.includes('ocean')) {
+                    videoUrl = "https://assets.mixkit.co/videos/preview/mixkit-waves-coming-to-the-shore-seen-from-above-34441-large.mp4";
+                } else if (query.includes('forest') || query.includes('nature')) {
+                    videoUrl = "https://assets.mixkit.co/videos/preview/mixkit-forest-stream-in-the-sunlight-2530-large.mp4";
+                } else if (query.includes('city') || query.includes('urban')) {
+                    videoUrl = "https://assets.mixkit.co/videos/preview/mixkit-aerial-view-of-city-traffic-at-night-11-large.mp4";
+                } else if (query.includes('rain')) {
+                    videoUrl = "https://assets.mixkit.co/videos/preview/mixkit-rain-drops-on-a-window-pane-1411-large.mp4";
+                }
+
+                this.mediaBg.style.backgroundImage = 'none';
+                const video = document.createElement('video');
+                video.autoplay = true;
+                video.muted = true;
+                video.loop = true;
+                video.playsinline = true;
+                const source = document.createElement('source');
+                source.src = videoUrl;
+                source.type = 'video/mp4';
+                video.appendChild(source);
+                this.mediaBg.appendChild(video);
+            }
+        }
+    }
+
+    const bgManager = new BackgroundManager();
+    bgManager.init();
+
     let editingId = null;
 
     // Load Shortcuts
