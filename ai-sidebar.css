@@ -1,67 +1,96 @@
-/* AI Sidebar */
+/* AI Sidebar Container */
 .ai-sidebar {
     position: fixed;
     top: 50%;
-    transform: translateY(-50%); /* Centered vertically initially, handled specifically by modifiers below */
-    width: 80px;
-    height: auto;
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 12px;
+    transform: translateY(-50%); 
     z-index: 1000;
-    transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1), opacity 0.3s ease;
+    transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
     display: flex;
-    flex-direction: column;
     align-items: center;
-    padding: 15px 0;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
-.ai-sidebar.hidden {
-    opacity: 0; 
-    pointer-events: none;
-}
-
-/* Positioning */
-.ai-sidebar.right {
-    right: 20px;
-    transform: translateY(-50%) translateX(0); /* Visible state */
-}
-
-/* Slide out logic - maybe we just keep it visible as a dock? 
-   The user said "slide in panel". Let's assume it's always docked on the side 
-   but can be toggled via settings. Or maybe it collapses?
-   Let's stick to a clean docked bar for now that is always there if enabled.
-*/
-
-.ai-sidebar-handle {
-    display: none; /* Not needed if it's a permanent dock */
-}
-
+/* The Panel itself (initially hidden off-screen) */
 .ai-sidebar-content {
+    background: rgba(20, 20, 20, 0.7); /* Darker for contrast */
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 15px 10px;
     display: flex;
     flex-direction: column;
+    gap: 15px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    min-width: 70px;
     align-items: center;
-    width: 100%;
 }
 
-.ai-sidebar-content h3 {
-    font-size: 0.75rem;
-    text-transform: uppercase;
+/* The "AI" Handle Tab */
+.ai-sidebar-handle {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    padding: 12px 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: bold;
     letter-spacing: 1px;
-    color: rgba(255, 255, 255, 0.6);
-    margin-bottom: 15px;
     writing-mode: vertical-rl;
     text-orientation: mixed;
     transform: rotate(180deg);
+    border-radius: 8px 0 0 8px; /* Rounded on outside edge for Right side */
+    box-shadow: -4px 0 10px rgba(0,0,0,0.1);
+    transition: background 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+.ai-sidebar-handle:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* RIGHT Position Logic */
+.ai-sidebar.right {
+    right: 0;
+    /* Move content off-screen to the right, leaving handle visible */
+    transform: translateY(-50%) translateX(calc(100% - 35px)); 
+}
+
+.ai-sidebar.right.open {
+    transform: translateY(-50%) translateX(-10px); /* Slide in with slight margin */
+}
+
+/* Handle on Left of content when sidebar is on Right */
+.ai-sidebar.right .ai-sidebar-handle {
+    order: -1; /* Handle appears visually before content */
+    border-radius: 8px 0 0 8px; 
+}
+
+
+/* LEFT Position Logic */
+.ai-sidebar.left {
+    left: 0;
+    /* Move content off-screen to the left */
+    transform: translateY(-50%) translateX(calc(-100% + 35px));
+}
+
+.ai-sidebar.left.open {
+    transform: translateY(-50%) translateX(10px);
+}
+
+/* Handle on Right of content when sidebar is on Left */
+.ai-sidebar.left .ai-sidebar-handle {
+    order: 1; 
+    border-radius: 0 8px 8px 0;
 }
 
 .ai-dock {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 15px;
 }
 
 .ai-icon {

@@ -13,13 +13,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     class AISidebarManager {
         constructor() {
             this.sidebar = document.getElementById('ai-sidebar');
+            this.handle = document.querySelector('.ai-sidebar-handle');
             this.toggleSwitch = document.getElementById('ai-sidebar-toggle');
             this.positionSelect = document.getElementById('ai-sidebar-position');
-            this.icons = document.querySelectorAll('.ai-icon');
+            this.dock = document.querySelector('.ai-dock');
+
+            // Default Tools with actual URLs
+            this.defaultTools = [{
+                    name: 'Gemini',
+                    url: 'https://gemini.google.com/app',
+                    iconColor: '#4facfe'
+                },
+                {
+                    name: 'ChatGPT',
+                    url: 'https://chatgpt.com/',
+                    iconColor: '#10a37f'
+                },
+                {
+                    name: 'Claude',
+                    url: 'https://claude.ai/chats',
+                    iconColor: '#d97757'
+                },
+                {
+                    name: 'Perplexity',
+                    url: 'https://www.perplexity.ai/',
+                    iconColor: '#2ebf91'
+                }
+            ];
 
             this.state = {
                 enabled: true,
-                position: 'right'
+                position: 'right',
+                isOpen: false
             };
         }
 
@@ -32,11 +57,67 @@ document.addEventListener('DOMContentLoaded', async () => {
                 };
             }
 
+            this.renderDock();
             this.applyState();
             this.setupListeners();
         }
 
+        renderDock() {
+            // Re-render icons using Google's S2 Favicon service for high-quality real icons
+            this.dock.innerHTML = '';
+
+            this.defaultTools.forEach(tool => {
+                const iconDiv = document.createElement('div');
+                iconDiv.className = 'ai-icon';
+                iconDiv.setAttribute('title', tool.name);
+                iconDiv.setAttribute('data-url', tool.url);
+
+                // Use Google S2 for Favicon (better than duckduckgo for some sites)
+                // Size 64 for retina sharpness
+                const domain = new URL(tool.url).hostname;
+                const iconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+
+                const img = document.createElement('img');
+                img.src = iconUrl;
+                img.alt = tool.name;
+                img.style.width = '24px';
+                img.style.height = '24px';
+                img.style.borderRadius = '4px';
+
+                iconDiv.appendChild(img);
+
+                // Click to Open
+                iconDiv.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent closing sidebar immediately?
+                    this.openPopup(tool.url, tool.name);
+                });
+
+                this.dock.appendChild(iconDiv);
+            });
+        }
+
         setupListeners() {
+            // Handle Toggle (Slide In/Out)
+            if (this.handle) {
+                this.handle.addEventListener('click', () => {
+                    this.state.isOpen = !this.state.isOpen;
+                    this.applyState();
+                });
+
+                // Optional: Hover open
+                this.sidebar.addEventListener('mouseenter', () => {
+                    // this.state.isOpen = true; // Maybe too aggressive? Let's stick to click for now as requested
+                });
+            }
+
+            // Close when clicking outside?
+            document.addEventListener('click', (e) => {
+                if (this.state.isOpen && !this.sidebar.contains(e.target)) {
+                    this.state.isOpen = false;
+                    this.applyState();
+                }
+            });
+
             // Settings Toggle
             if (this.toggleSwitch) {
                 this.toggleSwitch.checked = this.state.enabled;
@@ -51,20 +132,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 this.positionSelect.value = this.state.position;
                 this.positionSelect.addEventListener('change', () => {
                     this.state.position = this.positionSelect.value;
+                    this.state.isOpen = false; // Close on position change
                     this.saveAndApply();
                 });
             }
 
-            // Icon Clicks - Open Popup
-            this.icons.forEach(icon => {
-                icon.addEventListener('click', () => {
-                    const url = icon.getAttribute('data-url');
-                    const title = icon.getAttribute('title');
-                    this.openPopup(url, title);
-                });
-            });
-
-            // Sync Listener
+            // Sync Listener logic is shared in main listener
             chrome.storage.onChanged.addListener((changes) => {
                 if (changes.aiSidebarConfig) {
                     this.state = changes.aiSidebarConfig.newValue;
@@ -77,8 +150,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         async saveAndApply() {
+            // Don't save isOpen state, always closed on reload
+            const toSave = {
+                ...this.state,
+                isOpen: false
+            };
             await window.storageManager.set({
-                aiSidebarConfig: this.state
+                aiSidebarConfig: toSave
             });
             this.applyState();
         }
@@ -86,32 +164,41 @@ document.addEventListener('DOMContentLoaded', async () => {
         applyState() {
             if (!this.sidebar) return;
 
-            // 1. Visibility
+            // 1. Visibility (Enabled/Disabled)
             if (this.state.enabled) {
                 this.sidebar.classList.remove('hidden');
             } else {
                 this.sidebar.classList.add('hidden');
             }
 
-            // 2. Position
+            // 2. Position styling
             this.sidebar.classList.remove('left', 'right');
             this.sidebar.classList.add(this.state.position);
+
+            // 3. Open/Close State (Slide animation)
+            if (this.state.isOpen) {
+                this.sidebar.classList.add('open');
+                this.handle.querySelector('span').textContent = 'chevron_right'; // Change icon?
+                // Rotate icon based on side
+                if (this.state.position === 'right') {
+                    this.handle.style.transform = 'rotate(0deg)'; // Arrow points right
+                } else {
+                    this.handle.style.transform = 'rotate(180deg)';
+                }
+            } else {
+                this.sidebar.classList.remove('open');
+                // Reset Icon
+                this.handle.querySelector('span').textContent = 'smart_toy';
+                this.handle.style.transform = ''; // Clear inline transform
+            }
         }
 
         openPopup(url, title) {
-            // Dimensions for a "Mobile" feel
             const width = 450;
             const height = 700;
             const left = (window.screen.width / 2) - (width / 2);
             const top = (window.screen.height / 2) - (height / 2);
-
-            // Unique window name per service allows multiple to be open? 
-            // Or one shared sidebar window? User request implies "slide in panel", 
-            // so maybe one shared window acting as the "panel" is better?
-            // "slide in panel from the left or right... present in the slide in panel"
-            // Let's use specific names so you can have Claude AND Gemini open if you want.
             const windowName = `AI_Popup_${title}`;
-
             window.open(url, windowName, `width=${width},height=${height},top=${top},left=${left},resizable=yes,scrollbars=yes,status=no,toolbar=no,menubar=no,location=no`);
         }
     }
