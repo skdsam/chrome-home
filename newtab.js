@@ -13,6 +13,89 @@ document.addEventListener('DOMContentLoaded', async () => {
     // CLEANUP: Remove deprecated Gemini state if present
     window.storageManager.remove(['geminiState']);
 
+    // --- Search Engine Switcher Logic ---
+    const searchEngineSelector = document.getElementById('search-engine-selector');
+    const searchEngineIcon = document.getElementById('search-engine-icon');
+    const searchEngineDropdown = document.getElementById('search-engine-dropdown');
+    const searchForm = document.getElementById('search-form');
+    const searchInput = document.getElementById('search-input');
+    const searchEngineOptions = document.querySelectorAll('.search-engine-option');
+
+    // Default search engine config
+    let currentSearchEngine = {
+        engine: 'google',
+        url: 'https://www.google.com/search',
+        param: 'q',
+        name: 'Google'
+    };
+
+    // Load saved search engine
+    window.storageManager.get(['searchEngine']).then((result) => {
+        if (result.searchEngine) {
+            currentSearchEngine = result.searchEngine;
+            applySearchEngine();
+        }
+    });
+
+    function applySearchEngine() {
+        // Update icon
+        searchEngineIcon.src = `https://www.google.com/s2/favicons?domain=${currentSearchEngine.engine === 'duckduckgo' ? 'duckduckgo.com' : currentSearchEngine.engine + '.com'}&sz=32`;
+
+        // Update form action
+        searchForm.action = currentSearchEngine.url;
+
+        // Update input name (for Yahoo, param is 'p')
+        searchInput.name = currentSearchEngine.param;
+
+        // Update placeholder
+        searchInput.placeholder = `Search ${currentSearchEngine.name}...`;
+
+        // Update active state in dropdown
+        searchEngineOptions.forEach(opt => {
+            opt.classList.remove('active');
+            if (opt.dataset.engine === currentSearchEngine.engine) {
+                opt.classList.add('active');
+            }
+        });
+    }
+
+    // Toggle dropdown
+    if (searchEngineSelector) {
+        searchEngineSelector.addEventListener('click', (e) => {
+            e.stopPropagation();
+            searchEngineDropdown.classList.toggle('hidden');
+        });
+    }
+
+    // Select engine
+    searchEngineOptions.forEach(option => {
+        option.addEventListener('click', (e) => {
+            e.stopPropagation();
+
+            currentSearchEngine = {
+                engine: option.dataset.engine,
+                url: option.dataset.url,
+                param: option.dataset.param,
+                name: option.querySelector('span').textContent
+            };
+
+            applySearchEngine();
+            searchEngineDropdown.classList.add('hidden');
+
+            // Save preference
+            window.storageManager.set({
+                searchEngine: currentSearchEngine
+            });
+        });
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', () => {
+        if (searchEngineDropdown && !searchEngineDropdown.classList.contains('hidden')) {
+            searchEngineDropdown.classList.add('hidden');
+        }
+    });
+
     // --- Settings & Data Logic ---
     const settingsBtn = document.getElementById('settings-btn');
     const settingsModalOverlay = document.getElementById('settings-modal-overlay');
@@ -518,8 +601,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Search Logic ---
     const searchOptions = document.querySelectorAll('.search-options button');
-    const searchForm = document.getElementById('search-form');
-    const searchInput = searchForm.querySelector('input');
     let searchType = 'web';
 
     searchOptions.forEach(btn => {
@@ -527,7 +608,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             searchOptions.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             searchType = btn.dataset.type;
-            searchInput.placeholder = `Search Google ${btn.textContent}...`;
+            searchInput.placeholder = `Search ${currentSearchEngine.name} ${btn.textContent}...`;
         });
     });
 
@@ -536,13 +617,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         const query = searchInput.value;
         if (!query) return;
 
-        let url = 'https://www.google.com/search?q=' + encodeURIComponent(query);
-        if (searchType === 'isch') {
-            url += '&tbm=isch';
-        } else if (searchType === 'vid') {
-            url += '&tbm=vid';
-        } else if (searchType === 'nws') {
-            url += '&tbm=nws';
+        // Use current search engine URL
+        let url = currentSearchEngine.url + '?' + currentSearchEngine.param + '=' + encodeURIComponent(query);
+
+        // Google-specific type params (Images, Videos, News) - only apply to Google
+        if (currentSearchEngine.engine === 'google') {
+            if (searchType === 'isch') {
+                url += '&tbm=isch';
+            } else if (searchType === 'vid') {
+                url += '&tbm=vid';
+            } else if (searchType === 'nws') {
+                url += '&tbm=nws';
+            }
         }
 
         window.location.href = url;

@@ -190,8 +190,44 @@
             <!-- Logo Removed -->
             <form id="search-form" action="https://www.google.com/search" method="GET">
                 <div class="search-bar">
-                    <span class="search-google-icon">G</span>
-                    <input type="text" name="q" placeholder="Search Google..." autocomplete="off">
+                    <div id="search-engine-selector" class="search-engine-selector">
+                        <img id="search-engine-icon" src="https://www.google.com/s2/favicons?domain=google.com&sz=32"
+                            alt="G" title="Click to change search engine">
+                        <div id="search-engine-dropdown" class="search-engine-dropdown hidden">
+                            <div class="search-engine-option" data-engine="google"
+                                data-url="https://www.google.com/search" data-param="q">
+                                <img src="https://www.google.com/s2/favicons?domain=google.com&sz=32" alt="Google">
+                                <span>Google</span>
+                            </div>
+                            <div class="search-engine-option" data-engine="duckduckgo"
+                                data-url="https://duckduckgo.com/" data-param="q">
+                                <img src="https://www.google.com/s2/favicons?domain=duckduckgo.com&sz=32"
+                                    alt="DuckDuckGo">
+                                <span>DuckDuckGo</span>
+                            </div>
+                            <div class="search-engine-option" data-engine="bing" data-url="https://www.bing.com/search"
+                                data-param="q">
+                                <img src="https://www.google.com/s2/favicons?domain=bing.com&sz=32" alt="Bing">
+                                <span>Bing</span>
+                            </div>
+                            <div class="search-engine-option" data-engine="yahoo"
+                                data-url="https://search.yahoo.com/search" data-param="p">
+                                <img src="https://www.google.com/s2/favicons?domain=yahoo.com&sz=32" alt="Yahoo">
+                                <span>Yahoo</span>
+                            </div>
+                            <div class="search-engine-option" data-engine="brave"
+                                data-url="https://search.brave.com/search" data-param="q">
+                                <img src="https://www.google.com/s2/favicons?domain=brave.com&sz=32" alt="Brave">
+                                <span>Brave</span>
+                            </div>
+                            <div class="search-engine-option" data-engine="ecosia"
+                                data-url="https://www.ecosia.org/search" data-param="q">
+                                <img src="https://www.google.com/s2/favicons?domain=ecosia.org&sz=32" alt="Ecosia">
+                                <span>Ecosia</span>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="text" id="search-input" name="q" placeholder="Search Google..." autocomplete="off">
                     <button id="voice-search-btn" type="button" title="Search by voice">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
