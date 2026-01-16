@@ -226,9 +226,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!this.bgQueryGroup) return;
             if (this.state.type === 'weather') {
                 this.bgQueryGroup.classList.add('hidden');
+            } else if (this.state.type === 'gradient') {
+                this.bgQueryGroup.classList.remove('hidden');
+                this.bgQueryLabel.textContent = 'Gradient Name (e.g. Sunset, Ocean, Neon)';
+                // Hide interval for gradients as they are CSS animations
+                if (this.bgIntervalInput) {
+                    this.bgIntervalInput.style.display = 'none';
+                    this.bgIntervalInput.previousElementSibling.style.display = 'none';
+                }
             } else {
                 this.bgQueryGroup.classList.remove('hidden');
                 this.bgQueryLabel.textContent = 'Image Topic';
+                if (this.bgIntervalInput) {
+                    this.bgIntervalInput.style.display = 'block';
+                    this.bgIntervalInput.previousElementSibling.style.display = 'block';
+                }
             }
         }
 
@@ -292,6 +304,37 @@ document.addEventListener('DOMContentLoaded', async () => {
                 this.rotationInterval = setInterval(() => {
                     this.rotateImage();
                 }, intervalMs);
+
+            } else if (this.state.type === 'gradient') {
+                // Predefined Mesh Gradients
+                const gradients = {
+                    'Sunset': 'linear-gradient(45deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%)',
+                    'Ocean': 'linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%)',
+                    'Neon': 'linear-gradient(to right, #0f2027, #203a43, #2c5364)',
+                    'Playful': 'linear-gradient(to right, #8360c3, #2ebf91)',
+                    'Warm': 'linear-gradient(to right, #f77062, #fe5196)',
+                    'Aurora': 'linear-gradient(to right, #00c6ff, #0072ff)',
+                    'Candy': 'linear-gradient(to right, #ffecd2 0%, #fcb69f 100%)',
+                    'Deep': 'linear-gradient(to top, #30cfd0 0%, #330867 100%)'
+                };
+
+                // Fuzzy match or default
+                let gradientVal = gradients['Aurora']; // Default
+                const query = this.state.query.trim();
+
+                // Case-insensitive check
+                const match = Object.keys(gradients).find(key => key.toLowerCase() === query.toLowerCase());
+                if (match) {
+                    gradientVal = gradients[match];
+                }
+
+                const gradDiv = document.createElement('div');
+                gradDiv.className = 'gradient-bg';
+                gradDiv.style.background = gradientVal;
+                // Add size again for animation to work on specific gradients if needed
+                gradDiv.style.backgroundSize = '400% 400%';
+
+                this.mediaBg.appendChild(gradDiv);
             }
         }
 

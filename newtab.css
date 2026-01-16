@@ -71,6 +71,28 @@ body {
     transition: opacity 1.5s ease-in-out;
 }
 
+@media (max-aspect-ratio: 16/9) {
+    .youtube-bg {
+        width: 177.78vh;
+    }
+}
+
+/* Gradient Mesh Background */
+.gradient-bg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: -5;
+    background-size: 400% 400%;
+    animation: gradient-flow 15s ease infinite;
+}
+
+@keyframes gradient-flow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
 .media-bg .bg-slide.active {
     opacity: 1;
 }
