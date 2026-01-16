@@ -274,62 +274,42 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 const query = this.state.query.toLowerCase();
 
-                // Stable Public CDN URLs (Pixabay/Mixkit) - Pexels sometimes 403s on hotlinking
-                // Default Space/Stars
-                let videoUrl = "https://cdn.pixabay.com/video/2020/06/18/42337-434079069_large.mp4";
+                // YouTube ID Mapping (High Quality Loops)
+                // Default: Star Field (Relaxing)
+                let videoId = "ShZpYgP5qdc";
 
-                if (query.includes('sea') || query.includes('ocean') || query.includes('beach')) {
-                    videoUrl = "https://cdn.pixabay.com/video/2022/11/22/140111-774433990_large.mp4"; // Waves
+                if (query.includes('sea') || query.includes('ocean')) {
+                    videoId = "bn9F19Hi1Lk"; // Ocean Waves
+                } else if (query.includes('beach')) {
+                    videoId = "gnLuL4e951I"; // Tropical Beach
                 } else if (query.includes('forest') || query.includes('nature') || query.includes('tree')) {
-                    videoUrl = "https://cdn.pixabay.com/video/2021/08/04/83896-583204961_large.mp4"; // Forest path
-                } else if (query.includes('city') || query.includes('urban') || query.includes('night')) {
-                    videoUrl = "https://cdn.pixabay.com/video/2023/11/26/190847-888496464_large.mp4"; // City Blur
+                    videoId = "hld4uaO1MDE"; // Forest Nature
+                } else if (query.includes('city') || query.includes('urban')) {
+                    videoId = "eZe4Q_58UTU"; // Cyberpunk City
+                } else if (query.includes('night')) {
+                    videoId = "yJg-Y5byMMw"; // Night City
                 } else if (query.includes('cloud') || query.includes('sky')) {
-                    videoUrl = "https://cdn.pixabay.com/video/2024/02/09/200780-911689280_large.mp4"; // Sky Clouds
+                    videoId = "7HMbdN5Fp9I"; // Sky Clouds
                 } else if (query.includes('rain')) {
-                    // Using verified Cloudinary fallback for rain as Pixabay link rot is frequent
-                    videoUrl = "https://res.cloudinary.com/demo/video/upload/v1687441865/samples/rain-window.mp4";
+                    videoId = "q76bMs-NwRk"; // Rain Window
+                } else if (query.includes('lofi') || query.includes('study')) {
+                    videoId = "jfKfPfyJRdk"; // Lofi Girl
                 }
 
-                const video = document.createElement('video');
-                video.className = 'active'; // Fade in effect needs active class now
-                video.autoplay = true;
-                video.muted = true;
-                video.loop = true;
-                video.playsInline = true;
-                video.setAttribute('playsinline', '');
+                // Construct Embed URL with Autoplay, Mute, Loop, Controls Hidden
+                const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&disablekb=1&fs=0&loop=1&playlist=${videoId}&iv_load_policy=3&modestbranding=1`;
 
-                // Styling
-                video.style.position = "absolute";
-                video.style.top = "0";
-                video.style.left = "0";
-                video.style.width = "100%";
-                video.style.height = "100%";
-                video.style.objectFit = "cover";
+                const iframe = document.createElement('iframe');
+                iframe.className = 'youtube-bg';
+                iframe.src = embedUrl;
+                iframe.allow = "autoplay; encrypted-media";
 
-                const source = document.createElement('source');
-                source.src = videoUrl;
-                source.type = 'video/mp4';
+                // Load event to trigger fade-in
+                iframe.onload = () => {
+                    iframe.classList.add('active');
+                };
 
-                video.appendChild(source);
-                this.mediaBg.appendChild(video);
-
-                // Error handling
-                video.addEventListener('error', (e) => {
-                    console.error("Video load error, falling back to image:", e);
-                    video.remove();
-                    this.state.type = 'image'; // Fallback
-                    this.loadMedia();
-                });
-
-                // Force play
-                const playPromise = video.play();
-                if (playPromise !== undefined) {
-                    playPromise.catch(e => {
-                        // Auto-play was prevented or interrupted
-                        console.log("Video auto-play prevented/interrupted:", e);
-                    });
-                }
+                this.mediaBg.appendChild(iframe);
             }
         }
 
