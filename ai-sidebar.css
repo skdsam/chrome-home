@@ -168,10 +168,3 @@
 .ai-icon:hover::after {
     opacity: 1;
 }
-
-/* Left Position Modifier */
-.ai-sidebar.left {
-    left: 20px;
-    right: auto;
-    transform: translateY(-50%);
-}
