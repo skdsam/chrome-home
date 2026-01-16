@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- Search Engine Switcher Logic ---
     const searchEngineSelector = document.getElementById('search-engine-selector');
     const searchEngineIcon = document.getElementById('search-engine-icon');
+    const searchEngineG = document.getElementById('search-engine-g');
     const searchEngineDropdown = document.getElementById('search-engine-dropdown');
     const searchForm = document.getElementById('search-form');
     const searchInput = document.getElementById('search-input');
@@ -38,8 +39,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     function applySearchEngine() {
-        // Update icon
-        searchEngineIcon.src = `https://www.google.com/s2/favicons?domain=${currentSearchEngine.engine === 'duckduckgo' ? 'duckduckgo.com' : currentSearchEngine.engine + '.com'}&sz=32`;
+        // Toggle between animated G (for Google) and favicon (for others)
+        if (currentSearchEngine.engine === 'google') {
+            searchEngineG.classList.remove('hidden');
+            searchEngineIcon.classList.add('hidden');
+        } else {
+            searchEngineG.classList.add('hidden');
+            searchEngineIcon.classList.remove('hidden');
+            // Update favicon
+            const domain = currentSearchEngine.engine === 'duckduckgo' ? 'duckduckgo.com' : currentSearchEngine.engine + '.com';
+            searchEngineIcon.src = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+        }
 
         // Update form action
         searchForm.action = currentSearchEngine.url;

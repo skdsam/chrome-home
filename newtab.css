@@ -426,11 +426,9 @@ body {
 }
 
 .search-google-icon {
-    position: absolute;
-    left: 20px;
-    font-family: 'Product Sans', 'Roboto', sans-serif; /* Google-ish font */
+    font-family: 'Product Sans', 'Roboto', sans-serif;
     font-weight: 700;
-    font-size: 1.8rem; /* Scaled down from 5rem */
+    font-size: 1.6rem;
     
     /* Animation Properties */
     background: linear-gradient(45deg, #4285F4, #DB4437, #F4B400, #0F9D58, #4285F4);
@@ -442,8 +440,13 @@ body {
     animation: google-colors 10s ease infinite;
     
     user-select: none;
-    cursor: default;
+    cursor: pointer;
     line-height: 1;
+    transition: transform 0.2s ease;
+}
+
+.search-google-icon:hover {
+    transform: scale(1.1);
 }
 
 /* Search Engine Selector */
