@@ -7,6 +7,7 @@
     <title>Chrome Home</title>
     <link rel="stylesheet" href="newtab.css">
     <link rel="stylesheet" href="ai-sidebar.css">
+    <link rel="stylesheet" href="tabs.css">
     <!-- Google Fonts for premium look -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -329,78 +330,108 @@
     <div id="settings-modal-overlay" class="modal-overlay hidden">
         <div class="modal">
             <h2 id="settings-modal-title">Settings</h2>
-            <div class="modal-content">
-                <div class="settings-group">
-                    <label for="recent-sites-limit">Recent Sites Limit</label>
-                    <input type="number" id="recent-sites-limit" min="1" max="20" value="5">
-                </div>
-                <div class="settings-group" style="display: flex; justify-content: space-between; align-items: center;">
-                    <label for="google-sync-toggle" style="margin-bottom: 0;">Google Sync (Cloud)</label>
-                    <label class="switch">
-                        <input type="checkbox" id="google-sync-toggle">
-                        <span class="slider round"></span>
-                    </label>
-                </div>
-                <hr style="border-color: rgba(255,255,255,0.1); margin: 20px 0;">
-                <div class="settings-group">
-                    <label for="bg-type-select">Background Type</label>
-                    <select id="bg-type-select" class="football-select" style="width: 100%; margin-top: 5px;">
-                        <option value="weather">Dynamic Weather</option>
-                        <option value="image">Unsplash Image</option>
-                        <option value="gradient">Gradient Pattern</option>
-                    </select>
-                </div>
-                <div id="bg-query-group" class="settings-group hidden">
-                    <label for="bg-query-input" id="bg-query-label">Search Query</label>
-                    <input type="text" id="bg-query-input" placeholder="e.g. Nature, Space, Minimal"
-                        style="width: 100%; margin-top: 5px;">
 
-                    <label for="bg-interval-input" style="display: block; margin-top: 10px;">Rotation Interval
-                        (Seconds)</label>
-                    <input type="number" id="bg-interval-input" min="10" max="3600" value="60"
-                        style="width: 100%; margin-top: 5px;">
-                </div>
-                <hr style="border-color: rgba(255,255,255,0.1); margin: 20px 0;">
-                <div class="settings-group">
-                    <label>Data Management</label>
-                    <div style="display: flex; gap: 10px; margin-top: 10px;">
-                        <button id="export-data-btn" class="btn-primary">Export Data</button>
-                        <button id="import-data-btn" class="btn-secondary">Import Data</button>
-                        <input type="file" id="import-file-input" accept=".json" hidden>
+            <!-- Tabs Header -->
+            <div class="settings-tabs">
+                <div class="tab-item active" data-tab="tab-general">General</div>
+                <div class="tab-item" data-tab="tab-background">Background</div>
+                <div class="tab-item" data-tab="tab-sidebar">Sidebar</div>
+                <div class="tab-item" data-tab="tab-data">Data</div>
+            </div>
+
+            <div class="modal-content" style="padding-top: 15px;">
+
+                <!-- Tab: General -->
+                <div id="tab-general" class="tab-content active">
+                    <div class="settings-group">
+                        <label for="recent-sites-limit">Recent Sites Limit</label>
+                        <input type="number" id="recent-sites-limit" min="1" max="20" value="5">
                     </div>
-                </div>
-                <hr style="border-color: rgba(255,255,255,0.1); margin: 20px 0;">
-                <div class="settings-group">
-                    <label>AI Sidebar</label>
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <label for="ai-sidebar-toggle" style="margin-bottom: 0px; font-size: 0.9em;">Enable
-                            Sidebar</label>
+                    <div class="settings-group"
+                        style="display: flex; justify-content: space-between; align-items: center;">
+                        <label for="google-sync-toggle" style="margin-bottom: 0;">Google Sync (Cloud)</label>
                         <label class="switch">
-                            <input type="checkbox" id="ai-sidebar-toggle" checked>
+                            <input type="checkbox" id="google-sync-toggle">
                             <span class="slider round"></span>
                         </label>
                     </div>
-                    <label for="ai-sidebar-position" style="font-size: 0.9em;">Position</label>
-                    <select id="ai-sidebar-position" class="football-select" style="width: 100%; margin-top: 5px;">
-                        <option value="right">Right</option>
-                        <option value="left">Left</option>
-                    </select>
+                </div>
 
-                    <label style="margin-top: 15px; font-size: 0.9em;">Manage AI Agents</label>
-                    <div id="ai-agents-list"
-                        style="margin-bottom: 10px; max-height: 150px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 5px;">
-                        <!-- Agents injected here -->
+                <!-- Tab: Background -->
+                <div id="tab-background" class="tab-content">
+                    <div class="settings-group">
+                        <label for="bg-type-select">Background Type</label>
+                        <select id="bg-type-select" class="football-select" style="width: 100%; margin-top: 5px;">
+                            <option value="weather">Dynamic Weather</option>
+                            <option value="image">Unsplash Image</option>
+                            <option value="gradient">Gradient Pattern</option>
+                        </select>
                     </div>
+                    <!-- Note: The ID bg-query-group is used in JS to toggle visibility. 
+                         We keep it here. The logic in newtab.js might need to check if we are in this tab, 
+                         but visibility toggling usually works on the element itself independently. 
+                    -->
+                    <div id="bg-query-group" class="settings-group hidden">
+                        <label for="bg-query-input" id="bg-query-label">Search Query</label>
+                        <input type="text" id="bg-query-input" placeholder="e.g. Nature, Space, Minimal"
+                            style="width: 100%; margin-top: 5px;">
 
-                    <div style="display: flex; gap: 5px;">
-                        <input type="text" id="new-agent-name" placeholder="Name" class="football-select"
-                            style="width: 30%;">
-                        <input type="text" id="new-agent-url" placeholder="URL (https://...)" class="football-select"
-                            style="width: 50%;">
-                        <button id="add-agent-btn" class="btn-primary" style="width: 20%; padding: 5px;">Add</button>
+                        <label for="bg-interval-input" style="display: block; margin-top: 10px;">Rotation Interval
+                            (Seconds)</label>
+                        <input type="number" id="bg-interval-input" min="10" max="3600" value="60"
+                            style="width: 100%; margin-top: 5px;">
                     </div>
                 </div>
+
+                <!-- Tab: AI Sidebar -->
+                <div id="tab-sidebar" class="tab-content">
+                    <div class="settings-group">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <label for="ai-sidebar-toggle" style="margin-bottom: 0px; font-size: 0.9em;">Enable
+                                Sidebar</label>
+                            <label class="switch">
+                                <input type="checkbox" id="ai-sidebar-toggle" checked>
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        <label for="ai-sidebar-position" style="font-size: 0.9em;">Position</label>
+                        <select id="ai-sidebar-position" class="football-select" style="width: 100%; margin-top: 5px;">
+                            <option value="right">Right</option>
+                            <option value="left">Left</option>
+                        </select>
+
+                        <label style="margin-top: 15px; font-size: 0.9em;">Manage AI Agents</label>
+                        <div id="ai-agents-list"
+                            style="margin-bottom: 10px; max-height: 150px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 5px;">
+                            <!-- Agents injected here -->
+                        </div>
+
+                        <div style="display: flex; gap: 5px;">
+                            <input type="text" id="new-agent-name" placeholder="Name" class="football-select"
+                                style="width: 30%;">
+                            <input type="text" id="new-agent-url" placeholder="URL" class="football-select"
+                                style="width: 50%;">
+                            <button id="add-agent-btn" class="btn-primary"
+                                style="width: 20%; padding: 5px;">Add</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Data -->
+                <div id="tab-data" class="tab-content">
+                    <div class="settings-group">
+                        <label>Data Management</label>
+                        <p style="font-size: 0.8em; color: #888; margin-bottom: 10px;">Export your settings to a JSON
+                            file or import a previous backup.</p>
+                        <div style="display: flex; gap: 10px;">
+                            <button id="export-data-btn" class="btn-primary" style="flex:1;">Export Data</button>
+                            <button id="import-data-btn" class="btn-secondary" style="flex:1;">Import Data</button>
+                            <input type="file" id="import-file-input" accept=".json" hidden>
+                        </div>
+                    </div>
+                </div>
+
             </div>
             <div class="modal-actions">
                 <button type="button" id="close-settings-modal" class="btn-secondary">Close</button>

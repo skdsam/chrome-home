@@ -1,0 +1,51 @@
+/* Tabs Header */
+.settings-tabs {
+    display: flex;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin: -10px -30px 10px -30px; /* Use negative margins to span full width */
+    padding: 0 30px;
+}
+
+.tab-item {
+    padding: 12px 15px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #888;
+    cursor: pointer;
+    position: relative;
+    transition: color 0.3s;
+}
+
+.tab-item:hover {
+    color: #ccc;
+}
+
+.tab-item.active {
+    color: var(--accent-color);
+}
+
+.tab-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: var(--accent-color);
+    box-shadow: 0 -2px 5px var(--accent-color);
+}
+
+/* Tab Content */
+.tab-content {
+    display: none; /* Hidden by default */
+    animation: fadeIn 0.3s ease;
+}
+
+.tab-content.active {
+    display: block; /* Show if active */
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}

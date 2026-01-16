@@ -359,6 +359,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // --- Tab Switching Logic ---
+    const tabs = document.querySelectorAll('.tab-item');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            // Remove active from all
+            tabs.forEach(t => t.classList.remove('active'));
+            tabContents.forEach(c => c.classList.remove('active'));
+
+            // Set active
+            tab.classList.add('active');
+            const targetId = tab.getAttribute('data-tab');
+            const targetContent = document.getElementById(targetId);
+            if (targetContent) {
+                targetContent.classList.add('active');
+            }
+        });
+    });
+
     if (closeSettingsModalBtn) {
         closeSettingsModalBtn.addEventListener('click', () => {
             settingsModalOverlay.classList.add('hidden');
