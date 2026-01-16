@@ -237,36 +237,81 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         async loadMedia() {
             this.mediaBg.innerHTML = '';
-            if (this.state.type === 'image') {
-                const url = `https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1920&q=80&q=${encodeURIComponent(this.state.query)}`;
-                // Better: Use a random image from a collection based on query
-                const randomUrl = `https://loremflickr.com/1920/1080/${encodeURIComponent(this.state.query)}`;
-                this.mediaBg.style.backgroundImage = `url('${randomUrl}')`;
-            } else if (this.state.type === 'video') {
-                const query = this.state.query.toLowerCase();
-                let videoUrl = "https://assets.mixkit.co/videos/preview/mixkit-stars-in-the-night-sky-slow-motion-from-below-34444-large.mp4"; // Default
 
-                if (query.includes('sea') || query.includes('ocean')) {
-                    videoUrl = "https://assets.mixkit.co/videos/preview/mixkit-waves-coming-to-the-shore-seen-from-above-34441-large.mp4";
-                } else if (query.includes('forest') || query.includes('nature')) {
-                    videoUrl = "https://assets.mixkit.co/videos/preview/mixkit-forest-stream-in-the-sunlight-2530-large.mp4";
-                } else if (query.includes('city') || query.includes('urban')) {
-                    videoUrl = "https://assets.mixkit.co/videos/preview/mixkit-aerial-view-of-city-traffic-at-night-11-large.mp4";
+            if (this.state.type === 'image') {
+                // Remove any previous video styles
+                this.mediaBg.style.backgroundSize = 'cover';
+                this.mediaBg.style.backgroundPosition = 'center';
+
+                // Add timestamp to force rotation/refresh so it changes every time or on reload
+                // Using loremflickr for better query matching
+                const timestamp = new Date().getTime();
+                const randomUrl = `https://loremflickr.com/1920/1080/${encodeURIComponent(this.state.query)}?lock=${timestamp}`;
+
+                // Preload image to avoid flash of black
+                const img = new Image();
+                img.onload = () => {
+                    this.mediaBg.style.backgroundImage = `url('${randomUrl}')`;
+                };
+                img.src = randomUrl;
+            } else if (this.state.type === 'video') {
+                this.mediaBg.style.backgroundImage = 'none';
+
+                const query = this.state.query.toLowerCase();
+
+                // Stable Pexels URLs (Free to use)
+                let videoUrl = "https://videos.pexels.com/video-files/3129957/3129957-hd_1280_720_25fps.mp4"; // Default Space/Stars
+
+                if (query.includes('sea') || query.includes('ocean') || query.includes('beach')) {
+                    videoUrl = "https://videos.pexels.com/video-files/854209/854209-hd_1280_720_30fps.mp4"; // Waves
+                } else if (query.includes('forest') || query.includes('nature') || query.includes('tree')) {
+                    videoUrl = "https://videos.pexels.com/video-files/1536322/1536322-hd_1920_1080_30fps.mp4"; // Forest
+                } else if (query.includes('city') || query.includes('urban') || query.includes('night')) {
+                    videoUrl = "https://videos.pexels.com/video-files/3129671/3129671-hd_1280_720_30fps.mp4"; // City Traffic
+                } else if (query.includes('cloud') || query.includes('sky')) {
+                    videoUrl = "https://videos.pexels.com/video-files/856972/856972-hd_1280_720_25fps.mp4"; // Clouds
                 } else if (query.includes('rain')) {
-                    videoUrl = "https://assets.mixkit.co/videos/preview/mixkit-rain-drops-on-a-window-pane-1411-large.mp4";
+                    videoUrl = "https://videos.pexels.com/video-files/856279/856279-hd_1280_720_30fps.mp4"; // Rain
                 }
 
-                this.mediaBg.style.backgroundImage = 'none';
                 const video = document.createElement('video');
                 video.autoplay = true;
                 video.muted = true;
                 video.loop = true;
-                video.playsinline = true;
+                video.playsInline = true;
+                video.setAttribute('playsinline', '');
+
+                // Styling
+                video.style.position = "absolute";
+                video.style.top = "0";
+                video.style.left = "0";
+                video.style.width = "100%";
+                video.style.height = "100%";
+                video.style.objectFit = "cover";
+
                 const source = document.createElement('source');
                 source.src = videoUrl;
                 source.type = 'video/mp4';
+
                 video.appendChild(source);
                 this.mediaBg.appendChild(video);
+
+                // Error handling
+                video.addEventListener('error', (e) => {
+                    console.error("Video load error, falling back to image:", e);
+                    video.remove();
+                    this.state.type = 'image'; // Fallback
+                    this.loadMedia();
+                });
+
+                // Force play
+                const playPromise = video.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(e => {
+                        // Auto-play was prevented or interrupted
+                        console.log("Video auto-play prevented/interrupted:", e);
+                    });
+                }
             }
         }
     }
