@@ -332,20 +332,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         loadRandomGradient() {
-            // Predefined Mesh Gradients
+            // Predefined Mesh Gradients - Expanded for diversity
             const gradients = [
                 'linear-gradient(45deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%)', // Sunset
                 'linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%)', // Ocean
-                'linear-gradient(to right, #0f2027, #203a43, #2c5364)', // Neon
-                'linear-gradient(to right, #8360c3, #2ebf91)', // Playful
-                'linear-gradient(to right, #f77062, #fe5196)', // Warm
-                'linear-gradient(to right, #00c6ff, #0072ff)', // Aurora
-                'linear-gradient(to right, #ffecd2 0%, #fcb69f 100%)', // Candy
-                'linear-gradient(to top, #30cfd0 0%, #330867 100%)', // Deep
-                'linear-gradient(to right, #4facfe 0%, #00f2fe 100%)', // Malibu
-                'linear-gradient(to right, #43e97b 0%, #38f9d7 100%)', // Emerald
-                'linear-gradient(to right, #fa709a 0%, #fee140 100%)', // Fruit
-                'linear-gradient(to top, #c471f5 0%, #fa71cd 100%)' // Magic
+                'linear-gradient(to right, #0f2027, #203a43, #2c5364)', // Neon (Dark)
+                'linear-gradient(to right, #8360c3, #2ebf91)', // Playful (Purple/Green)
+                'linear-gradient(to right, #f77062, #fe5196)', // Warm (Red/Pink)
+                'linear-gradient(to right, #00c6ff, #0072ff)', // Aurora (Electric Blue)
+                'linear-gradient(to right, #ffecd2 0%, #fcb69f 100%)', // Candy (Pastel)
+                'linear-gradient(to top, #30cfd0 0%, #330867 100%)', // Deep (Teal/Purple)
+                'linear-gradient(to right, #4facfe 0%, #00f2fe 100%)', // Malibu (Bright Cyan)
+                'linear-gradient(to right, #43e97b 0%, #38f9d7 100%)', // Emerald (Mint/Green)
+                'linear-gradient(to right, #fa709a 0%, #fee140 100%)', // Fruit (Pink/Yellow)
+                'linear-gradient(to top, #c471f5 0%, #fa71cd 100%)', // Magic (Orchid)
+                'linear-gradient(to right, #243949 0%, #517fa4 100%)', // Steel (Sober Blue)
+                'linear-gradient(to right, #868f96 0%, #596164 100%)', // Monochrome (Grey)
+                'linear-gradient(to right, #ed213a, #93291e)', // Fire (Intense Red)
+                'linear-gradient(to right, #00b09b, #96c93d)', // Forest (Fresh Green)
+                'linear-gradient(to right, #141e30, #243b55)' // Midnight (Very Dark)
             ];
 
             const randomGradient = gradients[Math.floor(Math.random() * gradients.length)];
