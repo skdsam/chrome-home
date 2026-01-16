@@ -397,6 +397,8 @@ body {
     max-width: 600px;
     margin-bottom: 60px;
     text-align: center;
+    position: relative;
+    z-index: 20; /* Ensure search bar sits above grid */
 }
 
 /* Logo text removed, but keeping keyframes */
