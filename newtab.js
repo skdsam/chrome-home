@@ -206,9 +206,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (this.bgIntervalInput) {
                 this.bgIntervalInput.addEventListener('change', () => {
                     let val = parseInt(this.bgIntervalInput.value);
-                    if (val < 10) val = 10; // Minimum 10s
+                    if (isNaN(val) || val < 10) val = 10; // Minimum 10s safety
                     this.state.interval = val;
                     this.saveAndApply();
+
+                    // Restart rotation immediately with new speed if we are in image mode
+                    if (this.state.type === 'image') {
+                        this.stopRotation();
+                        const intervalMs = this.state.interval * 1000;
+                        this.rotationInterval = setInterval(() => {
+                            this.rotateImage();
+                        }, intervalMs);
+                    }
                 });
             }
         }
