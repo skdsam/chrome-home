@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const topSitesList = document.getElementById('top-sites-list'); // Moved here to fix init error
 
     // CLEANUP: Remove deprecated Gemini state if present
-    chrome.storage.local.remove(['geminiState']);
+    window.storageManager.remove(['geminiState']);
 
     // --- Settings & Data Logic ---
     const settingsBtn = document.getElementById('settings-btn');
@@ -25,14 +25,50 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Default Limit Global
     window.recentSitesLimit = 5;
 
-    // Load Limit
-    chrome.storage.local.get(['recentSitesLimit'], (result) => {
-        if (result.recentSitesLimit) {
-            window.recentSitesLimit = parseInt(result.recentSitesLimit);
+    const googleSyncToggle = document.getElementById('google-sync-toggle');
+
+    // Load Initial settings
+    chrome.storage.local.get(['googleSyncEnabled'], async (result) => {
+        if (googleSyncToggle) {
+            googleSyncToggle.checked = !!result.googleSyncEnabled;
+        }
+
+        // Now load other settings using storageManager
+        const settings = await window.storageManager.get(['recentSitesLimit']);
+        if (settings.recentSitesLimit) {
+            window.recentSitesLimit = parseInt(settings.recentSitesLimit);
             recentSitesLimitInput.value = window.recentSitesLimit;
             renderTopSites(); // Re-render with loaded limit
         }
     });
+
+    if (googleSyncToggle) {
+        googleSyncToggle.addEventListener('change', async () => {
+            const enabled = googleSyncToggle.checked;
+
+            if (enabled) {
+                if (confirm('Enable Google Sync? This will move your current local settings to your Google account.')) {
+                    await window.storageManager.migrate(true);
+                    await chrome.storage.local.set({
+                        googleSyncEnabled: true
+                    });
+                    alert('Google Sync enabled! Data migrated.');
+                    location.reload();
+                } else {
+                    googleSyncToggle.checked = false;
+                }
+            } else {
+                if (confirm('Disable Google Sync? Your settings will remain in the cloud but new changes will only be saved locally.')) {
+                    await chrome.storage.local.set({
+                        googleSyncEnabled: false
+                    });
+                    location.reload();
+                } else {
+                    googleSyncToggle.checked = true;
+                }
+            }
+        });
+    }
 
     if (settingsBtn) {
         settingsBtn.addEventListener('click', () => {
@@ -58,7 +94,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (val < 1) val = 1;
         if (val > 50) val = 50; // Sane max
         window.recentSitesLimit = val;
-        chrome.storage.local.set({
+        window.storageManager.set({
             recentSitesLimit: val
         });
         renderTopSites(); // Refresh list immediately
@@ -66,7 +102,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Export Data
     exportDataBtn.addEventListener('click', () => {
-        chrome.storage.local.get(null, (items) => {
+        window.storageManager.get(null).then((items) => {
             const dataStr = JSON.stringify(items, null, 2);
             const blob = new Blob([dataStr], {
                 type: "application/json"
@@ -96,8 +132,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const data = JSON.parse(event.target.result);
                 // Validation could go here
-                chrome.storage.local.clear(() => {
-                    chrome.storage.local.set(data, () => {
+                window.storageManager.clear(() => {
+                    window.storageManager.set(data).then(() => {
                         alert('Settings imported successfully! Reloading...');
                         location.reload();
                     });
@@ -348,21 +384,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             url: url.startsWith('http') ? url : `https://${url}`,
             title: name
         });
-        await chrome.storage.local.set({
+        await window.storageManager.set({
             mySites
         });
         renderMySites();
     });
 
     async function getMySites() {
-        const res = await chrome.storage.local.get('mySites');
+        const res = await window.storageManager.get('mySites');
         return res.mySites || [];
     }
 
     async function removeMySite(id) {
         let sites = await getMySites();
         sites = sites.filter(s => s.id !== id);
-        await chrome.storage.local.set({
+        await window.storageManager.set({
             mySites: sites
         });
         renderMySites();
@@ -476,7 +512,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Helper Functions ---
     async function getShortcuts() {
-        const result = await chrome.storage.local.get('shortcuts');
+        const result = await window.storageManager.get('shortcuts');
         return result.shortcuts || [];
     }
 
@@ -489,7 +525,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             icon: `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=64`
         };
         shortcuts.push(newShortcut);
-        await chrome.storage.local.set({
+        await window.storageManager.set({
             shortcuts
         });
     }
@@ -501,7 +537,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             shortcuts[index].url = url;
             shortcuts[index].title = title;
             shortcuts[index].icon = `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=64`;
-            await chrome.storage.local.set({
+            await window.storageManager.set({
                 shortcuts
             });
         }
@@ -511,7 +547,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         let shortcuts = await getShortcuts();
         const removed = shortcuts.find(s => s.id === id);
         shortcuts = shortcuts.filter(s => s.id !== id);
-        await chrome.storage.local.set({
+        await window.storageManager.set({
             shortcuts
         });
 
@@ -644,7 +680,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     // Load State
-    chrome.storage.local.get(['spotifyState'], (result) => {
+    window.storageManager.get(['spotifyState']).then((result) => {
         if (result.spotifyState) {
             spotifyState = {
                 ...spotifyState,
@@ -655,7 +691,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     function saveSpotifyState() {
-        chrome.storage.local.set({
+        window.storageManager.set({
             spotifyState
         });
     }
@@ -861,7 +897,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let footballInterval = null;
 
     // Load State
-    chrome.storage.local.get(['footballState'], (result) => {
+    window.storageManager.get(['footballState']).then((result) => {
         if (result.footballState) {
             footballState = {
                 ...footballState,
@@ -872,7 +908,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     function saveFootballState() {
-        chrome.storage.local.set({
+        window.storageManager.set({
             footballState
         });
     }
@@ -1135,7 +1171,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     // Load State
-    chrome.storage.local.get(['todoState'], (result) => {
+    window.storageManager.get(['todoState']).then((result) => {
         if (result.todoState) {
             todoState = {
                 ...todoState,
@@ -1147,7 +1183,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     function saveTodoState() {
-        chrome.storage.local.set({
+        window.storageManager.set({
             todoState
         });
     }
@@ -1347,7 +1383,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     // Load State
-    chrome.storage.local.get(['notesState'], (result) => {
+    window.storageManager.get(['notesState']).then((result) => {
         if (result.notesState) {
             notesState = {
                 ...notesState,
@@ -1359,7 +1395,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     function saveNotesState() {
-        chrome.storage.local.set({
+        window.storageManager.set({
             notesState
         });
     }

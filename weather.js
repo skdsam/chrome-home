@@ -6,7 +6,7 @@ class WeatherManager {
     async init() {
         try {
             // Check for manual location override first
-            const storage = await chrome.storage.local.get('manualLocation');
+            const storage = await window.storageManager.get('manualLocation');
 
             let lat, lon, name;
 
@@ -35,7 +35,7 @@ class WeatherManager {
     async setManualLocation(cityQuery) {
         if (!cityQuery) {
             // Clear manual location to revert to auto
-            await chrome.storage.local.remove('manualLocation');
+            await window.storageManager.remove('manualLocation');
             this.init();
             return;
         }
@@ -51,7 +51,7 @@ class WeatherManager {
                     lat: result.latitude,
                     lon: result.longitude
                 };
-                await chrome.storage.local.set({
+                await window.storageManager.set({
                     manualLocation: locationData
                 });
                 this.init(); // Reload

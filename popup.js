@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('save-btn').addEventListener('click', async () => {
         if (!tab) return;
 
-        const storage = await chrome.storage.local.get('shortcuts');
+        const storage = await window.storageManager.get('shortcuts');
         const shortcuts = storage.shortcuts || [];
 
         const newShortcut = {
@@ -23,12 +23,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         shortcuts.push(newShortcut);
-        await chrome.storage.local.set({
+        await window.storageManager.set({
             shortcuts
         });
 
         // Add notification
-        const notifications = (await chrome.storage.local.get('notifications')).notifications || [];
+        const notifications = (await window.storageManager.get('notifications')).notifications || [];
         notifications.unshift({
             id: Date.now(),
             title: 'Shortcut Added',
@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             timestamp: new Date().toISOString()
         });
         if (notifications.length > 50) notifications.pop();
-        await chrome.storage.local.set({
+        await window.storageManager.set({
             notifications
         });
 

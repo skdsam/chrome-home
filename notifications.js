@@ -15,7 +15,7 @@ class NotificationManager {
         // Limit to 50
         if (notifications.length > 50) notifications.pop();
 
-        await chrome.storage.local.set({
+        await window.storageManager.set({
             [this.storageKey]: notifications
         });
         this.updateBadge(notifications.length);
@@ -23,12 +23,12 @@ class NotificationManager {
     }
 
     async getAll() {
-        const result = await chrome.storage.local.get(this.storageKey);
+        const result = await window.storageManager.get(this.storageKey);
         return result[this.storageKey] || [];
     }
 
     async clearAll() {
-        await chrome.storage.local.set({
+        await window.storageManager.set({
             [this.storageKey]: []
         });
         this.updateBadge(0);
