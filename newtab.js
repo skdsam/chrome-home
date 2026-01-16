@@ -443,6 +443,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     const bgManager = new BackgroundManager();
     bgManager.init();
 
+    // --- Real-time Sync Listener ---
+    // Listens for changes from other devices (if Google Sync is enabled)
+    chrome.storage.onChanged.addListener((changes, namespace) => {
+        // Background Config Sync
+        if (changes.bgConfig) {
+            console.log('Background config updated remotely:', changes.bgConfig.newValue);
+            // Update state and re-apply without reloading
+            bgManager.state = changes.bgConfig.newValue;
+            bgManager.applyState();
+        }
+
+        // Recent Sites Limit Sync
+        if (changes.recentSitesLimit) {
+            window.recentSitesLimit = parseInt(changes.recentSitesLimit.newValue);
+            if (recentSitesLimitInput) recentSitesLimitInput.value = window.recentSitesLimit;
+            renderTopSites();
+        }
+
+        // We can add other sync handlers here (shortcuts, etc.)
+    });
+
     let editingId = null;
 
     // Load Shortcuts
