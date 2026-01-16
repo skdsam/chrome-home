@@ -287,7 +287,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } else if (query.includes('cloud') || query.includes('sky')) {
                     videoUrl = "https://cdn.pixabay.com/video/2024/02/09/200780-911689280_large.mp4"; // Sky Clouds
                 } else if (query.includes('rain')) {
-                    videoUrl = "https://cdn.pixabay.com/video/2023/10/22/186175-877663236_large.mp4"; // Rain Window
+                    // Using verified Cloudinary fallback for rain as Pixabay link rot is frequent
+                    videoUrl = "https://res.cloudinary.com/demo/video/upload/v1687441865/samples/rain-window.mp4";
                 }
 
                 const video = document.createElement('video');
