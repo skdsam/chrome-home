@@ -2302,7 +2302,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function applyTechNewsState() {
         if (!techNewsWidget) return;
-        techNewsState.isOpen ? techNewsWidget.classList.remove('hidden') : techNewsWidget.classList.add('hidden');
+        if (techNewsState.isOpen) {
+            techNewsWidget.classList.remove('hidden');
+            if (techNewsBtn) techNewsBtn.classList.add('active');
+        } else {
+            techNewsWidget.classList.add('hidden');
+            if (techNewsBtn) techNewsBtn.classList.remove('active');
+        }
         if (techNewsState.x !== null && techNewsState.y !== null) {
             techNewsWidget.style.left = techNewsState.x + 'px';
             techNewsWidget.style.top = techNewsState.y + 'px';
