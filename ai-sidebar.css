@@ -110,6 +110,51 @@
     left: 15px;
 }
 
+
+/* --- BOTTOM Position Logic --- */
+.ai-sidebar.bottom {
+    bottom: -75px; /* Hidden: Content off-screen below */
+    top: auto;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%); /* Center horizontally */
+}
+
+.ai-sidebar.bottom .ai-sidebar-content {
+    flex-direction: row; /* Horizontal layout */
+    width: auto;
+    min-width: auto;
+    padding: 10px 15px;
+    gap: 10px;
+}
+
+.ai-sidebar.bottom .ai-sidebar-content h3 {
+    display: none; /* Hide header in bottom mode for cleaner look */
+}
+
+.ai-sidebar.bottom .ai-dock {
+    flex-direction: row; /* Horizontal icons */
+    gap: 10px;
+}
+
+.ai-sidebar.bottom .ai-sidebar-handle {
+    /* Handle sticks out at the TOP */
+    top: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 35px;
+    writing-mode: horizontal-tb;
+    text-orientation: mixed;
+    border-radius: 8px 8px 0 0;
+    border-bottom: none;
+    box-shadow: 0 -4px 10px rgba(0,0,0,0.2);
+}
+
+.ai-sidebar.bottom.open {
+    bottom: 15px;
+}
+
 .ai-dock {
     display: flex;
     flex-direction: column;

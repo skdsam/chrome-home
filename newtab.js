@@ -266,7 +266,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             // 2. Position styling
-            this.sidebar.classList.remove('left', 'right');
+            this.sidebar.classList.remove('left', 'right', 'bottom');
             this.sidebar.classList.add(this.state.position);
 
             // 3. Open/Close styling
