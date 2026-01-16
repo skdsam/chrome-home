@@ -228,14 +228,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (this.state.type === 'weather') {
                 this.bgQueryGroup.classList.add('hidden');
             } else if (this.state.type === 'gradient') {
-                this.bgQueryGroup.classList.add('hidden'); // Hide query for random gradients
+                this.bgQueryGroup.classList.remove('hidden'); // Show group so we can show interval
+
+                // Hide Query Input parts
+                this.bgQueryLabel.style.display = 'none';
+                this.bgQueryInput.style.display = 'none';
+
+                // Show Interval parts
                 if (this.bgIntervalInput) {
-                    this.bgIntervalInput.style.display = 'block'; // Show interval!
+                    this.bgIntervalInput.style.display = 'block';
                     this.bgIntervalInput.previousElementSibling.style.display = 'block';
                 }
             } else {
                 this.bgQueryGroup.classList.remove('hidden');
+
+                // Show Query Input parts
+                this.bgQueryLabel.style.display = 'block';
+                this.bgQueryInput.style.display = 'block';
                 this.bgQueryLabel.textContent = 'Image Topic';
+
                 if (this.bgIntervalInput) {
                     this.bgIntervalInput.style.display = 'block';
                     this.bgIntervalInput.previousElementSibling.style.display = 'block';
