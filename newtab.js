@@ -296,8 +296,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     videoId = "jfKfPfyJRdk"; // Lofi Girl
                 }
 
-                // Construct Embed URL with Autoplay, Mute, Loop, Controls Hidden
-                const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&disablekb=1&fs=0&loop=1&playlist=${videoId}&iv_load_policy=3&modestbranding=1`;
+                // Construct Embed URL with Autoplay, Mute, Loop, Controls Hidden, and No Cookies
+                // using youtube-nocookie.com to minimize tracking errors and ad requests
+                const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&controls=0&disablekb=1&fs=0&loop=1&playlist=${videoId}&iv_load_policy=3&modestbranding=1&rel=0`;
 
                 const iframe = document.createElement('iframe');
                 iframe.className = 'youtube-bg';
