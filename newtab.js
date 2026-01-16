@@ -156,13 +156,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             this.bgQueryGroup = document.getElementById('bg-query-group');
             this.bgQueryLabel = document.getElementById('bg-query-label');
             this.bgQueryInput = document.getElementById('bg-query-input');
+            this.bgIntervalInput = document.getElementById('bg-interval-input');
             this.mediaBg = document.getElementById('media-bg');
             this.weatherBlobs = document.getElementById('weather-blobs');
             this.bgOverlay = document.getElementById('bg-overlay');
 
             this.state = {
                 type: 'weather',
-                query: 'Nature'
+                query: 'Nature',
+                interval: 60 // Default 60 seconds
             };
             this.rotationInterval = null;
             this.currentSlideIndex = 0;
@@ -200,6 +202,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                     this.saveAndApply();
                 });
             }
+
+            if (this.bgIntervalInput) {
+                this.bgIntervalInput.addEventListener('change', () => {
+                    let val = parseInt(this.bgIntervalInput.value);
+                    if (val < 10) val = 10; // Minimum 10s
+                    this.state.interval = val;
+                    this.saveAndApply();
+                });
+            }
         }
 
         updateQueryVisibility() {
@@ -222,6 +233,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         applyState() {
             if (this.bgTypeSelect) this.bgTypeSelect.value = this.state.type;
             if (this.bgQueryInput) this.bgQueryInput.value = this.state.query;
+            if (this.bgIntervalInput) this.bgIntervalInput.value = this.state.interval || 60;
+
             this.updateQueryVisibility();
 
             if (this.state.type === 'weather') {
@@ -264,10 +277,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Initial Load
                 await this.loadImageToSlide(slide1);
 
-                // Start Rotation (e.g., every 60 seconds)
+                // Start Rotation (use stored interval or default 60s)
+                const intervalMs = (this.state.interval || 60) * 1000;
+
                 this.rotationInterval = setInterval(() => {
                     this.rotateImage();
-                }, 60000);
+                }, intervalMs);
             }
         }
 
