@@ -332,36 +332,70 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         loadRandomGradient() {
-            // Predefined Mesh Gradients - Expanded for diversity
-            const gradients = [
-                'linear-gradient(45deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%)', // Sunset
-                'linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%)', // Ocean
-                'linear-gradient(to right, #0f2027, #203a43, #2c5364)', // Neon (Dark)
-                'linear-gradient(to right, #8360c3, #2ebf91)', // Playful (Purple/Green)
-                'linear-gradient(to right, #f77062, #fe5196)', // Warm (Red/Pink)
-                'linear-gradient(to right, #00c6ff, #0072ff)', // Aurora (Electric Blue)
-                'linear-gradient(to right, #ffecd2 0%, #fcb69f 100%)', // Candy (Pastel)
-                'linear-gradient(to top, #30cfd0 0%, #330867 100%)', // Deep (Teal/Purple)
-                'linear-gradient(to right, #4facfe 0%, #00f2fe 100%)', // Malibu (Bright Cyan)
-                'linear-gradient(to right, #43e97b 0%, #38f9d7 100%)', // Emerald (Mint/Green)
-                'linear-gradient(to right, #fa709a 0%, #fee140 100%)', // Fruit (Pink/Yellow)
-                'linear-gradient(to top, #c471f5 0%, #fa71cd 100%)', // Magic (Orchid)
-                'linear-gradient(to right, #243949 0%, #517fa4 100%)', // Steel (Sober Blue)
-                'linear-gradient(to right, #868f96 0%, #596164 100%)', // Monochrome (Grey)
-                'linear-gradient(to right, #ed213a, #93291e)', // Fire (Intense Red)
-                'linear-gradient(to right, #00b09b, #96c93d)', // Forest (Fresh Green)
-                'linear-gradient(to right, #141e30, #243b55)' // Midnight (Very Dark)
-            ];
+            // Generate a random, aesthetically pleasing gradient procedurally
+            // This ensures infinite variety like uigradients/cssgradient.io
 
-            const randomGradient = gradients[Math.floor(Math.random() * gradients.length)];
+            const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+            // 1. Pick a Angle (0-360)
+            const angle = randomInt(0, 360);
+
+            // 2. Decide Gradient Type (Linear vs Radial) - 80% Linear, 20% Radial
+            const isRadial = Math.random() > 0.8;
+
+            // 3. Generate Colors using HSL for harmony
+            // Base Hue
+            const baseHue = randomInt(0, 360);
+
+            // Harmony Strategy: Analogous, Complementary, or Split Complementary
+            const harmony = Math.random();
+            let secondaryHue, tertiaryHue;
+
+            if (harmony < 0.5) {
+                // Analogous (Nearby colors, smooth)
+                secondaryHue = (baseHue + randomInt(30, 60)) % 360;
+                tertiaryHue = (baseHue + randomInt(60, 90)) % 360;
+            } else if (harmony < 0.8) {
+                // Complementary (Opposite, bold)
+                secondaryHue = (baseHue + 180) % 360;
+                tertiaryHue = (baseHue + randomInt(150, 210)) % 360;
+            } else {
+                // Triadic (Vibrant)
+                secondaryHue = (baseHue + 120) % 360;
+                tertiaryHue = (baseHue + 240) % 360;
+            }
+
+            // Saturation & Lightness (Keep premium/vibrant)
+            const s = randomInt(60, 90) + '%';
+            const l = randomInt(40, 65) + '%';
+
+            const color1 = `hsl(${baseHue}, ${s}, ${l})`;
+            const color2 = `hsl(${secondaryHue}, ${s}, ${l})`;
+            const color3 = `hsl(${tertiaryHue}, ${s}, ${l})`;
+
+            // 4. Construct Gradient String
+            let gradientVal;
+            const stopType = Math.random();
+
+            if (isRadial) {
+                gradientVal = `radial-gradient(circle at ${randomInt(20,80)}% ${randomInt(20,80)}%, ${color1}, ${color2})`;
+            } else {
+                if (stopType < 0.6) {
+                    // 2-Stop Simple
+                    gradientVal = `linear-gradient(${angle}deg, ${color1}, ${color2})`;
+                } else {
+                    // 3-Stop Complex
+                    gradientVal = `linear-gradient(${angle}deg, ${color1}, ${color2}, ${color3})`;
+                }
+            }
 
             // Clear current
             this.mediaBg.innerHTML = '';
 
             const gradDiv = document.createElement('div');
             gradDiv.className = 'gradient-bg';
-            gradDiv.style.background = randomGradient;
-            gradDiv.style.backgroundSize = '400% 400%';
+            gradDiv.style.background = gradientVal;
+            gradDiv.style.backgroundSize = '200% 200%'; // Slightly less zoom for procedural to show off colors
 
             this.mediaBg.appendChild(gradDiv);
         }
