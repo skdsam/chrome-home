@@ -208,7 +208,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 this.bgQueryGroup.classList.add('hidden');
             } else {
                 this.bgQueryGroup.classList.remove('hidden');
-                this.bgQueryLabel.textContent = this.state.type === 'image' ? 'Image Topic' : 'Video Topic';
+                this.bgQueryLabel.textContent = 'Image Topic';
             }
         }
 
@@ -268,49 +268,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 this.rotationInterval = setInterval(() => {
                     this.rotateImage();
                 }, 60000);
-
-            } else if (this.state.type === 'video') {
-                this.mediaBg.style.backgroundImage = 'none';
-
-                const query = this.state.query.toLowerCase();
-
-                // YouTube ID Mapping (High Quality Loops)
-                // Default: Star Field (Relaxing)
-                let videoId = "ShZpYgP5qdc";
-
-                if (query.includes('sea') || query.includes('ocean')) {
-                    videoId = "bn9F19Hi1Lk"; // Ocean Waves
-                } else if (query.includes('beach')) {
-                    videoId = "gnLuL4e951I"; // Tropical Beach
-                } else if (query.includes('forest') || query.includes('nature') || query.includes('tree')) {
-                    videoId = "hld4uaO1MDE"; // Forest Nature
-                } else if (query.includes('city') || query.includes('urban')) {
-                    videoId = "eZe4Q_58UTU"; // Cyberpunk City
-                } else if (query.includes('night')) {
-                    videoId = "yJg-Y5byMMw"; // Night City
-                } else if (query.includes('cloud') || query.includes('sky')) {
-                    videoId = "7HMbdN5Fp9I"; // Sky Clouds
-                } else if (query.includes('rain')) {
-                    videoId = "q76bMs-NwRk"; // Rain Window
-                } else if (query.includes('lofi') || query.includes('study')) {
-                    videoId = "jfKfPfyJRdk"; // Lofi Girl
-                }
-
-                // Construct Embed URL with Autoplay, Mute, Loop, Controls Hidden, and No Cookies
-                // using youtube-nocookie.com to minimize tracking errors and ad requests
-                const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&controls=0&disablekb=1&fs=0&loop=1&playlist=${videoId}&iv_load_policy=3&modestbranding=1&rel=0`;
-
-                const iframe = document.createElement('iframe');
-                iframe.className = 'youtube-bg';
-                iframe.src = embedUrl;
-                iframe.allow = "autoplay; encrypted-media";
-
-                // Load event to trigger fade-in
-                iframe.onload = () => {
-                    iframe.classList.add('active');
-                };
-
-                this.mediaBg.appendChild(iframe);
             }
         }
 
