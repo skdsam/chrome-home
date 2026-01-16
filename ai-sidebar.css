@@ -73,9 +73,12 @@
 
 
 /* LEFT Position Logic */
+/* LEFT Position Logic */
 .ai-sidebar.left {
     left: 0;
-    /* Move content off-screen to the left */
+    /* Move content off-screen to the left, leaving handle visible.
+       Content is 100%, we want to move it -100% but leave the handle (approx 35px) visible.
+    */
     transform: translateY(-50%) translateX(calc(-100% + 35px));
 }
 
@@ -87,6 +90,11 @@
 .ai-sidebar.left .ai-sidebar-handle {
     order: 1; 
     border-radius: 0 8px 8px 0;
+    box-shadow: 4px 0 10px rgba(0,0,0,0.2); /* Flip shadow for left side */
+}
+
+.ai-sidebar.left .ai-sidebar-handle:hover {
+    box-shadow: 4px 0 15px rgba(255,255,255,0.1);
 }
 
 .ai-dock {
