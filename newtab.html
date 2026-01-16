@@ -386,6 +386,20 @@
                         <option value="right">Right</option>
                         <option value="left">Left</option>
                     </select>
+
+                    <label style="margin-top: 15px; font-size: 0.9em;">Manage AI Agents</label>
+                    <div id="ai-agents-list"
+                        style="margin-bottom: 10px; max-height: 150px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 5px;">
+                        <!-- Agents injected here -->
+                    </div>
+
+                    <div style="display: flex; gap: 5px;">
+                        <input type="text" id="new-agent-name" placeholder="Name" class="football-select"
+                            style="width: 30%;">
+                        <input type="text" id="new-agent-url" placeholder="URL (https://...)" class="football-select"
+                            style="width: 50%;">
+                        <button id="add-agent-btn" class="btn-primary" style="width: 20%; padding: 5px;">Add</button>
+                    </div>
                 </div>
             </div>
             <div class="modal-actions">
@@ -397,7 +411,7 @@
     <!-- AI Sidebar -->
     <div id="ai-sidebar" class="ai-sidebar hidden right">
         <div class="ai-sidebar-handle">
-            <span class="material-icons">smart_toy</span>
+            AI
         </div>
         <div class="ai-sidebar-content">
             <h3>AI Tools</h3>

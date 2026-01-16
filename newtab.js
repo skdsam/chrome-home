@@ -18,33 +18,48 @@ document.addEventListener('DOMContentLoaded', async () => {
             this.positionSelect = document.getElementById('ai-sidebar-position');
             this.dock = document.querySelector('.ai-dock');
 
-            // Default Tools with actual URLs
+            // Settings UI Elements
+            this.agentsListContainer = document.getElementById('ai-agents-list');
+            this.addAgentBtn = document.getElementById('add-agent-btn');
+            this.newAgentName = document.getElementById('new-agent-name');
+            this.newAgentUrl = document.getElementById('new-agent-url');
+
+            // Default Tools
             this.defaultTools = [{
                     name: 'Gemini',
-                    url: 'https://gemini.google.com/app',
-                    iconColor: '#4facfe'
+                    url: 'https://gemini.google.com/app'
                 },
                 {
                     name: 'ChatGPT',
-                    url: 'https://chatgpt.com/',
-                    iconColor: '#10a37f'
+                    url: 'https://chatgpt.com/'
                 },
                 {
                     name: 'Claude',
-                    url: 'https://claude.ai/chats',
-                    iconColor: '#d97757'
+                    url: 'https://claude.ai/chats'
                 },
                 {
                     name: 'Perplexity',
-                    url: 'https://www.perplexity.ai/',
-                    iconColor: '#2ebf91'
+                    url: 'https://www.perplexity.ai/'
+                },
+                {
+                    name: 'Grok',
+                    url: 'https://twitter.com/i/grok'
+                },
+                {
+                    name: 'Kimi',
+                    url: 'https://kimi.moonshot.cn/'
+                },
+                {
+                    name: 'DeepSeek',
+                    url: 'https://chat.deepseek.com/'
                 }
             ];
 
             this.state = {
                 enabled: true,
                 position: 'right',
-                isOpen: false
+                isOpen: false,
+                customAgents: [] // Stores user added agents OR overrides to defaults if we want full customizability
             };
         }
 
@@ -57,23 +72,29 @@ document.addEventListener('DOMContentLoaded', async () => {
                 };
             }
 
+            // If customAgents is empty/undefined, maybe we should init it with defaults so they can be deleted?
+            // Or keep defaults separate? User said "Add a remove" implying full control.
+            // Let's populate customAgents with defaults ONCE if it's empty to give full control.
+            if (!this.state.customAgents || this.state.customAgents.length === 0) {
+                this.state.customAgents = [...this.defaultTools];
+            }
+
             this.renderDock();
+            this.renderSettingsList(); // Render list in settings
             this.applyState();
             this.setupListeners();
         }
 
         renderDock() {
-            // Re-render icons using Google's S2 Favicon service for high-quality real icons
             this.dock.innerHTML = '';
 
-            this.defaultTools.forEach(tool => {
+            this.state.customAgents.forEach(tool => {
                 const iconDiv = document.createElement('div');
                 iconDiv.className = 'ai-icon';
                 iconDiv.setAttribute('title', tool.name);
                 iconDiv.setAttribute('data-url', tool.url);
 
-                // Use Google S2 for Favicon (better than duckduckgo for some sites)
-                // Size 64 for retina sharpness
+                // Use Google S2 for Favicon
                 const domain = new URL(tool.url).hostname;
                 const iconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
 
@@ -88,12 +109,76 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // Click to Open
                 iconDiv.addEventListener('click', (e) => {
-                    e.stopPropagation(); // Prevent closing sidebar immediately?
+                    e.stopPropagation();
                     this.openPopup(tool.url, tool.name);
                 });
 
                 this.dock.appendChild(iconDiv);
             });
+        }
+
+        renderSettingsList() {
+            if (!this.agentsListContainer) return;
+            this.agentsListContainer.innerHTML = '';
+
+            this.state.customAgents.forEach((tool, index) => {
+                const row = document.createElement('div');
+                row.style.display = 'flex';
+                row.style.justifyContent = 'space-between';
+                row.style.alignItems = 'center';
+                row.style.padding = '5px';
+                row.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+                row.style.fontSize = '0.9em';
+
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = tool.name;
+
+                const delBtn = document.createElement('button');
+                delBtn.textContent = '×';
+                delBtn.style.background = 'rgba(255,0,0,0.3)';
+                delBtn.style.border = 'none';
+                delBtn.style.color = 'white';
+                delBtn.style.borderRadius = '4px';
+                delBtn.style.cursor = 'pointer';
+                delBtn.style.padding = '2px 6px';
+
+                delBtn.addEventListener('click', () => {
+                    this.removeAgent(index);
+                });
+
+                row.appendChild(nameSpan);
+                row.appendChild(delBtn);
+                this.agentsListContainer.appendChild(row);
+            });
+        }
+
+        addAgent(name, url) {
+            if (!name || !url) return;
+            try {
+                new URL(url); // Validate URL
+            } catch (e) {
+                alert('Invalid URL');
+                return;
+            }
+
+            this.state.customAgents.push({
+                name,
+                url
+            });
+            this.saveAndApply();
+            this.renderDock();
+            this.renderSettingsList();
+
+            // Clear inputs
+            this.newAgentName.value = '';
+            this.newAgentUrl.value = '';
+        }
+
+        removeAgent(index) {
+            this.state.customAgents.splice(index, 1);
+            this.saveAndApply();
+            this.renderDock();
+            this.renderSettingsList();
         }
 
         setupListeners() {
@@ -105,9 +190,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
 
                 // Optional: Hover open
-                this.sidebar.addEventListener('mouseenter', () => {
-                    // this.state.isOpen = true; // Maybe too aggressive? Let's stick to click for now as requested
-                });
+                // this.sidebar.addEventListener('mouseenter', () => {
+                //     // this.state.isOpen = true; // Maybe too aggressive? Let's stick to click for now as requested
+                // });
             }
 
             // Close when clicking outside?
@@ -137,11 +222,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             }
 
+            // Add Agent Button
+            if (this.addAgentBtn) {
+                this.addAgentBtn.addEventListener('click', () => {
+                    this.addAgent(this.newAgentName.value.trim(), this.newAgentUrl.value.trim());
+                });
+            }
+
             // Sync Listener logic is shared in main listener
             chrome.storage.onChanged.addListener((changes) => {
                 if (changes.aiSidebarConfig) {
                     this.state = changes.aiSidebarConfig.newValue;
                     this.applyState();
+                    this.renderDock(); // Re-render dock on remote change
+                    this.renderSettingsList(); // Re-render settings list
                     // Update UI controls
                     if (this.toggleSwitch) this.toggleSwitch.checked = this.state.enabled;
                     if (this.positionSelect) this.positionSelect.value = this.state.position;
@@ -175,21 +269,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             this.sidebar.classList.remove('left', 'right');
             this.sidebar.classList.add(this.state.position);
 
-            // 3. Open/Close State (Slide animation)
+            // 3. Open/Close styling
             if (this.state.isOpen) {
                 this.sidebar.classList.add('open');
-                this.handle.querySelector('span').textContent = 'chevron_right'; // Change icon?
-                // Rotate icon based on side
-                if (this.state.position === 'right') {
-                    this.handle.style.transform = 'rotate(0deg)'; // Arrow points right
-                } else {
-                    this.handle.style.transform = 'rotate(180deg)';
-                }
+                // Could change text/icon if needed, but keeping simple "AI" is fine
             } else {
                 this.sidebar.classList.remove('open');
-                // Reset Icon
-                this.handle.querySelector('span').textContent = 'smart_toy';
-                this.handle.style.transform = ''; // Clear inline transform
             }
         }
 
