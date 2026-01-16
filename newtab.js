@@ -6,8 +6,291 @@ document.addEventListener('DOMContentLoaded', async () => {
     const shortcutForm = document.getElementById('shortcut-form');
     const cancelModalBtn = document.getElementById('cancel-modal');
     const modalTitle = document.getElementById('modal-title');
-    const notificationManager = new window.NotificationManager();
     const weatherManager = new window.WeatherManager();
+    const notificationManager = new window.NotificationManager();
+
+    // --- AI Sidebar Logic ---
+    class AISidebarManager {
+        constructor() {
+            this.sidebar = document.getElementById('ai-sidebar');
+            this.handle = document.querySelector('.ai-sidebar-handle');
+            this.toggleSwitch = document.getElementById('ai-sidebar-toggle');
+            this.positionSelect = document.getElementById('ai-sidebar-position');
+            this.dock = document.querySelector('.ai-dock');
+
+            // Settings UI Elements
+            this.agentsListContainer = document.getElementById('ai-agents-list');
+            this.addAgentBtn = document.getElementById('add-agent-btn');
+            this.newAgentName = document.getElementById('new-agent-name');
+            this.newAgentUrl = document.getElementById('new-agent-url');
+
+            // Default Tools
+            this.defaultTools = [{
+                    name: 'Gemini',
+                    url: 'https://gemini.google.com/app'
+                },
+                {
+                    name: 'ChatGPT',
+                    url: 'https://chatgpt.com/'
+                },
+                {
+                    name: 'Claude',
+                    url: 'https://claude.ai/chats'
+                },
+                {
+                    name: 'Perplexity',
+                    url: 'https://www.perplexity.ai/'
+                },
+                {
+                    name: 'Grok',
+                    url: 'https://twitter.com/i/grok'
+                },
+                {
+                    name: 'Kimi',
+                    url: 'https://kimi.moonshot.cn/'
+                },
+                {
+                    name: 'DeepSeek',
+                    url: 'https://chat.deepseek.com/'
+                }
+            ];
+
+            this.state = {
+                enabled: true,
+                position: 'right',
+                isOpen: false,
+                customAgents: [] // Stores user added agents OR overrides to defaults if we want full customizability
+            };
+        }
+
+        async init() {
+            const stored = await window.storageManager.get(['aiSidebarConfig']);
+            if (stored.aiSidebarConfig) {
+                this.state = {
+                    ...this.state,
+                    ...stored.aiSidebarConfig
+                };
+            }
+
+            // If customAgents is empty/undefined, maybe we should init it with defaults so they can be deleted?
+            // Or keep defaults separate? User said "Add a remove" implying full control.
+            // Let's populate customAgents with defaults ONCE if it's empty to give full control.
+            if (!this.state.customAgents || this.state.customAgents.length === 0) {
+                this.state.customAgents = [...this.defaultTools];
+            }
+
+            this.renderDock();
+            this.renderSettingsList(); // Render list in settings
+            this.applyState();
+            this.setupListeners();
+        }
+
+        renderDock() {
+            this.dock.innerHTML = '';
+
+            this.state.customAgents.forEach(tool => {
+                const iconDiv = document.createElement('div');
+                iconDiv.className = 'ai-icon';
+                iconDiv.setAttribute('title', tool.name);
+                iconDiv.setAttribute('data-url', tool.url);
+
+                // Use Google S2 for Favicon
+                const domain = new URL(tool.url).hostname;
+                const iconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+
+                const img = document.createElement('img');
+                img.src = iconUrl;
+                img.alt = tool.name;
+                img.style.width = '24px';
+                img.style.height = '24px';
+                img.style.borderRadius = '4px';
+
+                iconDiv.appendChild(img);
+
+                // Click to Open
+                iconDiv.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.openPopup(tool.url, tool.name);
+                });
+
+                this.dock.appendChild(iconDiv);
+            });
+        }
+
+        renderSettingsList() {
+            if (!this.agentsListContainer) return;
+            this.agentsListContainer.innerHTML = '';
+
+            this.state.customAgents.forEach((tool, index) => {
+                const row = document.createElement('div');
+                row.style.display = 'flex';
+                row.style.justifyContent = 'space-between';
+                row.style.alignItems = 'center';
+                row.style.padding = '5px';
+                row.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+                row.style.fontSize = '0.9em';
+
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = tool.name;
+
+                const delBtn = document.createElement('button');
+                delBtn.textContent = '×';
+                delBtn.style.background = 'rgba(255,0,0,0.3)';
+                delBtn.style.border = 'none';
+                delBtn.style.color = 'white';
+                delBtn.style.borderRadius = '4px';
+                delBtn.style.cursor = 'pointer';
+                delBtn.style.padding = '2px 6px';
+
+                delBtn.addEventListener('click', () => {
+                    this.removeAgent(index);
+                });
+
+                row.appendChild(nameSpan);
+                row.appendChild(delBtn);
+                this.agentsListContainer.appendChild(row);
+            });
+        }
+
+        addAgent(name, url) {
+            if (!name || !url) return;
+            try {
+                new URL(url); // Validate URL
+            } catch (e) {
+                alert('Invalid URL');
+                return;
+            }
+
+            this.state.customAgents.push({
+                name,
+                url
+            });
+            this.saveAndApply();
+            this.renderDock();
+            this.renderSettingsList();
+
+            // Clear inputs
+            this.newAgentName.value = '';
+            this.newAgentUrl.value = '';
+        }
+
+        removeAgent(index) {
+            this.state.customAgents.splice(index, 1);
+            this.saveAndApply();
+            this.renderDock();
+            this.renderSettingsList();
+        }
+
+        setupListeners() {
+            // Handle Toggle (Slide In/Out)
+            if (this.handle) {
+                this.handle.addEventListener('click', () => {
+                    this.state.isOpen = !this.state.isOpen;
+                    this.applyState();
+                });
+
+                // Optional: Hover open
+                // this.sidebar.addEventListener('mouseenter', () => {
+                //     // this.state.isOpen = true; // Maybe too aggressive? Let's stick to click for now as requested
+                // });
+            }
+
+            // Close when clicking outside?
+            document.addEventListener('click', (e) => {
+                if (this.state.isOpen && !this.sidebar.contains(e.target)) {
+                    this.state.isOpen = false;
+                    this.applyState();
+                }
+            });
+
+            // Settings Toggle
+            if (this.toggleSwitch) {
+                this.toggleSwitch.checked = this.state.enabled;
+                this.toggleSwitch.addEventListener('change', () => {
+                    this.state.enabled = this.toggleSwitch.checked;
+                    this.saveAndApply();
+                });
+            }
+
+            // Settings Position
+            if (this.positionSelect) {
+                this.positionSelect.value = this.state.position;
+                this.positionSelect.addEventListener('change', () => {
+                    this.state.position = this.positionSelect.value;
+                    this.state.isOpen = false; // Close on position change
+                    this.saveAndApply();
+                });
+            }
+
+            // Add Agent Button
+            if (this.addAgentBtn) {
+                this.addAgentBtn.addEventListener('click', () => {
+                    this.addAgent(this.newAgentName.value.trim(), this.newAgentUrl.value.trim());
+                });
+            }
+
+            // Sync Listener logic is shared in main listener
+            chrome.storage.onChanged.addListener((changes) => {
+                if (changes.aiSidebarConfig) {
+                    this.state = changes.aiSidebarConfig.newValue;
+                    this.applyState();
+                    this.renderDock(); // Re-render dock on remote change
+                    this.renderSettingsList(); // Re-render settings list
+                    // Update UI controls
+                    if (this.toggleSwitch) this.toggleSwitch.checked = this.state.enabled;
+                    if (this.positionSelect) this.positionSelect.value = this.state.position;
+                }
+            });
+        }
+
+        async saveAndApply() {
+            // Don't save isOpen state, always closed on reload
+            const toSave = {
+                ...this.state,
+                isOpen: false
+            };
+            await window.storageManager.set({
+                aiSidebarConfig: toSave
+            });
+            this.applyState();
+        }
+
+        applyState() {
+            if (!this.sidebar) return;
+
+            // 1. Visibility (Enabled/Disabled)
+            if (this.state.enabled) {
+                this.sidebar.classList.remove('hidden');
+            } else {
+                this.sidebar.classList.add('hidden');
+            }
+
+            // 2. Position styling
+            this.sidebar.classList.remove('left', 'right', 'bottom');
+            this.sidebar.classList.add(this.state.position);
+
+            // 3. Open/Close styling
+            if (this.state.isOpen) {
+                this.sidebar.classList.add('open');
+                // Could change text/icon if needed, but keeping simple "AI" is fine
+            } else {
+                this.sidebar.classList.remove('open');
+            }
+        }
+
+        openPopup(url, title) {
+            const width = 450;
+            const height = 700;
+            const left = (window.screen.width / 2) - (width / 2);
+            const top = (window.screen.height / 2) - (height / 2);
+            const windowName = `AI_Popup_${title}`;
+            window.open(url, windowName, `width=${width},height=${height},top=${top},left=${left},resizable=yes,scrollbars=yes,status=no,toolbar=no,menubar=no,location=no`);
+        }
+    }
+
+    const aiSidebarManager = new AISidebarManager();
+    aiSidebarManager.init();
+
     const topSitesList = document.getElementById('top-sites-list'); // Moved here to fix init error
 
     // CLEANUP: Remove deprecated Gemini state if present
@@ -168,6 +451,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             settingsModalOverlay.classList.remove('hidden');
         });
     }
+
+    // --- Tab Switching Logic ---
+    const tabs = document.querySelectorAll('.tab-item');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            // Remove active from all
+            tabs.forEach(t => t.classList.remove('active'));
+            tabContents.forEach(c => c.classList.remove('active'));
+
+            // Set active
+            tab.classList.add('active');
+            const targetId = tab.getAttribute('data-tab');
+            const targetContent = document.getElementById(targetId);
+            if (targetContent) {
+                targetContent.classList.add('active');
+            }
+        });
+    });
 
     if (closeSettingsModalBtn) {
         closeSettingsModalBtn.addEventListener('click', () => {
