@@ -25,7 +25,17 @@
     width: 65px; 
     min-width: 65px;
     align-items: center;
-    /* NO position: relative here - handle should be relative to .ai-sidebar (fixed) */
+    text-align: center; /* Center "AI Tools" header */
+}
+
+/* Header in sidebar */
+.ai-sidebar-content h3 {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0;
+    text-align: center;
 }
 
 /* The Handle - Positioned relative to .ai-sidebar */
