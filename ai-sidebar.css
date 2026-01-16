@@ -2,16 +2,20 @@
 .ai-sidebar {
     position: fixed;
     top: 50%;
-    transform: translateY(-50%); 
+    /* No align-items: center here, we rely on absolute pos for handle */
     z-index: 1000;
     transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    /* No display: flex needed for the outer container anymore, 
+       it's a wrapper moving left/right. 
+       Actually let's keep it flex to hold content but we will absolutely position handle relative to this.
+    */
     display: flex;
-    align-items: center;
+    flex-direction: column;
 }
 
-/* The Panel itself (initially hidden off-screen) */
+/* The Panel (Content) */
 .ai-sidebar-content {
-    background: rgba(20, 20, 20, 0.7); /* Darker for contrast */
+    background: rgba(20, 20, 20, 0.7);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -21,80 +25,86 @@
     flex-direction: column;
     gap: 15px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-    min-width: 70px;
+    min-width: 60px; /* Fixed width for better calculation */
+    width: 60px;
     align-items: center;
+    position: relative; /* Anchor for handle */
 }
 
-/* The "AI" Handle Tab */
+/* The Handle */
 .ai-sidebar-handle {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 35px;
+    height: 60px; /* Fixed height tab */
+    
     background: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.15);
     color: white;
-    padding: 15px 5px;
     cursor: pointer;
     font-size: 0.9rem;
     font-weight: 800;
     letter-spacing: 1px;
-    writing-mode: vertical-rl;
-    text-orientation: upright; /* "AI" readable vertically */
-    transform: none; /* No rotation */
-    border-radius: 8px 0 0 8px; 
-    box-shadow: -4px 0 10px rgba(0,0,0,0.2);
-    transition: all 0.3s ease;
+    
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0;
+    
+    /* Text */
+    writing-mode: vertical-rl;
+    text-orientation: upright;
     font-family: 'Inter', sans-serif;
+    
+    transition: all 0.3s ease;
+    z-index: -1; /* Behind content visually if overlapped, but sticking out */
 }
 
 .ai-sidebar-handle:hover {
     background: rgba(255, 255, 255, 0.1);
-    box-shadow: -4px 0 15px rgba(255,255,255,0.1);
 }
 
-/* RIGHT Position Logic */
+/* --- RIGHT Side Logic --- */
 .ai-sidebar.right {
     right: 0;
-    /* Move content off-screen to the right, leaving handle visible */
-    transform: translateY(-50%) translateX(calc(100% - 35px)); 
+    /* Hidden: Move entire box 100% to right. Main content is hidden. 
+       Handle needs to stick out to the LEFT of the content.
+    */
+    transform: translateY(-50%) translateX(100%); 
+}
+
+.ai-sidebar.right .ai-sidebar-handle {
+    left: -35px; /* Stick out to the left */
+    border-radius: 8px 0 0 8px;
+    box-shadow: -4px 0 10px rgba(0,0,0,0.2);
+    border-right: none; /* Merge with content border */
 }
 
 .ai-sidebar.right.open {
-    transform: translateY(-50%) translateX(-10px); /* Slide in with slight margin */
-}
-
-/* Handle on Left of content when sidebar is on Right */
-.ai-sidebar.right .ai-sidebar-handle {
-    order: -1; /* Handle appears visually before content */
-    border-radius: 8px 0 0 8px; 
+    /* Show: Move back to 0, plus a little margin from edge */
+    transform: translateY(-50%) translateX(-10px);
 }
 
 
-/* LEFT Position Logic */
-/* LEFT Position Logic */
+/* --- LEFT Side Logic --- */
 .ai-sidebar.left {
     left: 0;
-    /* Move content off-screen to the left, leaving handle visible.
-       Content is 100%, we want to move it -100% but leave the handle (approx 35px) visible.
+    /* Hidden: Move entire box -100% to left. 
+       Handle needs to stick out to the RIGHT of the content.
     */
-    transform: translateY(-50%) translateX(calc(-100% + 35px));
+    transform: translateY(-50%) translateX(-100%);
+}
+
+.ai-sidebar.left .ai-sidebar-handle {
+    right: -35px; /* Stick out to the right */
+    border-radius: 0 8px 8px 0;
+    box-shadow: 4px 0 10px rgba(0,0,0,0.2);
+    border-left: none;
 }
 
 .ai-sidebar.left.open {
     transform: translateY(-50%) translateX(10px);
-}
-
-/* Handle on Right of content when sidebar is on Left */
-.ai-sidebar.left .ai-sidebar-handle {
-    order: 1; 
-    border-radius: 0 8px 8px 0;
-    box-shadow: 4px 0 10px rgba(0,0,0,0.2); /* Flip shadow for left side */
-}
-
-.ai-sidebar.left .ai-sidebar-handle:hover {
-    box-shadow: 4px 0 15px rgba(255,255,255,0.1);
 }
 
 .ai-dock {
