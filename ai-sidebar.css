@@ -113,7 +113,7 @@
 
 /* --- BOTTOM Position Logic --- */
 .ai-sidebar.bottom {
-    bottom: -75px; /* Hidden: Content off-screen below */
+    bottom: -55px; /* Hidden: Content off-screen, handle visible */
     top: auto;
     left: 50%;
     right: auto;
