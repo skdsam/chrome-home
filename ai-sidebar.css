@@ -2,12 +2,10 @@
 .ai-sidebar {
     position: fixed;
     top: 50%;
-    /* We will animate 'left' and 'right' properties directly or use explicit transforms with pixel values */
-    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
     z-index: 1000;
+    transition: left 0.4s ease, right 0.4s ease;
     display: flex;
     flex-direction: column;
-    /* Ensure it has no phantom width */
     width: auto;
 }
 
@@ -23,17 +21,14 @@
     flex-direction: column;
     gap: 15px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-    
-    /* Strict Dimensions */
     box-sizing: border-box;
     width: 65px; 
     min-width: 65px;
-    
     align-items: center;
-    position: relative; 
+    /* NO position: relative here - handle should be relative to .ai-sidebar (fixed) */
 }
 
-/* The Handle */
+/* The Handle - Positioned relative to .ai-sidebar */
 .ai-sidebar-handle {
     position: absolute;
     top: 50%;
@@ -59,7 +54,6 @@
     font-family: 'Inter', sans-serif;
     
     transition: all 0.3s ease;
-    z-index: -1; 
 }
 
 .ai-sidebar-handle:hover {
@@ -68,40 +62,42 @@
 
 /* --- RIGHT Position Logic --- */
 .ai-sidebar.right {
-    right: -75px; /* width (65) + margin (10) approx hidden. Let's say -65px */
-    right: -65px;
+    right: -65px; /* Hidden: Content off-screen to the right */
     left: auto;
-    transform: translateY(-50%); /* Only Y center */
+    transform: translateY(-50%);
 }
 
 .ai-sidebar.right .ai-sidebar-handle {
-    left: -35px; /* Stick out LEFT */
+    left: -35px; /* Handle sticks out to the LEFT of the content */
+    right: auto;
     border-radius: 8px 0 0 8px;
     border-right: none;
     box-shadow: -4px 0 10px rgba(0,0,0,0.2);
 }
 
 .ai-sidebar.right.open {
-    right: 15px; /* Visible */
+    right: 15px;
 }
 
 
 /* --- LEFT Position Logic --- */
 .ai-sidebar.left {
-    left: -65px; /* Fully hidden off-screen */
+    left: -65px; /* Hidden: Content off-screen to the left */
     right: auto;
     transform: translateY(-50%);
 }
 
 .ai-sidebar.left .ai-sidebar-handle {
-    right: -35px; /* Stick out RIGHT */
+    /* Handle sticks out to the RIGHT. Content is 65px, so handle starts at left: 65px */
+    left: 65px; 
+    right: auto;
     border-radius: 0 8px 8px 0;
     border-left: none;
     box-shadow: 4px 0 10px rgba(0,0,0,0.2);
 }
 
 .ai-sidebar.left.open {
-    left: 15px; /* Visible */
+    left: 15px;
 }
 
 .ai-dock {
