@@ -7,9 +7,9 @@
 ---
 
 ## 📸 Screenshots
-| Widgets & Productivity | Immersive Dark Mode |
+| Widgets & Productivity | Image Background Mode |
 |---|---|
-| ![Widgets](screenshots/widgets-preview.png) | ![Dark Mode](screenshots/dark-mode-preview.png) |
+| ![Widgets](screenshots/widgets-preview.png) | ![Background Mode](screenshots/dark-mode-preview.png) |
 
 ---
 
