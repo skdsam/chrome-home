@@ -1,6 +1,15 @@
 # Chrome Home 🏠✨
 
+![Main Preview](screenshots/main-preview.png)
+
 **Chrome Home** is a premium, high-performance New Tab extension designed to transform your browser into a stunning, productive workspace. Built with a focus on aesthetics, speed, and utility, it combines modern design principles with the essential tools you need daily.
+
+---
+
+## 📸 Screenshots
+| Widgets & Productivity | Immersive Dark Mode |
+|---|---|
+| ![Widgets](screenshots/widgets-preview.png) | ![Dark Mode](screenshots/dark-mode-preview.png) |
 
 ---
 
