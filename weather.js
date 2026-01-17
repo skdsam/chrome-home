@@ -56,11 +56,11 @@ class WeatherManager {
                 });
                 this.init(); // Reload
             } else {
-                alert('City not found. Please try again.');
+                window.customAlert('Location Not Found', 'Could not find the city you entered. Please check the spelling and try again.');
             }
         } catch (error) {
             console.error("Geocoding Error:", error);
-            alert('Error fetching city data.');
+            window.customAlert('Weather Error', 'Failed to fetch location data. Please check your internet connection.');
         }
     }
 

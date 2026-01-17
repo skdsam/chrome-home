@@ -1,4 +1,84 @@
+// --- Unified Custom Dialog Logic (Defined Globally for access by other modules) ---
+window.customAlert = (title, message) => window._showDialog('alert', title, message);
+window.customConfirm = (title, message) => window._showDialog('confirm', title, message);
+window.customPrompt = (title, message, defaultValue = '') => window._showDialog('prompt', title, message, defaultValue);
+
 document.addEventListener('DOMContentLoaded', async () => {
+    // --- Unified Custom Dialog Logic ---
+    const dialogOverlay = document.getElementById('custom-dialog-overlay');
+    const dialogTitle = document.getElementById('dialog-title');
+    const dialogMessage = document.getElementById('dialog-message');
+    const dialogInput = document.getElementById('dialog-input');
+    const dialogInputContainer = document.getElementById('dialog-input-container');
+    const dialogCancel = document.getElementById('dialog-cancel');
+    const dialogConfirm = document.getElementById('dialog-confirm');
+
+    let dialogResolver = null;
+
+    window._showDialog = function (type, title, message, defaultValue = '') {
+        return new Promise((resolve) => {
+            dialogTitle.textContent = title;
+            dialogMessage.textContent = message;
+            dialogInput.value = defaultValue;
+
+            // UI adjustment based on type
+            if (type === 'alert') {
+                dialogInputContainer.classList.add('hidden');
+                dialogCancel.classList.add('hidden');
+                dialogConfirm.textContent = 'OK';
+            } else if (type === 'confirm') {
+                dialogInputContainer.classList.add('hidden');
+                dialogCancel.classList.remove('hidden');
+                dialogConfirm.textContent = 'Yes';
+                dialogCancel.textContent = 'No';
+            } else if (type === 'prompt') {
+                dialogInputContainer.classList.remove('hidden');
+                dialogCancel.classList.remove('hidden');
+                dialogConfirm.textContent = 'Confirm';
+                dialogCancel.textContent = 'Cancel';
+            }
+
+            dialogOverlay.classList.remove('hidden');
+            if (type === 'prompt') dialogInput.focus();
+            dialogResolver = resolve;
+        });
+    }
+
+    dialogConfirm.addEventListener('click', () => {
+        const value = dialogInput.value;
+        const res = dialogInputContainer.classList.contains('hidden') ? true : value;
+        dialogOverlay.classList.add('hidden');
+        if (dialogResolver) dialogResolver(res);
+        dialogResolver = null;
+    });
+
+    dialogCancel.addEventListener('click', () => {
+        dialogOverlay.classList.add('hidden');
+        if (dialogResolver) dialogResolver(null);
+        dialogResolver = null;
+    });
+
+    dialogOverlay.addEventListener('click', (e) => {
+        if (e.target === dialogOverlay) {
+            dialogOverlay.classList.add('hidden');
+            if (dialogResolver) dialogResolver(null);
+            dialogResolver = null;
+        }
+    });
+
+    // Handle global keys for dialog
+    window.addEventListener('keydown', (e) => {
+        if (dialogOverlay.classList.contains('hidden')) return;
+
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            dialogConfirm.click();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            dialogCancel.click();
+        }
+    });
+
     // --- Shortcuts Logic ---
     const shortcutsGrid = document.getElementById('shortcuts-grid');
     const addShortcutBtn = document.getElementById('add-shortcut-btn');
@@ -8,8 +88,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const modalTitle = document.getElementById('modal-title');
     const weatherManager = new window.WeatherManager();
     const notificationManager = new window.NotificationManager();
-
-    // --- AI Sidebar Logic ---
     class AISidebarManager {
         constructor() {
             this.sidebar = document.getElementById('ai-sidebar');
@@ -157,7 +235,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 new URL(url); // Validate URL
             } catch (e) {
-                alert('Invalid URL');
+                window.customAlert('Invalid URL', 'Please enter a valid website address.');
                 return;
             }
 
@@ -423,18 +501,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             const enabled = googleSyncToggle.checked;
 
             if (enabled) {
-                if (confirm('Enable Google Sync? This will move your current local settings to your Google account.')) {
+                if (await window.customConfirm('Enable Google Sync?', 'This will move your current local settings to your Google account and sync them across devices.')) {
                     await window.storageManager.migrate(true);
                     await chrome.storage.local.set({
                         googleSyncEnabled: true
                     });
-                    alert('Google Sync enabled! Data migrated.');
+                    window.customAlert('Sync Enabled', 'Google Sync has been enabled! Your data is now being synchronized.');
                     location.reload();
                 } else {
                     googleSyncToggle.checked = false;
                 }
             } else {
-                if (confirm('Disable Google Sync? Your settings will remain in the cloud but new changes will only be saved locally.')) {
+                if (await window.customConfirm('Disable Google Sync?', 'Your settings will remain in the cloud but new changes will only be saved locally. Continue?')) {
                     await chrome.storage.local.set({
                         googleSyncEnabled: false
                     });
@@ -528,14 +606,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 const data = JSON.parse(event.target.result);
                 // Validation could go here
-                window.storageManager.clear(() => {
-                    window.storageManager.set(data).then(() => {
-                        alert('Settings imported successfully! Reloading...');
-                        location.reload();
-                    });
+                window.storageManager.clear(async () => {
+                    await window.storageManager.set(data);
+                    await window.customAlert('Import Success', 'Settings imported successfully! The page will now reload.');
+                    location.reload();
                 });
             } catch (err) {
-                alert('Error parsing JSON file');
+                window.customAlert('Import Error', 'Failed to parse the backup file. Please ensure it is a valid JSON settings file.');
                 console.error(err);
             }
         };
@@ -1087,9 +1164,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     addMySiteBtn.addEventListener('click', async () => {
-        const url = prompt('Enter website URL:');
+        const url = await window.customPrompt('Add Site', 'Enter the website URL:');
         if (!url) return;
-        const name = prompt('Enter website name:');
+        const name = await window.customPrompt('Site Name', 'Enter a name for this site:');
         if (!name) return;
 
         const mySites = await getMySites();
@@ -1156,9 +1233,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             delBtn.style.color = '#ff4081';
             delBtn.style.fontSize = '1.2rem';
             delBtn.style.cursor = 'pointer';
-            delBtn.onclick = (e) => {
+            delBtn.onclick = async (e) => {
                 e.preventDefault();
-                removeMySite(site.id);
+                // Reuse existing confirmation or could make a customConfirm too
+                if (await window.customConfirm('Remove Site', 'Are you sure you want to remove this site from your list?')) {
+                    removeMySite(site.id);
+                }
             };
 
             item.appendChild(linkDiv);
@@ -1215,9 +1295,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // --- Weather Manual Override ---
-    document.getElementById('weather-display').addEventListener('click', () => {
-        const currentLoc = document.getElementById('weather-temp').textContent.split(',')[0];
-        const newCity = prompt('Enter your city manually (or leave empty to use Auto-Location):', currentLoc.includes('°') ? '' : currentLoc);
+    document.getElementById('weather-display').addEventListener('click', async () => {
+        const currentLocLabel = document.getElementById('weather-temp').textContent.split(',')[0];
+        const initialValue = currentLocLabel.includes('°') ? '' : currentLocLabel;
+
+        const newCity = await window.customPrompt('Change Location', 'Enter your city manually (or leave empty to use Auto-Location):', initialValue);
 
         if (newCity !== null) { // If not cancelled
             weatherManager.setManualLocation(newCity.trim());
@@ -1307,10 +1389,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Handle delete
             const deleteBtn = card.querySelector('.delete-btn');
-            deleteBtn.addEventListener('click', (e) => {
+            deleteBtn.addEventListener('click', async (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                if (confirm('Delete this shortcut?')) {
+                if (await window.customConfirm('Delete Shortcut', `Are you sure you want to delete the shortcut for ${shortcut.title}?`)) {
                     removeShortcut(shortcut.id);
                 }
             });
@@ -1499,7 +1581,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // Edit Playlist
-    spotifyEditBtn.addEventListener('click', (e) => {
+    spotifyEditBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
         e.preventDefault();
 
@@ -1507,7 +1589,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         spotifyState.zIndex = maxZIndex;
 
         const current = spotifyState.embedUrl;
-        const newUrl = prompt('Enter Spotify Playlist/Album URL:', current);
+        const newUrl = await window.customPrompt('Spotify Widget', 'Enter Spotify Playlist or Album URL:', current);
 
         if (newUrl && newUrl !== current) {
             let embedUrl = newUrl;

@@ -398,6 +398,21 @@
         </div>
     </div>
 
+    <!-- Custom Dialog Modal (Alert/Confirm/Prompt) -->
+    <div id="custom-dialog-overlay" class="modal-overlay hidden">
+        <div class="modal">
+            <h2 id="dialog-title">Notification</h2>
+            <p id="dialog-message" style="color: #aaa; margin-bottom: 20px; font-size: 0.9rem;"></p>
+            <div id="dialog-input-container" class="form-group">
+                <input type="text" id="dialog-input" placeholder="Type here...">
+            </div>
+            <div class="form-actions">
+                <button type="button" id="dialog-cancel" class="btn-secondary">Cancel</button>
+                <button type="button" id="dialog-confirm" class="btn-primary">OK</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Settings Modal -->
     <div id="settings-modal-overlay" class="modal-overlay hidden">
         <div class="modal">
