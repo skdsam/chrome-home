@@ -9,17 +9,14 @@ class ExtensionStorage {
                 if (res.googleSyncEnabled !== undefined) {
                     resolve(!!res.googleSyncEnabled);
                 } else {
-                    // First run on this device or never configured. 
-                    // Check if sync already has data (e.g. from another device)
+                    // First run on this device. Check for cloud data.
                     chrome.storage.sync.get(null, (syncRes) => {
-                        // Check for signature keys that indicate the extension is active on sync
-                        const hasCloudData = syncRes.shortcuts || syncRes.bgConfig || syncRes.aiSidebarConfig || syncRes.mySites;
+                        const hasCloudData = Object.keys(syncRes).length > 0;
                         if (hasCloudData) {
-                            console.log("Cloud data detected. Auto-enabling Google Sync.");
+                            console.log("Cloud data found. Auto-enabling Sync.");
                             chrome.storage.local.set({
                                 googleSyncEnabled: true
-                            });
-                            resolve(true);
+                            }, () => resolve(true));
                         } else {
                             resolve(false);
                         }
@@ -27,6 +24,18 @@ class ExtensionStorage {
                 }
             });
         });
+    }
+
+    async getDiagnosticInfo() {
+        const local = await new Promise(r => chrome.storage.local.get(null, r));
+        const sync = await new Promise(r => chrome.storage.sync.get(null, r));
+        return {
+            extensionId: chrome.runtime.id,
+            syncEnabled: await this.isSyncEnabled(),
+            localKeys: Object.keys(local),
+            syncKeys: Object.keys(sync),
+            syncDataSize: JSON.stringify(sync).length
+        };
     }
 
     handleError() {

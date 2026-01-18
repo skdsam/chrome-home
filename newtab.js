@@ -653,6 +653,39 @@ document.addEventListener('DOMContentLoaded', async () => {
         reader.readAsText(file);
     });
 
+    // --- Sync Troubleshooting Logic ---
+    const debugSyncBtn = document.getElementById('debug-sync-btn');
+    const forceSyncPullBtn = document.getElementById('force-sync-pull');
+
+    if (debugSyncBtn) {
+        debugSyncBtn.addEventListener('click', async () => {
+            const info = await window.storageManager.getDiagnosticInfo();
+            const msg = `
+ID: ${info.extensionId}
+Sync Enabled: ${info.syncEnabled}
+Local Items: ${info.localKeys.length}
+Sync Items: ${info.syncKeys.length}
+Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
+            `.trim();
+
+            await window.customAlert('Sync Diagnostics', msg + "\n\nNote: For sync to work across devices, the Extension ID must match exactly. If they don't match, you'll need to add a 'key' to your manifest.json.");
+        });
+    }
+
+    if (forceSyncPullBtn) {
+        forceSyncPullBtn.addEventListener('click', async () => {
+            if (await window.customConfirm('Force Cloud Pull', 'This will pull all data from the cloud and merge it with your local settings. Continue?')) {
+                try {
+                    await window.storageManager.migrate(false, 'merge');
+                    await window.customAlert('Sync Success', 'Cloud data merged successfully! Reloading...');
+                    location.reload();
+                } catch (err) {
+                    window.customAlert('Sync Failed', 'Could not pull data: ' + err.message);
+                }
+            }
+        });
+    }
+
     // Init Weather
     weatherManager.init();
 

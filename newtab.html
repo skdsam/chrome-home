@@ -512,10 +512,23 @@
                         <label>Data Management</label>
                         <p style="font-size: 0.8em; color: #888; margin-bottom: 10px;">Export your settings to a JSON
                             file or import a previous backup.</p>
-                        <div style="display: flex; gap: 10px;">
+                        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
                             <button id="export-data-btn" class="btn-primary" style="flex:1;">Export Data</button>
                             <button id="import-data-btn" class="btn-secondary" style="flex:1;">Import Data</button>
                             <input type="file" id="import-file-input" accept=".json" hidden>
+                        </div>
+
+                        <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 20px 0;">
+
+                        <label>Troubleshooting</label>
+                        <p style="font-size: 0.8em; color: #888; margin-bottom: 10px;">If sync isn't working, check your
+                            diagnostics or force a cloud data pull.</p>
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <button id="debug-sync-btn" class="btn-secondary" style="font-size: 0.8em;">View Sync
+                                Diagnostics</button>
+                            <button id="force-sync-pull" class="btn-secondary"
+                                style="font-size: 0.8em; color: #4facfe;">Force
+                                Cloud Pull (Merge)</button>
                         </div>
                     </div>
                 </div>

@@ -3,6 +3,7 @@
   "name": "Chrome Home",
   "version": "1.0.0",
   "version_name": "1.0.0 (Initial Release)",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAv6N9fO9A6K9z8X5z8Z9z/z9z+z9v/v9j/j/j/j+j+j+j+j+j+j+j+j+j+j+j+j+j+j+j+j+j+j+j+v+v+v+v+v+v+v+j/j/j/j/j/v+v+v+v+v+v+j/j/j/j/j/v+v+v+v+v+v+j/j/j/j/j/v+x+x+x+x+x+j/j/j/j/j/v+v+v+v+v+v+j/j/j/j/j/v+v+v+v+v+v+j/j/j/j/j/v+v+v+v+v+v+j/j/j/j/j/v+v+v+v+v+v+j/j/j/j/j/v+v+v+v+v+v+j/j/j/j/j/v+v+v+v+v+v+j/j/j/j/j/v+v+v+v+v+v+j/j/j/j/j/v+v+v+v+v+v+j/j/j/j/j/v+v+v+v+v+v+j/j/j/j/j/v+v+v+v+v+v+j/j/j/j/j/v+v+v+v+v+v+j/j/j/j/j/v+v+v+v+v+v+j/j/j/j/j/v+v+v+v+v+v+j/j/j/j/j/v+v+v+v+v+v+j/j/j/j/j/v+v+v+v+v+v+j/j/j/j/j/v+v+v+v+v+v+wIDAQAB",
   "description": "Transform your new tab into a premium workspace with weather, shortcuts, AI sidebars, and productivity widgets.",
   "permissions": [
     "storage",
