@@ -11,12 +11,28 @@ class ExtensionStorage {
         });
     }
 
+    handleError() {
+        if (chrome.runtime.lastError) {
+            console.error('Storage Error:', chrome.runtime.lastError.message);
+            // We can dispatch a global event or store the error for the UI to consume
+            window.dispatchEvent(new CustomEvent('extension-storage-error', {
+                detail: chrome.runtime.lastError.message
+            }));
+            return true;
+        }
+        return false;
+    }
+
     async get(keys) {
         const sync = await this.isSyncEnabled();
         const storage = sync ? chrome.storage.sync : chrome.storage.local;
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             storage.get(keys, (res) => {
-                resolve(res);
+                if (this.handleError()) {
+                    resolve({}); // Return empty on error to prevent total breakage
+                } else {
+                    resolve(res);
+                }
             });
         });
     }
@@ -24,9 +40,13 @@ class ExtensionStorage {
     async set(items) {
         const sync = await this.isSyncEnabled();
         const storage = sync ? chrome.storage.sync : chrome.storage.local;
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             storage.set(items, () => {
-                resolve();
+                if (this.handleError()) {
+                    reject(new Error(chrome.runtime.lastError.message));
+                } else {
+                    resolve();
+                }
             });
         });
     }
@@ -36,6 +56,7 @@ class ExtensionStorage {
         const storage = sync ? chrome.storage.sync : chrome.storage.local;
         return new Promise((resolve) => {
             storage.remove(keys, () => {
+                this.handleError();
                 resolve();
             });
         });
@@ -46,6 +67,7 @@ class ExtensionStorage {
         const storage = sync ? chrome.storage.sync : chrome.storage.local;
         return new Promise((resolve) => {
             storage.clear(() => {
+                this.handleError();
                 if (callback) callback();
                 resolve();
             });
@@ -53,25 +75,61 @@ class ExtensionStorage {
     }
 
     /**
+     * Get bytes in use for quota monitoring
+     */
+    async getBytesInUse(keys = null) {
+        const sync = await this.isSyncEnabled();
+        const storage = sync ? chrome.storage.sync : chrome.storage.local;
+        return new Promise((resolve) => {
+            storage.getBytesInUse(keys, (bytes) => {
+                resolve(bytes || 0);
+            });
+        });
+    }
+
+    /**
      * Migrates data from one storage to another
      * @param {boolean} toSync - Flag to indicate direction
+     * @param {string} mode - 'overwrite' or 'merge'
      */
-    async migrate(toSync) {
+    async migrate(toSync, mode = 'overwrite') {
         const source = toSync ? chrome.storage.local : chrome.storage.sync;
         const target = toSync ? chrome.storage.sync : chrome.storage.local;
 
-        return new Promise((resolve) => {
-            source.get(null, async (items) => {
-                // Filter out the sync toggle itself to avoid confusion
-                const data = {
-                    ...items
-                };
-                delete data.googleSyncEnabled;
+        return new Promise((resolve, reject) => {
+            source.get(null, (sourceItems) => {
+                if (this.handleError()) return reject(new Error('Failed to read source data'));
 
-                if (Object.keys(data).length > 0) {
-                    await new Promise(r => target.set(data, r));
-                }
-                resolve();
+                target.get(null, async (targetItems) => {
+                    if (this.handleError()) return reject(new Error('Failed to read target data'));
+
+                    let dataToSet;
+                    if (mode === 'merge') {
+                        dataToSet = {
+                            ...targetItems,
+                            ...sourceItems
+                        };
+                    } else {
+                        dataToSet = {
+                            ...sourceItems
+                        };
+                    }
+
+                    // Filter out the sync toggle itself to avoid confusion
+                    delete dataToSet.googleSyncEnabled;
+
+                    if (Object.keys(dataToSet).length > 0) {
+                        target.set(dataToSet, () => {
+                            if (this.handleError()) {
+                                reject(new Error(chrome.runtime.lastError.message));
+                            } else {
+                                resolve();
+                            }
+                        });
+                    } else {
+                        resolve();
+                    }
+                });
             });
         });
     }

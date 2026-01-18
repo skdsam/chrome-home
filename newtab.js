@@ -496,19 +496,53 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    // --- Global Storage Error Listener ---
+    window.addEventListener('extension-storage-error', (e) => {
+        const error = e.detail;
+        if (error.includes('QUOTA_BYTES')) {
+            window.customAlert('Sync Full', 'Your Google Sync storage is full (100KB limit). Some settings might not be saved to the cloud.');
+        } else {
+            window.customAlert('Storage Error', `There was a problem saving your data: ${error}`);
+        }
+    });
     if (googleSyncToggle) {
         googleSyncToggle.addEventListener('change', async () => {
             const enabled = googleSyncToggle.checked;
 
             if (enabled) {
-                if (await window.customConfirm('Enable Google Sync?', 'This will move your current local settings to your Google account and sync them across devices.')) {
-                    await window.storageManager.migrate(true);
+                const choice = await window.customConfirm('Enable Google Sync?', 'This will sync your settings across devices. How would you like to proceed?');
+
+                // If cancelled
+                if (choice === null) {
+                    googleSyncToggle.checked = false;
+                    return;
+                }
+
+                try {
+                    // Check if cloud data exists
+                    const cloudData = await new Promise((resolve) => {
+                        chrome.storage.sync.get(null, (res) => resolve(res));
+                    });
+
+                    let migrateMode = 'overwrite';
+                    if (Object.keys(cloudData).length > 1) { // >1 because of potential internal extension keys
+                        const merge = await window.customConfirm('Existing Cloud Data Found', 'Would you like to MERGE your local settings with your cloud settings? (Selecting "No" will overwrite cloud data with local settings)');
+                        if (merge === null) {
+                            googleSyncToggle.checked = false;
+                            return;
+                        }
+                        migrateMode = merge ? 'merge' : 'overwrite';
+                    }
+
+                    await window.storageManager.migrate(true, migrateMode);
                     await chrome.storage.local.set({
                         googleSyncEnabled: true
                     });
-                    window.customAlert('Sync Enabled', 'Google Sync has been enabled! Your data is now being synchronized.');
-                    location.reload();
-                } else {
+
+                    window.customAlert('Sync Enabled', `Google Sync has been enabled in ${migrateMode} mode! Your data is now being synchronized.`);
+                    setTimeout(() => location.reload(), 1000);
+                } catch (err) {
+                    window.customAlert('Sync Failed', `Failed to enable sync: ${err.message}`);
                     googleSyncToggle.checked = false;
                 }
             } else {
