@@ -482,19 +482,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     const googleSyncToggle = document.getElementById('google-sync-toggle');
 
     // Load Initial settings
-    chrome.storage.local.get(['googleSyncEnabled'], async (result) => {
-        if (googleSyncToggle) {
-            googleSyncToggle.checked = !!result.googleSyncEnabled;
-        }
+    const syncStatus = await window.storageManager.isSyncEnabled();
+    if (googleSyncToggle) {
+        googleSyncToggle.checked = syncStatus;
+    }
 
-        // Now load other settings using storageManager
-        const settings = await window.storageManager.get(['recentSitesLimit']);
-        if (settings.recentSitesLimit) {
-            window.recentSitesLimit = parseInt(settings.recentSitesLimit);
-            recentSitesLimitInput.value = window.recentSitesLimit;
-            renderTopSites(); // Re-render with loaded limit
-        }
-    });
+    // Now load other settings using storageManager
+    const settings = await window.storageManager.get(['recentSitesLimit']);
+    if (settings.recentSitesLimit) {
+        window.recentSitesLimit = parseInt(settings.recentSitesLimit);
+        recentSitesLimitInput.value = window.recentSitesLimit;
+        renderTopSites(); // Re-render with loaded limit
+    }
+
 
     // --- Global Storage Error Listener ---
     window.addEventListener('extension-storage-error', (e) => {
@@ -952,11 +952,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Real-time Sync Listener ---
     // Listens for changes from other devices (if Google Sync is enabled)
-    chrome.storage.onChanged.addListener((changes, namespace) => {
+    chrome.storage.onChanged.addListener(async (changes, namespace) => {
         // Background Config Sync
         if (changes.bgConfig) {
-            console.log('Background config updated remotely:', changes.bgConfig.newValue);
-            // Update state and re-apply without reloading
             bgManager.state = changes.bgConfig.newValue;
             bgManager.applyState();
         }
@@ -968,7 +966,48 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderTopSites();
         }
 
-        // We can add other sync handlers here (shortcuts, etc.)
+        // Shortcuts Sync
+        if (changes.shortcuts) {
+            await renderShortcuts();
+        }
+
+        // My Sites Sync
+        if (changes.mySites) {
+            await renderMySites();
+        }
+
+        // Search Engine Sync
+        if (changes.searchEngine) {
+            currentSearchEngine = changes.searchEngine.newValue;
+            applySearchEngine();
+        }
+
+        // Widget States Sync
+        if (changes.spotifyState) {
+            spotifyState = changes.spotifyState.newValue;
+            applySpotifyState();
+        }
+        if (changes.footballState) {
+            footballState = changes.footballState.newValue;
+            applyFootballState();
+        }
+        if (changes.todoState) {
+            todoState = changes.todoState.newValue;
+            applyTodoState();
+            renderTodos();
+        }
+        if (changes.notesState) {
+            const oldContent = notesState.content;
+            notesState = changes.notesState.newValue;
+            applyNotesState();
+            if (notesState.content !== oldContent) {
+                notesInput.value = notesState.content;
+            }
+        }
+        if (changes.techNewsState) {
+            techNewsState = changes.techNewsState.newValue;
+            applyTechNewsState();
+        }
     });
 
     let editingId = null;
