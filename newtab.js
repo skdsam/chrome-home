@@ -918,7 +918,10 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
         }
 
         updateInteractiveColors() {
-            // Colors are handled internally by the WebGL shader
+            // Change gradient colors based on interval timer
+            if (this.webglApp && this.webglApp.randomizeColors) {
+                this.webglApp.randomizeColors();
+            }
         }
 
         animateInteractive() {

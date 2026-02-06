@@ -506,6 +506,63 @@ class WebGLGradientApp {
             this.scene.background = new THREE.Color(color2Hex);
         }
     }
+
+    randomizeColors() {
+        // Generate harmonious random colors using HSL
+        const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+        const hslToRgb = (h, s, l) => {
+            h /= 360;
+            s /= 100;
+            l /= 100;
+            let r, g, b;
+            if (s === 0) {
+                r = g = b = l;
+            } else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1;
+                    if (t > 1) t -= 1;
+                    if (t < 1 / 6) return p + (q - p) * 6 * t;
+                    if (t < 1 / 2) return q;
+                    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+                    return p;
+                };
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                r = hue2rgb(p, q, h + 1 / 3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1 / 3);
+            }
+            return {
+                r,
+                g,
+                b
+            };
+        };
+
+        // Base hue for harmony
+        const baseHue = randomInt(0, 360);
+
+        // Generate 6 colors with harmonic hue offsets
+        const colors = [];
+        for (let i = 0; i < 6; i++) {
+            const hue = (baseHue + (i * 30) + randomInt(-10, 10)) % 360;
+            const sat = randomInt(60, 90);
+            const light = i % 2 === 0 ? randomInt(45, 60) : randomInt(20, 35);
+            colors.push(hslToRgb(hue, sat, light));
+        }
+
+        const u = this.gradientBackground.uniforms;
+        u.uColor1.value.set(colors[0].r, colors[0].g, colors[0].b);
+        u.uColor2.value.set(colors[1].r, colors[1].g, colors[1].b);
+        u.uColor3.value.set(colors[2].r, colors[2].g, colors[2].b);
+        u.uColor4.value.set(colors[3].r, colors[3].g, colors[3].b);
+        u.uColor5.value.set(colors[4].r, colors[4].g, colors[4].b);
+        u.uColor6.value.set(colors[5].r, colors[5].g, colors[5].b);
+
+        // Dark background from the darkest color
+        u.uDarkNavy.value.set(colors[1].r, colors[1].g, colors[1].b);
+        this.scene.background = new THREE.Color(colors[1].r, colors[1].g, colors[1].b);
+    }
 }
 
 // Export for use in newtab.js
