@@ -411,6 +411,7 @@ class WebGLGradientApp {
 
     init() {
         this.gradientBackground.init();
+        this.randomizeColors();
         this.isRunning = true;
         this.tick();
 
