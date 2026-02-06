@@ -1780,6 +1780,7 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
     const footballHeader = document.getElementById('football-header');
     const footballMinimizeBtn = document.getElementById('football-minimize');
     const footballLeagueSelect = document.getElementById('football-league-select');
+    const sportSelect = document.getElementById('sport-select');
 
 
     const footballMatches = document.getElementById('football-matches');
@@ -1795,7 +1796,66 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
             left: '340px'
         }, // Default offset from spotify
         selectedLeague: 'eng.1', // Default EPL
+        selectedSport: 'soccer', // Default Soccer
         favoriteTeam: '' // User's pinned team
+    };
+
+    const sportLeagues = {
+        soccer: [{
+                value: 'eng.1',
+                name: 'Premier League'
+            },
+            {
+                value: 'eng.fa',
+                name: 'FA Cup'
+            },
+            {
+                value: 'eng.league_cup',
+                name: 'EFL Cup'
+            },
+            {
+                value: 'uefa.champions',
+                name: 'Champions League'
+            },
+            {
+                value: 'esp.1',
+                name: 'La Liga'
+            },
+            {
+                value: 'ger.1',
+                name: 'Bundesliga'
+            },
+            {
+                value: 'ita.1',
+                name: 'Serie A'
+            },
+            {
+                value: 'fra.1',
+                name: 'Ligue 1'
+            }
+        ],
+        football: [{
+                value: 'nfl',
+                name: 'NFL'
+            },
+            {
+                value: 'college-football',
+                name: 'NCAAF'
+            }
+        ],
+        basketball: [{
+                value: 'nba',
+                name: 'NBA'
+            },
+            {
+                value: 'mens-college-basketball',
+                name: 'NCAAB'
+            },
+            {
+                value: 'wnba',
+                name: 'WNBA'
+            }
+        ]
     };
 
     let footballInterval = null;
@@ -1852,6 +1912,12 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
             if (footballState.zIndex > maxZIndex) maxZIndex = footballState.zIndex;
         }
 
+        // Sport Select
+        if (sportSelect && sportSelect.value !== footballState.selectedSport) {
+            sportSelect.value = footballState.selectedSport;
+            updateLeagueOptions();
+        }
+
         // League Select
         if (footballLeagueSelect.value !== footballState.selectedLeague) {
             footballLeagueSelect.value = footballState.selectedLeague;
@@ -1901,8 +1967,31 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
 
         footballState.selectedLeague = e.target.value;
         saveFootballState();
-        fetchScores(footballState.selectedLeague);
+        fetchScores(footballState.selectedSport, footballState.selectedLeague);
     });
+
+    if (sportSelect) {
+        sportSelect.addEventListener('change', (e) => {
+            e.stopPropagation();
+            bringToFront(footballWidget);
+            footballState.zIndex = maxZIndex;
+
+            footballState.selectedSport = e.target.value;
+            // Set default league for sport
+            footballState.selectedLeague = sportLeagues[footballState.selectedSport][0].value;
+
+            updateLeagueOptions();
+            saveFootballState();
+            fetchScores(footballState.selectedSport, footballState.selectedLeague);
+        });
+    }
+
+    function updateLeagueOptions() {
+        if (!sportSelect || !footballLeagueSelect) return;
+        const leagues = sportLeagues[footballState.selectedSport] || [];
+        footballLeagueSelect.innerHTML = leagues.map(l => `<option value="${l.value}">${l.name}</option>`).join('');
+        footballLeagueSelect.value = footballState.selectedLeague;
+    }
 
     if (favoriteTeamInput) {
         favoriteTeamInput.addEventListener('input', () => {
@@ -1916,19 +2005,27 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
     }
 
     // API Key Function
-    async function fetchScores(leagueCode) {
+    async function fetchScores(sport, leagueCode) {
         if (!footballState.isOpen) return;
 
         footballLoading.style.display = 'block';
-        footballMatches.style.display = 'none'; // Hide old data while loading? Maybe just keep it visible.
-        // Better: Keep old data visible until new data works, unless it's first load.
-        // Let's just show loading if matches is empty.
         if (footballMatches.children.length === 0) {
             footballLoading.style.display = 'block';
         }
 
         try {
-            const response = await fetch(`http://site.api.espn.com/apis/site/v2/sports/soccer/${leagueCode}/scoreboard`);
+            // Mapping for ESPN API types
+            let sportType = sport; // nfl/nba/soccer
+            if (sport === 'soccer') {
+                // Soccer endpoint is slightly different: soccer/{league}/scoreboard
+            } else if (sport === 'football') {
+                // NFL/College endpoint: football/nfl/scoreboard
+            } else if (sport === 'basketball') {
+                // NBA/NCAA endpoint: basketball/nba/scoreboard
+            }
+
+            const url = `https://site.api.espn.com/apis/site/v2/sports/${sportType}/${leagueCode}/scoreboard`;
+            const response = await fetch(url);
             const data = await response.json();
 
             renderMatches(data);
@@ -2019,9 +2116,9 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
 
     function startFootballUpdates() {
         if (footballInterval) clearInterval(footballInterval);
-        fetchScores(footballState.selectedLeague);
+        fetchScores(footballState.selectedSport, footballState.selectedLeague);
         footballInterval = setInterval(() => {
-            fetchScores(footballState.selectedLeague);
+            fetchScores(footballState.selectedSport, footballState.selectedLeague);
         }, 60000); // 1 minute
     }
 
