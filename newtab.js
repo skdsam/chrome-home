@@ -708,6 +708,18 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
             };
             this.rotationInterval = null;
             this.currentSlideIndex = 0;
+
+            // Interactive Gradient Properties
+            this.mousePos = {
+                x: window.innerWidth / 2,
+                y: window.innerHeight / 2
+            };
+            this.curMousePos = {
+                x: window.innerWidth / 2,
+                y: window.innerHeight / 2
+            };
+            this.interactiveReqId = null;
+            this.blobs = [];
         }
 
         async init() {
@@ -732,9 +744,18 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
                     // If switching back to weather, trigger weather update to restore blobs/state
                     if (this.state.type === 'weather') {
                         weatherManager.init();
+                    } else {
+                        // Bug Fix: Clear weather effects container
+                        const effects = document.getElementById('weather-effects');
+                        if (effects) effects.innerHTML = '';
                     }
                 });
             }
+
+            window.addEventListener('mousemove', (e) => {
+                this.mousePos.x = e.clientX;
+                this.mousePos.y = e.clientY;
+            });
 
             if (this.bgQueryInput) {
                 this.bgQueryInput.addEventListener('change', () => {
@@ -813,25 +834,34 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
                 this.weatherBlobs.classList.remove('hidden');
                 this.bgOverlay.style.background = 'rgba(0,0,0,0.1)';
                 this.stopRotation();
+                this.stopInteractiveGradient();
                 this.mediaBg.innerHTML = ''; // Clean up media
             } else if (this.state.type === 'gradient') {
                 this.mediaBg.classList.remove('hidden');
                 this.weatherBlobs.classList.add('hidden');
-                this.bgOverlay.style.background = 'rgba(0,0,0,0.1)'; // Lighter overlay for gradients
+                this.bgOverlay.style.background = 'rgba(0,0,0,0.1)';
+
+                // Bug Fix: Ensure weather effects are cleared when switching to gradient
+                const effects = document.getElementById('weather-effects');
+                if (effects) effects.innerHTML = '';
 
                 this.stopRotation();
-
-                // Initial Load
-                this.loadRandomGradient();
+                this.initInteractiveGradient();
 
                 const intervalMs = (this.state.interval || 60) * 1000;
                 this.rotationInterval = setInterval(() => {
-                    this.loadRandomGradient();
+                    this.updateInteractiveColors();
                 }, intervalMs);
             } else {
                 this.mediaBg.classList.remove('hidden');
                 this.weatherBlobs.classList.add('hidden');
                 this.bgOverlay.style.background = 'rgba(0,0,0,0.3)';
+
+                // Bug Fix: Ensure weather effects are cleared when switching to image
+                const effects = document.getElementById('weather-effects');
+                if (effects) effects.innerHTML = '';
+
+                this.stopInteractiveGradient();
                 this.loadMedia();
             }
         }
@@ -871,73 +901,87 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
             }
         }
 
-        loadRandomGradient() {
-            // Generate a random, aesthetically pleasing gradient procedurally
-            // This ensures infinite variety like uigradients/cssgradient.io
-
-            const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-
-            // 1. Pick a Angle (0-360)
-            const angle = randomInt(0, 360);
-
-            // 2. Decide Gradient Type (Linear vs Radial) - 80% Linear, 20% Radial
-            const isRadial = Math.random() > 0.8;
-
-            // 3. Generate Colors using HSL for harmony
-            // Base Hue
-            const baseHue = randomInt(0, 360);
-
-            // Harmony Strategy: Analogous, Complementary, or Split Complementary
-            const harmony = Math.random();
-            let secondaryHue, tertiaryHue;
-
-            if (harmony < 0.5) {
-                // Analogous (Nearby colors, smooth)
-                secondaryHue = (baseHue + randomInt(30, 60)) % 360;
-                tertiaryHue = (baseHue + randomInt(60, 90)) % 360;
-            } else if (harmony < 0.8) {
-                // Complementary (Opposite, bold)
-                secondaryHue = (baseHue + 180) % 360;
-                tertiaryHue = (baseHue + randomInt(150, 210)) % 360;
-            } else {
-                // Triadic (Vibrant)
-                secondaryHue = (baseHue + 120) % 360;
-                tertiaryHue = (baseHue + 240) % 360;
-            }
-
-            // Saturation & Lightness (Keep premium/vibrant)
-            const s = randomInt(60, 90) + '%';
-            const l = randomInt(40, 65) + '%';
-
-            const color1 = `hsl(${baseHue}, ${s}, ${l})`;
-            const color2 = `hsl(${secondaryHue}, ${s}, ${l})`;
-            const color3 = `hsl(${tertiaryHue}, ${s}, ${l})`;
-
-            // 4. Construct Gradient String
-            let gradientVal;
-            const stopType = Math.random();
-
-            if (isRadial) {
-                gradientVal = `radial-gradient(circle at ${randomInt(20,80)}% ${randomInt(20,80)}%, ${color1}, ${color2})`;
-            } else {
-                if (stopType < 0.6) {
-                    // 2-Stop Simple
-                    gradientVal = `linear-gradient(${angle}deg, ${color1}, ${color2})`;
-                } else {
-                    // 3-Stop Complex
-                    gradientVal = `linear-gradient(${angle}deg, ${color1}, ${color2}, ${color3})`;
-                }
-            }
-
-            // Clear current
+        initInteractiveGradient() {
+            this.stopInteractiveGradient();
             this.mediaBg.innerHTML = '';
 
-            const gradDiv = document.createElement('div');
-            gradDiv.className = 'gradient-bg';
-            gradDiv.style.background = gradientVal;
-            gradDiv.style.backgroundSize = '200% 200%'; // Slightly less zoom for procedural to show off colors
+            const container = document.createElement('div');
+            container.className = 'interactive-gradient-container';
+            this.mediaBg.appendChild(container);
 
-            this.mediaBg.appendChild(gradDiv);
+            this.blobs = [];
+            const blobCount = 5;
+            for (let i = 0; i < blobCount; i++) {
+                const blob = document.createElement('div');
+                blob.className = 'interactive-blob';
+                if (i === 0) blob.classList.add('user-blob');
+
+                const data = {
+                    el: blob,
+                    x: Math.random() * window.innerWidth,
+                    y: Math.random() * window.innerHeight,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    targetX: Math.random() * window.innerWidth,
+                    targetY: Math.random() * window.innerHeight
+                };
+
+                this.blobs.push(data);
+                container.appendChild(blob);
+            }
+
+            this.updateInteractiveColors();
+            this.animateInteractive();
+        }
+
+        updateInteractiveColors() {
+            const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+            const baseHue = randomInt(0, 360);
+
+            this.blobs.forEach((blobData, i) => {
+                const hue = (baseHue + (i * 40)) % 360;
+                const s = randomInt(60, 90) + '%';
+                const l = randomInt(40, 60) + '%';
+                blobData.el.style.background = `radial-gradient(circle at center, hsl(${hue}, ${s}, ${l}) 0, hsla(${hue}, ${s}, ${l}, 0) 70%)`;
+            });
+        }
+
+        animateInteractive() {
+            // Lerp mouse
+            this.curMousePos.x += (this.mousePos.x - this.curMousePos.x) * 0.1;
+            this.curMousePos.y += (this.mousePos.y - this.curMousePos.y) * 0.1;
+
+            this.blobs.forEach((blob, i) => {
+                if (i === 0) {
+                    // User following blob
+                    blob.x = this.curMousePos.x - (blob.el.offsetWidth / 2);
+                    blob.y = this.curMousePos.y - (blob.el.offsetHeight / 2);
+                } else {
+                    // Floating blobs
+                    blob.x += blob.vx;
+                    blob.y += blob.vy;
+
+                    // Bounce off walls
+                    if (blob.x < -200 || blob.x > window.innerWidth) blob.vx *= -1;
+                    if (blob.y < -200 || blob.y > window.innerHeight) blob.vy *= -1;
+                }
+
+                blob.el.style.transform = `translate(${blob.x}px, ${blob.y}px)`;
+            });
+
+            this.interactiveReqId = requestAnimationFrame(() => this.animateInteractive());
+        }
+
+        stopInteractiveGradient() {
+            if (this.interactiveReqId) {
+                cancelAnimationFrame(this.interactiveReqId);
+                this.interactiveReqId = null;
+            }
+        }
+
+        // Keep legacy for safety/internal use if needed
+        loadRandomGradient() {
+            this.updateInteractiveColors();
         }
 
         async loadImageToSlide(slideElement) {

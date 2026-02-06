@@ -126,15 +126,15 @@ class WeatherManager {
         } else if (code >= 51 && code <= 67) {
             baseState = 'rain';
             icon = '🌧️';
-            this.createRain(effects);
+            if (bgType === 'weather') this.createRain(effects);
         } else if (code >= 71 && code <= 86) {
             baseState = 'snow';
             icon = '❄️';
-            this.createSnow(effects);
+            if (bgType === 'weather') this.createSnow(effects);
         } else if (code >= 95) {
             baseState = 'rain'; // Storm
             icon = '⚡';
-            this.createRain(effects);
+            if (bgType === 'weather') this.createRain(effects);
         } else {
             baseState = 'clouds';
             icon = '🌫️';

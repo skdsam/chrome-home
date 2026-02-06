@@ -97,6 +97,40 @@ body {
     opacity: 1;
 }
 
+/* Interactive Gradient Styles */
+.interactive-gradient-container {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    overflow: hidden;
+    background: var(--bg-base);
+    z-index: -5;
+    filter: blur(40px); /* Base blur for smoother blending */
+}
+
+.interactive-blob {
+    position: absolute;
+    width: 60%;
+    height: 60%;
+    top: 20%;
+    left: 20%;
+    border-radius: 50%;
+    mix-blend-mode: screen;
+    filter: blur(80px);
+    opacity: 0.6;
+    transition: background 1s ease;
+}
+
+.interactive-blob.user-blob {
+    width: 40%;
+    height: 40%;
+    opacity: 0.8;
+    z-index: 2;
+    mix-blend-mode: hard-light;
+}
+
 .media-bg video {
     width: 100%;
     height: 100%;
