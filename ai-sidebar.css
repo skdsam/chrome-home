@@ -1,0 +1,225 @@
+/* AI Sidebar Wrapper */
+.ai-sidebar {
+    position: fixed;
+    top: 50%;
+    z-index: 1000;
+    transition: left 0.4s ease, right 0.4s ease;
+    display: flex;
+    flex-direction: column;
+    width: auto;
+}
+
+/* The Panel (Content Box) */
+.ai-sidebar-content {
+    background: rgba(20, 20, 20, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 15px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    box-sizing: border-box;
+    width: 65px; 
+    min-width: 65px;
+    align-items: center;
+    text-align: center; /* Center "AI Tools" header */
+}
+
+/* Header in sidebar */
+.ai-sidebar-content h3 {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0;
+    text-align: center;
+}
+
+/* The Handle - Positioned relative to .ai-sidebar */
+.ai-sidebar-handle {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 35px;
+    height: 60px;
+    
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: white;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    font-family: 'Inter', sans-serif;
+    
+    transition: all 0.3s ease;
+}
+
+.ai-sidebar-handle:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* --- RIGHT Position Logic --- */
+.ai-sidebar.right {
+    right: -65px; /* Hidden: Content off-screen to the right */
+    left: auto;
+    transform: translateY(-50%);
+}
+
+.ai-sidebar.right .ai-sidebar-handle {
+    left: -35px; /* Handle sticks out to the LEFT of the content */
+    right: auto;
+    border-radius: 8px 0 0 8px;
+    border-right: none;
+    box-shadow: -4px 0 10px rgba(0,0,0,0.2);
+}
+
+.ai-sidebar.right.open {
+    right: 15px;
+}
+
+
+/* --- LEFT Position Logic --- */
+.ai-sidebar.left {
+    left: -65px; /* Hidden: Content off-screen to the left */
+    right: auto;
+    transform: translateY(-50%);
+}
+
+.ai-sidebar.left .ai-sidebar-handle {
+    /* Handle sticks out to the RIGHT. Content is 65px, so handle starts at left: 65px */
+    left: 65px; 
+    right: auto;
+    border-radius: 0 8px 8px 0;
+    border-left: none;
+    box-shadow: 4px 0 10px rgba(0,0,0,0.2);
+}
+
+.ai-sidebar.left.open {
+    left: 15px;
+}
+
+
+/* --- BOTTOM Position Logic --- */
+.ai-sidebar.bottom {
+    bottom: -55px; /* Hidden: Content off-screen, handle visible */
+    top: auto;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%); /* Center horizontally */
+}
+
+.ai-sidebar.bottom .ai-sidebar-content {
+    flex-direction: row; /* Horizontal layout */
+    width: auto;
+    min-width: auto;
+    padding: 10px 15px;
+    gap: 10px;
+}
+
+.ai-sidebar.bottom .ai-sidebar-content h3 {
+    display: none; /* Hide header in bottom mode for cleaner look */
+}
+
+.ai-sidebar.bottom .ai-dock {
+    flex-direction: row; /* Horizontal icons */
+    gap: 10px;
+}
+
+.ai-sidebar.bottom .ai-sidebar-handle {
+    /* Handle sticks out at the TOP */
+    top: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 35px;
+    writing-mode: horizontal-tb;
+    text-orientation: mixed;
+    border-radius: 8px 8px 0 0;
+    border-bottom: none;
+    box-shadow: 0 -4px 10px rgba(0,0,0,0.2);
+}
+
+.ai-sidebar.bottom.open {
+    bottom: 15px;
+}
+
+.ai-dock {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ai-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ai-icon:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: scale(1.1);
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+}
+
+.ai-icon span.material-icons {
+    font-size: 24px;
+    margin-bottom: 2px;
+}
+
+.ai-icon .ai-name {
+    font-size: 0.6rem;
+    color: rgba(255, 255, 255, 0.8);
+    display: none; /* Show on hover maybe? */
+}
+
+/* Tooltip on hover */
+.ai-icon::after {
+    content: attr(title);
+    position: absolute;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    
+    /* Center vertical */
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.ai-sidebar.right .ai-icon::after {
+    right: 60px; /* Show to left of icon */
+}
+
+.ai-sidebar.left .ai-icon::after {
+    left: 60px; /* Show to right of icon */
+}
+
+.ai-icon:hover::after {
+    opacity: 1;
+}

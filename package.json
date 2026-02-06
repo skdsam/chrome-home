@@ -1,0 +1,8 @@
+{
+  "name": "chrome-home",
+  "version": "1.0.0",
+  "description": "Chrome Home Extension Packager",
+  "scripts": {
+    "zip": "powershell Compress-Archive -Path manifest.json, *.html, *.js, *.css, icons, icon.png -DestinationPath chrome-home.zip -Force"
+  }
+}

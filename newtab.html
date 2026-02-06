@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chrome Home</title>
+    <link rel="stylesheet" href="newtab.css">
+    <link rel="stylesheet" href="ai-sidebar.css">
+    <link rel="stylesheet" href="tabs.css">
+    <!-- Google Fonts for premium look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="icon" type="image/png" href="icon.png">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@300;400;500;700&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <div class="background-container" id="bg-container">
+        <!-- Blobs for color (will change based on weather) -->
+        <div id="weather-blobs" class="weather-blobs">
+            <div class="blob blob-1"></div>
+            <div class="blob blob-2"></div>
+            <div class="blob blob-3"></div>
+        </div>
+        <!-- Media Backgrounds -->
+        <div id="media-bg" class="media-bg hidden"></div>
+        <!-- Overlay for Rain/Snow/Clouds -->
+        <div id="weather-effects" class="weather-overlay"></div>
+        <div id="bg-overlay" class="bg-overlay"></div>
+    </div>
+
+    <!-- Header Controls (Top Right) -->
+    <div class="header-controls">
+        <!-- Weather Info -->
+        <div id="weather-display" class="control-btn"
+            style="width: auto; padding: 0 15px; border-radius: 20px; gap: 8px;">
+            <span id="weather-icon" style="font-size: 1.2rem;">Checking...</span>
+            <span id="weather-temp" style="font-size: 0.9rem;"></span>
+        </div>
+
+        <!-- Add Shortcut Button -->
+        <div id="add-shortcut-btn" class="control-btn" title="Add Shortcut">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+        </div>
+
+        <!-- My Sites Trigger -->
+        <div id="my-sites-btn" class="control-btn" title="My Sites">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="2" y1="12" x2="22" y2="12"></line>
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z">
+                </path>
+            </svg>
+        </div>
+
+        <!-- Top Sites Trigger -->
+        <div id="top-sites-btn" class="control-btn" title="Top Sites">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon
+                    points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                </polygon>
+            </svg>
+        </div>
+
+        <!-- Widgets Trigger -->
+        <div id="widgets-btn" class="control-btn" title="Widgets" style="position: relative;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7"></rect>
+                <rect x="14" y="3" width="7" height="7"></rect>
+                <rect x="14" y="14" width="7" height="7"></rect>
+                <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+        </div>
+
+        <!-- Widgets Menu (Hidden) -->
+        <div id="widgets-menu" class="widgets-menu hidden">
+            <div id="spotify-btn" class="widget-menu-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M8 14.5c2.5-1 5.5-1 8 0"></path>
+                    <path d="M7 11.5c3-1.5 7-1.5 10 0"></path>
+                    <path d="M9 8.5c3-1.5 6-1.5 9 0"></path>
+                </svg>
+                <span>Spotify</span>
+            </div>
+            <div id="football-btn" class="widget-menu-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+                    <path d="M2 12h20"></path>
+                    <path d="M12 2v20"></path>
+                    <path d="M4.93 4.93l14.14 14.14"></path>
+                    <path d="M14.07 4.93L4.93 19.07"></path>
+                </svg>
+                <span>Football</span>
+            </div>
+            <div id="todo-btn" class="widget-menu-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 11l3 3L22 4"></path>
+                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                </svg>
+                <span>Todo List</span>
+            </div>
+            <div id="notes-btn" class="widget-menu-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+                <span>Quick Notes</span>
+            </div>
+            <div id="tech-news-btn" class="widget-menu-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path
+                        d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2">
+                    </path>
+                    <path d="M18 14h-8"></path>
+                    <path d="M15 18h-5"></path>
+                    <path d="M10 6h8v4h-8V6Z"></path>
+                </svg>
+                <span>Tech News</span>
+            </div>
+        </div>
+
+        <!-- Notification Bell -->
+        <div id="notification-bell" class="control-btn notification-trigger">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+            <span id="notification-badge" class="badge hidden"></span>
+        </div>
+
+
+        <!-- Settings Button -->
+        <div id="settings-btn" class="control-btn" title="Settings">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path
+                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                </path>
+            </svg>
+        </div>
+    </div>
+
+    <!-- Notification Panel -->
+    <div id="notification-panel" class="panel hidden">
+        <div class="panel-header">
+            <h3>Notifications</h3>
+            <button id="clear-notifications">Clear All</button>
+        </div>
+        <div id="notification-list" class="panel-content">
+            <!-- Notifications will be injected here -->
+            <div class="empty-state">No new notifications</div>
+        </div>
+    </div>
+
+    <!-- Top Sites Panel -->
+    <div id="top-sites-panel" class="panel hidden">
+        <div class="panel-header">
+            <h3>Recent Sites</h3>
+        </div>
+        <div id="top-sites-list" class="panel-content">
+            <!-- Top sites injected here -->
+        </div>
+    </div>
+
+    <!-- My Sites Panel -->
+    <div id="my-sites-panel" class="panel hidden">
+        <div class="panel-header">
+            <h3>My Sites</h3>
+            <button id="add-my-site-btn" style="color:var(--accent-color); font-weight:bold;">+ Add</button>
+        </div>
+        <div id="my-sites-list" class="panel-content">
+            <!-- My sites injected here -->
+        </div>
+    </div>
+
+
+
+    <!-- Main Container -->
+    <main class="container">
+        <!-- Google Search -->
+        <div class="search-container">
+            <!-- Logo Removed -->
+            <form id="search-form" action="https://www.google.com/search" method="GET">
+                <div class="search-bar">
+                    <div id="search-engine-selector" class="search-engine-selector">
+                        <span id="search-engine-g" class="search-google-icon">G</span>
+                        <img id="search-engine-icon"
+                            src="https://www.google.com/s2/favicons?domain=duckduckgo.com&sz=32" alt="Search"
+                            title="Click to change search engine" class="hidden">
+                        <div id="search-engine-dropdown" class="search-engine-dropdown hidden">
+                            <div class="search-engine-option" data-engine="google"
+                                data-url="https://www.google.com/search" data-param="q">
+                                <img src="https://www.google.com/s2/favicons?domain=google.com&sz=32" alt="Google">
+                                <span>Google</span>
+                            </div>
+                            <div class="search-engine-option" data-engine="duckduckgo"
+                                data-url="https://duckduckgo.com/" data-param="q">
+                                <img src="https://www.google.com/s2/favicons?domain=duckduckgo.com&sz=32"
+                                    alt="DuckDuckGo">
+                                <span>DuckDuckGo</span>
+                            </div>
+                            <div class="search-engine-option" data-engine="bing" data-url="https://www.bing.com/search"
+                                data-param="q">
+                                <img src="https://www.google.com/s2/favicons?domain=bing.com&sz=32" alt="Bing">
+                                <span>Bing</span>
+                            </div>
+                            <div class="search-engine-option" data-engine="yahoo"
+                                data-url="https://search.yahoo.com/search" data-param="p">
+                                <img src="https://www.google.com/s2/favicons?domain=yahoo.com&sz=32" alt="Yahoo">
+                                <span>Yahoo</span>
+                            </div>
+                            <div class="search-engine-option" data-engine="brave"
+                                data-url="https://search.brave.com/search" data-param="q">
+                                <img src="https://www.google.com/s2/favicons?domain=brave.com&sz=32" alt="Brave">
+                                <span>Brave</span>
+                            </div>
+                            <div class="search-engine-option" data-engine="ecosia"
+                                data-url="https://www.ecosia.org/search" data-param="q">
+                                <img src="https://www.google.com/s2/favicons?domain=ecosia.org&sz=32" alt="Ecosia">
+                                <span>Ecosia</span>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="text" id="search-input" name="q" placeholder="Search Google..." autocomplete="off">
+                    <button id="voice-search-btn" type="button" title="Search by voice">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                            <line x1="12" y1="19" x2="12" y2="23"></line>
+                            <line x1="8" y1="23" x2="16" y2="23"></line>
+                        </svg>
+                    </button>
+                </div>
+                <div class="search-options">
+                    <button type="button" data-type="web" class="active">Web</button>
+                    <button type="button" data-type="isch">Images</button>
+                    <button type="button" data-type="vid">Videos</button>
+                    <button type="button" data-type="nws">News</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Shortcuts Grid -->
+        <div id="shortcuts-grid" class="grid">
+            <!-- Shortcuts will be injected here -->
+        </div>
+        </div>
+    </main>
+
+    <!-- Spotify Widget -->
+    <div id="spotify-widget" class="spotify-widget hidden">
+        <div class="spotify-header" id="spotify-header">
+            <span class="spotify-title">Spotify</span>
+            <div class="spotify-controls">
+                <button id="spotify-edit" title="Change Playlist">✎</button>
+                <button id="spotify-minimize">-</button>
+            </div>
+        </div>
+        <div class="spotify-content" id="spotify-content">
+            <!-- Spotify Embed -->
+            <iframe style="border-radius:12px"
+                src="https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M?utm_source=generator" width="100%"
+                height="152" frameBorder="0"
+                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy">
+            </iframe>
+        </div>
+    </div>
+
+    </div>
+
+    <!-- Football Widget -->
+    <div id="football-widget" class="spotify-widget football-widget hidden">
+        <div class="spotify-header" id="football-header">
+            <span class="spotify-title">
+                Football
+            </span>
+            <div class="spotify-controls">
+                <button id="football-minimize">-</button>
+            </div>
+        </div>
+        <div class="spotify-content football-content" id="football-content">
+            <div class="football-toolbar">
+                <select id="football-league-select" class="football-select">
+                    <option value="eng.1">Premier League</option>
+                    <option value="eng.fa">FA Cup</option>
+                    <option value="eng.league_cup">EFL Cup (Carabao)</option>
+                    <option value="uefa.champions">Champions League</option>
+                    <option value="esp.1">La Liga</option>
+                    <option value="ger.1">Bundesliga</option>
+                    <option value="ita.1">Serie A</option>
+                    <option value="fra.1">Ligue 1</option>
+                </select>
+                <div class="favorite-team-group" style="margin-top: 8px; display: flex; gap: 5px;">
+                    <input type="text" id="favorite-team-input" class="football-select"
+                        placeholder="Favorite Team (e.g. Arsenal)" style="font-size: 0.8rem; padding: 6px;">
+                </div>
+            </div>
+            <div id="football-loading" style="padding:20px; text-align:center; color:#888;">Loading...</div>
+            <div id="football-matches" class="football-matches"></div>
+        </div>
+    </div>
+
+    <!-- Todo Widget -->
+    <div id="todo-widget" class="spotify-widget todo-widget hidden">
+        <div class="spotify-header" id="todo-header">
+            <span class="spotify-title">Todo List</span>
+            <div class="spotify-controls">
+                <button id="todo-minimize">-</button>
+            </div>
+        </div>
+        <div class="spotify-content todo-content" id="todo-content">
+            <div class="todo-toolbar">
+                <input type="text" id="todo-input" class="todo-input" placeholder="Add a task...">
+                <button id="todo-add-btn" class="todo-add-btn">+</button>
+            </div>
+            <div id="todo-list" class="todo-list">
+                <!-- Todo items injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Notes Widget -->
+    <div id="notes-widget" class="spotify-widget notes-widget hidden">
+        <div class="spotify-header" id="notes-header">
+            <span class="spotify-title">Quick Notes</span>
+            <div class="spotify-controls">
+                <button id="notes-minimize">-</button>
+            </div>
+        </div>
+        <div class="spotify-content notes-content" id="notes-content">
+            <textarea id="notes-input" placeholder="Type something..."></textarea>
+        </div>
+    </div>
+
+    <!-- Tech News Widget -->
+    <div id="tech-news-widget" class="spotify-widget tech-news-widget hidden">
+        <div class="spotify-header" id="tech-news-header">
+            <span class="spotify-title">📰 Tech News</span>
+            <div class="spotify-controls">
+                <select id="news-source-select" class="news-source-select">
+                    <option value="hackernews">Hacker News</option>
+                    <option value="producthunt">Product Hunt</option>
+                    <option value="devto">DEV.to</option>
+                </select>
+                <button id="tech-news-refresh" title="Refresh">↻</button>
+                <button id="tech-news-minimize">-</button>
+            </div>
+        </div>
+        <div class="spotify-content tech-news-content" id="tech-news-content">
+            <div id="tech-news-loading" class="news-loading">Loading news...</div>
+            <div id="tech-news-list" class="news-list">
+                <!-- News items injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Add/Edit -->
+    <div id="modal-overlay" class="modal-overlay hidden">
+        <div class="modal">
+            <h2 id="modal-title">Add Shortcut</h2>
+            <form id="shortcut-form">
+                <div class="form-group">
+                    <label for="shortcut-url">URL</label>
+                    <input type="url" id="shortcut-url" placeholder="https://example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="shortcut-name">Name</label>
+                    <input type="text" id="shortcut-name" placeholder="Example" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="cancel-modal" class="btn-secondary">Cancel</button>
+                    <button type="submit" class="btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Custom Dialog Modal (Alert/Confirm/Prompt) -->
+    <div id="custom-dialog-overlay" class="modal-overlay hidden">
+        <div class="modal">
+            <h2 id="dialog-title">Notification</h2>
+            <p id="dialog-message" style="color: #aaa; margin-bottom: 20px; font-size: 0.9rem;"></p>
+            <div id="dialog-input-container" class="form-group">
+                <input type="text" id="dialog-input" placeholder="Type here...">
+            </div>
+            <div class="form-actions">
+                <button type="button" id="dialog-cancel" class="btn-secondary">Cancel</button>
+                <button type="button" id="dialog-confirm" class="btn-primary">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal-overlay" class="modal-overlay hidden">
+        <div class="modal">
+            <h2 id="settings-modal-title">Settings</h2>
+
+            <!-- Tabs Header -->
+            <div class="settings-tabs">
+                <div class="tab-item active" data-tab="tab-general">General</div>
+                <div class="tab-item" data-tab="tab-background">Background</div>
+                <div class="tab-item" data-tab="tab-sidebar">Sidebar</div>
+                <div class="tab-item" data-tab="tab-data">Data</div>
+            </div>
+
+            <div class="modal-content" style="padding-top: 15px;">
+
+                <!-- Tab: General -->
+                <div id="tab-general" class="tab-content active">
+                    <div class="settings-group">
+                        <label for="recent-sites-limit">Recent Sites Limit</label>
+                        <input type="number" id="recent-sites-limit" min="1" max="20" value="5">
+                    </div>
+                    <div class="settings-group"
+                        style="display: flex; justify-content: space-between; align-items: center;">
+                        <label for="google-sync-toggle" style="margin-bottom: 0;">Google Sync (Cloud)</label>
+                        <label class="switch">
+                            <input type="checkbox" id="google-sync-toggle">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Tab: Background -->
+                <div id="tab-background" class="tab-content">
+                    <div class="settings-group">
+                        <label for="bg-type-select">Background Type</label>
+                        <select id="bg-type-select" class="football-select" style="width: 100%; margin-top: 5px;">
+                            <option value="weather">Dynamic Weather</option>
+                            <option value="image">Unsplash Image</option>
+                            <option value="gradient">Gradient Pattern</option>
+                        </select>
+                    </div>
+                    <!-- Note: The ID bg-query-group is used in JS to toggle visibility. 
+                         We keep it here. The logic in newtab.js might need to check if we are in this tab, 
+                         but visibility toggling usually works on the element itself independently. 
+                    -->
+                    <div id="bg-query-group" class="settings-group hidden">
+                        <label for="bg-query-input" id="bg-query-label">Search Query</label>
+                        <input type="text" id="bg-query-input" placeholder="e.g. Nature, Space, Minimal"
+                            style="width: 100%; margin-top: 5px;">
+
+                        <label for="bg-interval-input" style="display: block; margin-top: 10px;">Rotation Interval
+                            (Seconds)</label>
+                        <input type="number" id="bg-interval-input" min="10" max="3600" value="60"
+                            style="width: 100%; margin-top: 5px;">
+                    </div>
+                </div>
+
+                <!-- Tab: AI Sidebar -->
+                <div id="tab-sidebar" class="tab-content">
+                    <div class="settings-group">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <label for="ai-sidebar-toggle" style="margin-bottom: 0px; font-size: 0.9em;">Enable
+                                Sidebar</label>
+                            <label class="switch">
+                                <input type="checkbox" id="ai-sidebar-toggle" checked>
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        <label for="ai-sidebar-position" style="font-size: 0.9em;">Position</label>
+                        <select id="ai-sidebar-position" class="football-select" style="width: 100%; margin-top: 5px;">
+                            <option value="right">Right</option>
+                            <option value="left">Left</option>
+                            <option value="bottom">Bottom</option>
+                        </select>
+
+                        <label style="margin-top: 15px; font-size: 0.9em;">Manage AI Agents</label>
+                        <div id="ai-agents-list"
+                            style="margin-bottom: 10px; max-height: 150px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 5px;">
+                            <!-- Agents injected here -->
+                        </div>
+
+                        <div style="display: flex; gap: 5px;">
+                            <input type="text" id="new-agent-name" placeholder="Name" class="football-select"
+                                style="width: 30%;">
+                            <input type="text" id="new-agent-url" placeholder="URL" class="football-select"
+                                style="width: 50%;">
+                            <button id="add-agent-btn" class="btn-primary"
+                                style="width: 20%; padding: 5px;">Add</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Data -->
+                <div id="tab-data" class="tab-content">
+                    <div class="settings-group">
+                        <label>Data Management</label>
+                        <p style="font-size: 0.8em; color: #888; margin-bottom: 10px;">Export your settings to a JSON
+                            file or import a previous backup.</p>
+                        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                            <button id="export-data-btn" class="btn-primary" style="flex:1;">Export Data</button>
+                            <button id="import-data-btn" class="btn-secondary" style="flex:1;">Import Data</button>
+                            <input type="file" id="import-file-input" accept=".json" hidden>
+                        </div>
+
+                        <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 20px 0;">
+
+                        <label>Troubleshooting</label>
+                        <p style="font-size: 0.8em; color: #888; margin-bottom: 10px;">If sync isn't working, check your
+                            diagnostics or force a cloud data pull.</p>
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <button id="debug-sync-btn" class="btn-secondary" style="font-size: 0.8em;">View Sync
+                                Diagnostics</button>
+                            <button id="force-sync-pull" class="btn-secondary"
+                                style="font-size: 0.8em; color: #4facfe;">Force
+                                Cloud Pull (Merge)</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-actions">
+                <button type="button" id="close-settings-modal" class="btn-secondary">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Sidebar -->
+    <div id="ai-sidebar" class="ai-sidebar hidden right">
+        <div class="ai-sidebar-handle">
+            AI
+        </div>
+        <div class="ai-sidebar-content">
+            <h3>AI Tools</h3>
+            <div class="ai-dock">
+                <div class="ai-icon" data-url="https://gemini.google.com/app" title="Gemini">
+                    <!-- Placeholder Icon (G) -->
+                    <span class="material-icons" style="color: #4facfe;">psychology</span>
+                    <span class="ai-name">Gemini</span>
+                </div>
+                <div class="ai-icon" data-url="https://chatgpt.com/" title="ChatGPT">
+                    <span class="material-icons" style="color: #10a37f;">chat</span>
+                    <span class="ai-name">ChatGPT</span>
+                </div>
+                <div class="ai-icon" data-url="https://claude.ai/chats" title="Claude">
+                    <span class="material-icons" style="color: #d97757;">alternate_email</span>
+                    <span class="ai-name">Claude</span>
+                </div>
+                <div class="ai-icon" data-url="https://www.perplexity.ai/" title="Perplexity">
+                    <span class="material-icons" style="color: #2ebf91;">search</span>
+                    <span class="ai-name">Perplexity</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="storage.js"></script>
+    <script src="notifications.js"></script>
+    <script src="weather.js"></script>
+    <script src="newtab.js"></script>
+</body>
+
+</html>
