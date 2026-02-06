@@ -689,6 +689,38 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
     // Init Weather
     weatherManager.init();
 
+    // Init Usage Stats
+    const usageStats = new window.UsageStats();
+    usageStats.init();
+
+    // Init Cursor Trail
+    const cursorTrail = new window.CursorTrail();
+    cursorTrail.init();
+
+    // Settings toggles for new features
+    const usageStatsToggle = document.getElementById('usage-stats-toggle');
+    const cursorTrailToggle = document.getElementById('cursor-trail-toggle');
+
+    // Load initial toggle states
+    (async () => {
+        const stored = await window.storageManager.get(['usageStatsEnabled', 'cursorTrailEnabled']);
+        if (usageStatsToggle) usageStatsToggle.checked = stored.usageStatsEnabled !== false;
+        if (cursorTrailToggle) cursorTrailToggle.checked = stored.cursorTrailEnabled !== false;
+    })();
+
+    // Toggle event listeners
+    if (usageStatsToggle) {
+        usageStatsToggle.addEventListener('change', () => {
+            usageStats.toggle(usageStatsToggle.checked);
+        });
+    }
+
+    if (cursorTrailToggle) {
+        cursorTrailToggle.addEventListener('change', () => {
+            cursorTrail.toggle(cursorTrailToggle.checked);
+        });
+    }
+
     // --- Background Customization Logic ---
     class BackgroundManager {
         constructor() {
