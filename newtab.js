@@ -1346,14 +1346,23 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
             return;
         }
 
-        sites.forEach(site => {
+        // Drag state
+        let draggedItem = null;
+        let draggedIndex = -1;
+
+        sites.forEach((site, index) => {
             const item = document.createElement('div');
             item.className = 'menu-list-item';
+            item.draggable = true;
+            item.dataset.index = index;
+            item.dataset.id = site.id;
             item.style.display = 'flex';
             item.style.alignItems = 'center';
             item.style.justifyContent = 'space-between';
             item.style.padding = '10px';
             item.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+            item.style.cursor = 'grab';
+            item.style.transition = 'background 0.2s ease, transform 0.2s ease';
 
             const iconUrl = `https://www.google.com/s2/favicons?domain=${new URL(site.url).hostname}&sz=32`;
 
@@ -1361,12 +1370,12 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
             linkDiv.style.display = 'flex';
             linkDiv.style.alignItems = 'center';
             linkDiv.style.gap = '10px';
-            linkDiv.style.cursor = 'pointer';
+            linkDiv.style.pointerEvents = 'none'; // Allow drag on parent
             linkDiv.innerHTML = `
+                <span class="drag-handle" style="color: rgba(255,255,255,0.3); margin-right: 5px;">⋮⋮</span>
                 <img src="${iconUrl}" width="16" height="16" style="border-radius: 4px;">
                 <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${site.title}</span>
             `;
-            linkDiv.onclick = () => window.location.href = site.url;
 
             const delBtn = document.createElement('button');
             delBtn.innerHTML = '×';
@@ -1375,13 +1384,76 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
             delBtn.style.color = '#ff4081';
             delBtn.style.fontSize = '1.2rem';
             delBtn.style.cursor = 'pointer';
+            delBtn.style.pointerEvents = 'auto';
             delBtn.onclick = async (e) => {
                 e.preventDefault();
-                // Reuse existing confirmation or could make a customConfirm too
+                e.stopPropagation();
                 if (await window.customConfirm('Remove Site', 'Are you sure you want to remove this site from your list?')) {
                     removeMySite(site.id);
                 }
             };
+
+            // Click to navigate (only if not dragging)
+            item.addEventListener('click', (e) => {
+                if (e.target.tagName !== 'BUTTON' && !item.classList.contains('dragging')) {
+                    window.location.href = site.url;
+                }
+            });
+
+            // Drag events
+            item.addEventListener('dragstart', (e) => {
+                draggedItem = item;
+                draggedIndex = index;
+                item.classList.add('dragging');
+                item.style.opacity = '0.5';
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', index.toString());
+            });
+
+            item.addEventListener('dragend', () => {
+                item.classList.remove('dragging');
+                item.style.opacity = '1';
+                draggedItem = null;
+                draggedIndex = -1;
+                // Remove all drag-over styles
+                mySitesList.querySelectorAll('.menu-list-item').forEach(el => {
+                    el.style.borderTop = '';
+                    el.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+                });
+            });
+
+            item.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                const targetIndex = parseInt(item.dataset.index);
+                if (draggedIndex !== targetIndex) {
+                    // Visual feedback
+                    item.style.borderTop = '2px solid #4facfe';
+                }
+            });
+
+            item.addEventListener('dragleave', () => {
+                item.style.borderTop = '';
+            });
+
+            item.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                const toIndex = parseInt(item.dataset.index);
+
+                if (fromIndex !== toIndex) {
+                    // Reorder the sites array
+                    const sitesArr = await getMySites();
+                    const [movedSite] = sitesArr.splice(fromIndex, 1);
+                    sitesArr.splice(toIndex, 0, movedSite);
+
+                    // Save new order
+                    await window.storageManager.set({
+                        mySites: sitesArr
+                    });
+                    renderMySites();
+                }
+            });
 
             item.appendChild(linkDiv);
             item.appendChild(delBtn);
