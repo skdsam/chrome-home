@@ -904,84 +904,41 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
         initInteractiveGradient() {
             this.stopInteractiveGradient();
             this.mediaBg.innerHTML = '';
+            this.mediaBg.classList.add('hidden');
 
-            const container = document.createElement('div');
-            container.className = 'interactive-gradient-container';
-            this.mediaBg.appendChild(container);
+            // Show & initialize WebGL gradient container
+            this.webglGradientContainer = document.getElementById('webgl-gradient-container');
+            this.webglGradientContainer.classList.remove('hidden');
+            this.webglGradientContainer.innerHTML = '';
 
-            this.blobs = [];
-            const blobCount = 5;
-            for (let i = 0; i < blobCount; i++) {
-                const blob = document.createElement('div');
-                blob.className = 'interactive-blob';
-                if (i === 0) blob.classList.add('user-blob');
-
-                const data = {
-                    el: blob,
-                    x: Math.random() * window.innerWidth,
-                    y: Math.random() * window.innerHeight,
-                    vx: (Math.random() - 0.5) * 2,
-                    vy: (Math.random() - 0.5) * 2,
-                    targetX: Math.random() * window.innerWidth,
-                    targetY: Math.random() * window.innerHeight
-                };
-
-                this.blobs.push(data);
-                container.appendChild(blob);
+            if (window.WebGLGradientApp) {
+                this.webglApp = new window.WebGLGradientApp(this.webglGradientContainer);
+                this.webglApp.init();
             }
-
-            this.updateInteractiveColors();
-            this.animateInteractive();
         }
 
         updateInteractiveColors() {
-            const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-            const baseHue = randomInt(0, 360);
-
-            this.blobs.forEach((blobData, i) => {
-                const hue = (baseHue + (i * 40)) % 360;
-                const s = randomInt(60, 90) + '%';
-                const l = randomInt(40, 60) + '%';
-                blobData.el.style.background = `radial-gradient(circle at center, hsl(${hue}, ${s}, ${l}) 0, hsla(${hue}, ${s}, ${l}, 0) 70%)`;
-            });
+            // Colors are handled internally by the WebGL shader
         }
 
         animateInteractive() {
-            // Lerp mouse
-            this.curMousePos.x += (this.mousePos.x - this.curMousePos.x) * 0.1;
-            this.curMousePos.y += (this.mousePos.y - this.curMousePos.y) * 0.1;
-
-            this.blobs.forEach((blob, i) => {
-                if (i === 0) {
-                    // User following blob
-                    blob.x = this.curMousePos.x - (blob.el.offsetWidth / 2);
-                    blob.y = this.curMousePos.y - (blob.el.offsetHeight / 2);
-                } else {
-                    // Floating blobs
-                    blob.x += blob.vx;
-                    blob.y += blob.vy;
-
-                    // Bounce off walls
-                    if (blob.x < -200 || blob.x > window.innerWidth) blob.vx *= -1;
-                    if (blob.y < -200 || blob.y > window.innerHeight) blob.vy *= -1;
-                }
-
-                blob.el.style.transform = `translate(${blob.x}px, ${blob.y}px)`;
-            });
-
-            this.interactiveReqId = requestAnimationFrame(() => this.animateInteractive());
+            // Animation is handled by WebGLGradientApp.tick()
         }
 
         stopInteractiveGradient() {
-            if (this.interactiveReqId) {
-                cancelAnimationFrame(this.interactiveReqId);
-                this.interactiveReqId = null;
+            if (this.webglApp) {
+                this.webglApp.dispose();
+                this.webglApp = null;
+            }
+            const container = document.getElementById('webgl-gradient-container');
+            if (container) {
+                container.classList.add('hidden');
+                container.innerHTML = '';
             }
         }
 
-        // Keep legacy for safety/internal use if needed
         loadRandomGradient() {
-            this.updateInteractiveColors();
+            // Not used for WebGL gradient
         }
 
         async loadImageToSlide(slideElement) {
