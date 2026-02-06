@@ -689,31 +689,18 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
     // Init Weather
     weatherManager.init();
 
-    // Init Usage Stats
-    const usageStats = new window.UsageStats();
-    usageStats.init();
-
     // Init Cursor Trail
     const cursorTrail = new window.CursorTrail();
     cursorTrail.init();
 
-    // Settings toggles for new features
-    const usageStatsToggle = document.getElementById('usage-stats-toggle');
+    // Settings toggles for features
     const cursorTrailToggle = document.getElementById('cursor-trail-toggle');
 
     // Load initial toggle states
     (async () => {
-        const stored = await window.storageManager.get(['usageStatsEnabled', 'cursorTrailEnabled']);
-        if (usageStatsToggle) usageStatsToggle.checked = stored.usageStatsEnabled !== false;
+        const stored = await window.storageManager.get(['cursorTrailEnabled']);
         if (cursorTrailToggle) cursorTrailToggle.checked = stored.cursorTrailEnabled !== false;
     })();
-
-    // Toggle event listeners
-    if (usageStatsToggle) {
-        usageStatsToggle.addEventListener('change', () => {
-            usageStats.toggle(usageStatsToggle.checked);
-        });
-    }
 
     if (cursorTrailToggle) {
         cursorTrailToggle.addEventListener('change', () => {
@@ -1578,11 +1565,18 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
     async function renderShortcuts() {
         const shortcuts = await getShortcuts();
         shortcutsGrid.innerHTML = '';
-        shortcuts.forEach(shortcut => {
-            const card = document.createElement('div'); // Changed to div so we don't accidentally navigate when clicking buttons
-            card.className = 'shortcut-card';
 
-            // To make the whole card clickable except buttons, we add a clear overlay or just handle click
+        // Drag state
+        let draggedCard = null;
+        let draggedIndex = -1;
+
+        shortcuts.forEach((shortcut, index) => {
+            const card = document.createElement('div');
+            card.className = 'shortcut-card';
+            card.draggable = true;
+            card.dataset.index = index;
+            card.dataset.id = shortcut.id;
+
             card.innerHTML = `
                 <img src="${shortcut.icon}" alt="${shortcut.title}" class="shortcut-icon" onerror="this.src='icon-placeholder.png'">
                 <div class="shortcut-title">${shortcut.title}</div>
@@ -1592,10 +1586,9 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
                 </div>
             `;
 
-            // Navigation handler
+            // Navigation handler (only if not dragging)
             card.addEventListener('click', (e) => {
-                // If not clicking a button
-                if (!e.target.closest('button')) {
+                if (!e.target.closest('button') && !card.classList.contains('dragging')) {
                     window.location.href = shortcut.url;
                 }
             });
@@ -1615,6 +1608,60 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
                 e.stopPropagation();
                 if (await window.customConfirm('Delete Shortcut', `Are you sure you want to delete the shortcut for ${shortcut.title}?`)) {
                     removeShortcut(shortcut.id);
+                }
+            });
+
+            // Drag events
+            card.addEventListener('dragstart', (e) => {
+                draggedCard = card;
+                draggedIndex = index;
+                card.classList.add('dragging');
+                card.style.opacity = '0.5';
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', index.toString());
+            });
+
+            card.addEventListener('dragend', () => {
+                card.classList.remove('dragging');
+                card.style.opacity = '1';
+                draggedCard = null;
+                draggedIndex = -1;
+                // Remove all drag-over styles
+                shortcutsGrid.querySelectorAll('.shortcut-card').forEach(el => {
+                    el.classList.remove('drag-over');
+                });
+            });
+
+            card.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                const targetIndex = parseInt(card.dataset.index);
+                if (draggedIndex !== -1 && draggedIndex !== targetIndex) {
+                    card.classList.add('drag-over');
+                }
+            });
+
+            card.addEventListener('dragleave', () => {
+                card.classList.remove('drag-over');
+            });
+
+            card.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                card.classList.remove('drag-over');
+                const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                const toIndex = parseInt(card.dataset.index);
+
+                if (fromIndex !== toIndex) {
+                    // Reorder shortcuts array
+                    const allShortcuts = await getShortcuts();
+                    const [movedShortcut] = allShortcuts.splice(fromIndex, 1);
+                    allShortcuts.splice(toIndex, 0, movedShortcut);
+
+                    // Save new order (syncs across devices)
+                    await window.storageManager.set({
+                        shortcuts: allShortcuts
+                    });
+                    renderShortcuts();
                 }
             });
 

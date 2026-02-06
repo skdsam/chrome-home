@@ -174,43 +174,24 @@ body {
     transition: background 0.5s ease;
 }
 
-/* Usage Stats Widget */
-.usage-stats-btn {
-    font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.9);
+/* Drag and Drop Shortcut Styles */
+.shortcut-card {
+    cursor: grab;
+    transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
 }
 
-.usage-stats-content {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+.shortcut-card:active {
+    cursor: grabbing;
 }
 
-.usage-stats-content .stat-item {
-    display: flex;
-    align-items: center;
-    gap: 4px;
+.shortcut-card.dragging {
+    opacity: 0.5;
+    transform: scale(1.05);
 }
 
-.usage-stats-content .stat-value {
-    font-weight: 600;
-    color: #fff;
-}
-
-.usage-stats-content .stat-label {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 0.75rem;
-}
-
-.usage-stats-content .stat-divider {
-    width: 1px;
-    height: 16px;
-    background: rgba(255, 255, 255, 0.2);
-}
-
-.usage-stats-content .top-sites .stat-value {
-    font-weight: 500;
-    font-size: 0.8rem;
+.shortcut-card.drag-over {
+    box-shadow: 0 0 0 2px #4facfe, 0 0 15px rgba(79, 172, 254, 0.4);
+    transform: scale(1.02);
 }
 
 /* Cursor Trail Canvas */
