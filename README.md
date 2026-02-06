@@ -15,18 +15,20 @@
 
 ## 🌟 Visual Excellence
 *   **Glassmorphism Design:** A sleek, semi-transparent UI that feels light and modern.
+*   **Interactive Cursor Trail:** A smooth, responsive "mouse tail" effect that follows your cursor.
 *   **Dynamic Backgrounds:** Choose between:
     *   **Weather-Driven:** The background changes colors and adds effects (Rain, Snow, Clouds) based on your real-time local weather.
     *   **Unsplash Integration:** High-quality photography that rotates on a customizable timer.
-    *   **Animated Gradients:** Smooth, pulsing patterns for a focused environment.
+    *   **Interactive WebGL Gradients:** Smooth, pulsing patterns with a high-performance interactive shader. Includes tools to view color swatches and export palettes to JSON, CSV, or CSS.
 *   **Premium Typography:** Utilizing *Outfit* and *Inter* fonts for a professional look.
 
 ## 🛠️ Productivity Suite
-*   **Smart Shortcuts Grid:** Manage your most-visited sites with a beautiful, hover-animated icon grid.
+*   **Smart Shortcuts Grid:** Manage your most-visited sites with a beautiful, hover-animated icon grid. Supports **Drag-and-Drop Reordering** for a fully custom layout.
+*   **Self-Managed "My Sites":** A dedicated panel for your favorite links with integrated reordering support.
 *   **Integrated AI Sidebar:** Instant access to your favorite AI tools like Gemini, ChatGPT, Claude, and Perplexity without leaving your tab.
 *   **Customizable Widgets:**
     *   🎵 **Spotify Player:** Control your music directly from the home page.
-    *   ⚽ **Live Football Scores:** Track matches and league standings for the Premier League, Champions League, and more.
+    *   🏀 **Live Sports Scores:** Track matches for **Football (Soccer)**, **American Football (NFL/NCAAF)**, and **Basketball (NBA/NCAAB)**.
     *   📰 **Tech News Feed:** Stay updated with the latest from Hacker News, Product Hunt, and DEV.to.
     *   📝 **Quick Notes & Todo:** Capture ideas and manage tasks with local persistence.
 
