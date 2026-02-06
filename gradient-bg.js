@@ -562,6 +562,28 @@ class WebGLGradientApp {
         // Dark background from the darkest color
         u.uDarkNavy.value.set(colors[1].r, colors[1].g, colors[1].b);
         this.scene.background = new THREE.Color(colors[1].r, colors[1].g, colors[1].b);
+
+        // Dispatch event for UI updates
+        window.dispatchEvent(new CustomEvent('gradientColorsChanged', {
+            detail: this.getColors()
+        }));
+    }
+
+    getColors() {
+        if (!this.gradientBackground) return [];
+        const u = this.gradientBackground.uniforms;
+        const rgbToHex = (r, g, b) => {
+            const toHex = (v) => Math.round(v * 255).toString(16).padStart(2, '0');
+            return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+        };
+        return [
+            rgbToHex(u.uColor1.value.x, u.uColor1.value.y, u.uColor1.value.z),
+            rgbToHex(u.uColor2.value.x, u.uColor2.value.y, u.uColor2.value.z),
+            rgbToHex(u.uColor3.value.x, u.uColor3.value.y, u.uColor3.value.z),
+            rgbToHex(u.uColor4.value.x, u.uColor4.value.y, u.uColor4.value.z),
+            rgbToHex(u.uColor5.value.x, u.uColor5.value.y, u.uColor5.value.z),
+            rgbToHex(u.uColor6.value.x, u.uColor6.value.y, u.uColor6.value.z)
+        ];
     }
 }
 

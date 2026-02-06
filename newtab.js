@@ -719,6 +719,11 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
             this.mediaBg = document.getElementById('media-bg');
             this.weatherBlobs = document.getElementById('weather-blobs');
             this.bgOverlay = document.getElementById('bg-overlay');
+            this.gradientColorsGroup = document.getElementById('gradient-colors-group');
+            this.gradientSwatches = document.getElementById('gradient-swatches');
+            this.exportJsonBtn = document.getElementById('export-json-btn');
+            this.exportCsvBtn = document.getElementById('export-csv-btn');
+            this.exportCssBtn = document.getElementById('export-css-btn');
 
             this.state = {
                 type: 'weather',
@@ -771,6 +776,20 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
                 });
             }
 
+            if (this.exportJsonBtn) {
+                this.exportJsonBtn.addEventListener('click', () => this.exportColors('json'));
+            }
+            if (this.exportCsvBtn) {
+                this.exportCsvBtn.addEventListener('click', () => this.exportColors('csv'));
+            }
+            if (this.exportCssBtn) {
+                this.exportCssBtn.addEventListener('click', () => this.exportColors('css'));
+            }
+
+            window.addEventListener('gradientColorsChanged', (e) => {
+                this.updateSwatches(e.detail);
+            });
+
             window.addEventListener('mousemove', (e) => {
                 this.mousePos.x = e.clientX;
                 this.mousePos.y = e.clientY;
@@ -819,8 +838,15 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
                     this.bgIntervalInput.style.display = 'block';
                     this.bgIntervalInput.previousElementSibling.style.display = 'block';
                 }
+
+                if (this.gradientColorsGroup) {
+                    this.gradientColorsGroup.classList.remove('hidden');
+                }
             } else {
                 this.bgQueryGroup.classList.remove('hidden');
+                if (this.gradientColorsGroup) {
+                    this.gradientColorsGroup.classList.add('hidden');
+                }
 
                 // Show Query Input parts
                 this.bgQueryLabel.style.display = 'block';
@@ -866,6 +892,11 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
 
                 this.stopRotation();
                 this.initInteractiveGradient();
+
+                // Update swatches immediately
+                if (this.webglApp) {
+                    this.updateSwatches(this.webglApp.getColors());
+                }
 
                 const intervalMs = (this.state.interval || 60) * 1000;
                 this.rotationInterval = setInterval(() => {
@@ -959,8 +990,64 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
             }
         }
 
+        updateSwatches(colors) {
+            if (!this.gradientSwatches || !colors) return;
+            const swatches = this.gradientSwatches.querySelectorAll('.color-swatch');
+            colors.forEach((color, i) => {
+                if (swatches[i]) {
+                    swatches[i].style.background = color;
+                    swatches[i].title = color; // Show hex on hover
+                }
+            });
+        }
+
         loadRandomGradient() {
             // Not used for WebGL gradient
+        }
+
+        exportColors(format) {
+            if (!this.webglApp) return;
+            const colors = this.webglApp.getColors();
+            if (!colors || colors.length === 0) return;
+
+            let content = '';
+            let filename = `gradient-palette.${format}`;
+            let mimeType = 'text/plain';
+
+            switch (format) {
+                case 'json':
+                    content = JSON.stringify(colors, null, 2);
+                    mimeType = 'application/json';
+                    break;
+                case 'csv':
+                    content = colors.join(',');
+                    mimeType = 'text/csv';
+                    break;
+                case 'css':
+                    content = ':root {\n';
+                    colors.forEach((color, i) => {
+                        content += `  --gradient-color-${i + 1}: ${color};\n`;
+                    });
+                    content += '}';
+                    mimeType = 'text/css';
+                    break;
+            }
+
+            this.downloadFile(content, filename, mimeType);
+        }
+
+        downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], {
+                type: mimeType
+            });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
 
         async loadImageToSlide(slideElement) {

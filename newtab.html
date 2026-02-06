@@ -484,6 +484,34 @@
                         <input type="number" id="bg-interval-input" min="10" max="3600" value="60"
                             style="width: 100%; margin-top: 5px;">
                     </div>
+                    <!-- Gradient Color Swatches -->
+                    <div id="gradient-colors-group" class="settings-group hidden">
+                        <label style="margin-bottom: 8px; display: block;">Current Gradient Colors</label>
+                        <div id="gradient-swatches" style="display: flex; gap: 6px; flex-wrap: wrap;">
+                            <div class="color-swatch"
+                                style="width: 32px; height: 32px; border-radius: 6px; background: #555;"></div>
+                            <div class="color-swatch"
+                                style="width: 32px; height: 32px; border-radius: 6px; background: #555;"></div>
+                            <div class="color-swatch"
+                                style="width: 32px; height: 32px; border-radius: 6px; background: #555;"></div>
+                            <div class="color-swatch"
+                                style="width: 32px; height: 32px; border-radius: 6px; background: #555;"></div>
+                            <div class="color-swatch"
+                                style="width: 32px; height: 32px; border-radius: 6px; background: #555;"></div>
+                            <div class="color-swatch"
+                                style="width: 32px; height: 32px; border-radius: 6px; background: #555;"></div>
+                        </div>
+                        <div style="display: flex; gap: 8px; margin-top: 10px;">
+                            <button id="export-json-btn" class="football-select"
+                                style="font-size: 0.75rem; padding: 4px 8px; width: auto;">JSON</button>
+                            <button id="export-csv-btn" class="football-select"
+                                style="font-size: 0.75rem; padding: 4px 8px; width: auto;">CSV</button>
+                            <button id="export-css-btn" class="football-select"
+                                style="font-size: 0.75rem; padding: 4px 8px; width: auto;">CSS</button>
+                        </div>
+                        <p style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 8px;">Export currently
+                            visible colors</p>
+                    </div>
                 </div>
 
                 <!-- Tab: AI Sidebar -->
