@@ -1372,7 +1372,14 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
             linkDiv.style.gap = '10px';
             linkDiv.style.pointerEvents = 'none'; // Allow drag on parent
             linkDiv.innerHTML = `
-                <span class="drag-handle" style="color: rgba(255,255,255,0.3); margin-right: 5px;">⋮⋮</span>
+                <svg class="drag-handle" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2" style="flex-shrink: 0; cursor: grab;">
+                    <circle cx="9" cy="5" r="1.5" fill="rgba(255,255,255,0.4)"/>
+                    <circle cx="15" cy="5" r="1.5" fill="rgba(255,255,255,0.4)"/>
+                    <circle cx="9" cy="12" r="1.5" fill="rgba(255,255,255,0.4)"/>
+                    <circle cx="15" cy="12" r="1.5" fill="rgba(255,255,255,0.4)"/>
+                    <circle cx="9" cy="19" r="1.5" fill="rgba(255,255,255,0.4)"/>
+                    <circle cx="15" cy="19" r="1.5" fill="rgba(255,255,255,0.4)"/>
+                </svg>
                 <img src="${iconUrl}" width="16" height="16" style="border-radius: 4px;">
                 <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${site.title}</span>
             `;
