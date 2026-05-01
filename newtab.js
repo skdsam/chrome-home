@@ -4,6 +4,10 @@ window.customConfirm = (title, message) => window._showDialog('confirm', title, 
 window.customPrompt = (title, message, defaultValue = '') => window._showDialog('prompt', title, message, defaultValue);
 
 document.addEventListener('DOMContentLoaded', async () => {
+    if (window.storageManager?.removeSync) {
+        window.storageManager.removeSync(['githubReposCache', 'blenderDevCache', 'moviesCache']);
+    }
+
     // --- Unified Custom Dialog Logic ---
     const dialogOverlay = document.getElementById('custom-dialog-overlay');
     const dialogTitle = document.getElementById('dialog-title');
@@ -3153,15 +3157,18 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
     };
     let githubReposCache = {};
 
-    window.storageManager.get(['githubReposState', 'githubReposCache']).then((result) => {
+    Promise.all([
+        window.storageManager.get(['githubReposState']),
+        window.storageManager.getLocal(['githubReposCache'])
+    ]).then(([result, cacheResult]) => {
         if (result.githubReposState) {
             githubReposState = {
                 ...githubReposState,
                 ...result.githubReposState
             };
         }
-        if (result.githubReposCache) {
-            githubReposCache = result.githubReposCache;
+        if (cacheResult.githubReposCache) {
+            githubReposCache = cacheResult.githubReposCache;
         }
         applyGithubReposState();
         if (githubReposState.isOpen) fetchGithubRepos(githubReposState.activeCategory);
@@ -3174,7 +3181,7 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
     }
 
     function saveGithubReposCache() {
-        window.storageManager.set({
+        window.storageManager.setLocal({
             githubReposCache
         }).catch(() => {
             // Cache failures should not break the widget; fetching can still work.
@@ -3431,15 +3438,18 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
     };
     let blenderDevCache = {};
 
-    window.storageManager.get(['blenderDevState', 'blenderDevCache']).then((result) => {
+    Promise.all([
+        window.storageManager.get(['blenderDevState']),
+        window.storageManager.getLocal(['blenderDevCache'])
+    ]).then(([result, cacheResult]) => {
         if (result.blenderDevState) {
             blenderDevState = {
                 ...blenderDevState,
                 ...result.blenderDevState
             };
         }
-        if (result.blenderDevCache) {
-            blenderDevCache = result.blenderDevCache;
+        if (cacheResult.blenderDevCache) {
+            blenderDevCache = cacheResult.blenderDevCache;
         }
         applyBlenderDevState();
         if (blenderDevState.isOpen) fetchBlenderDev(blenderDevState.activeTab);
@@ -3452,7 +3462,7 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
     }
 
     function saveBlenderDevCache() {
-        window.storageManager.set({
+        window.storageManager.setLocal({
             blenderDevCache
         }).catch(() => {
             // Cache failures should not stop the widget from rendering fresh data.
@@ -3832,8 +3842,511 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
         saveBlenderDevState();
     }
 
+    // --- Movies Widget Logic ---
+    const moviesBtn = document.getElementById('movies-btn');
+    const moviesWidget = document.getElementById('movies-widget');
+    const moviesHeader = document.getElementById('movies-header');
+    const moviesMinimize = document.getElementById('movies-minimize');
+    const moviesRefresh = document.getElementById('movies-refresh');
+    const moviesList = document.getElementById('movies-list');
+    const moviesLoading = document.getElementById('movies-loading');
+    const moviesTabs = Array.from(document.querySelectorAll('.movies-tab'));
+
+    const moviesSources = {
+        netflix: {
+            label: 'Netflix'
+        },
+        cinema: {
+            label: 'Cinemas'
+        },
+        guides: {
+            label: 'Guides'
+        },
+        links: {
+            label: 'Links'
+        }
+    };
+    const moviesCacheTtl = 6 * 60 * 60 * 1000;
+
+    let moviesState = {
+        isOpen: false,
+        x: null,
+        y: null,
+        zIndex: 100,
+        activeTab: 'netflix'
+    };
+    let moviesCache = {};
+
+    Promise.all([
+        window.storageManager.get(['moviesState']),
+        window.storageManager.getLocal(['moviesCache'])
+    ]).then(([result, cacheResult]) => {
+        if (result.moviesState) {
+            moviesState = {
+                ...moviesState,
+                ...result.moviesState
+            };
+        }
+        if (cacheResult.moviesCache) {
+            moviesCache = cacheResult.moviesCache;
+        }
+        applyMoviesState();
+        if (moviesState.isOpen) fetchMovies(moviesState.activeTab);
+    });
+
+    function saveMoviesState() {
+        window.storageManager.set({
+            moviesState
+        });
+    }
+
+    function saveMoviesCache() {
+        window.storageManager.setLocal({
+            moviesCache
+        }).catch(() => {
+            // Cache failures should not stop the widget from loading live data.
+        });
+    }
+
+    function getFreshMoviesCache(tabKey) {
+        const cached = moviesCache[tabKey];
+        if (!cached || !Array.isArray(cached.items) || !cached.fetchedAt) return null;
+        if (Date.now() - cached.fetchedAt > moviesCacheTtl) return null;
+        return cached;
+    }
+
+    function applyMoviesState() {
+        if (!moviesWidget) return;
+        if (moviesState.isOpen) {
+            moviesWidget.classList.remove('hidden');
+            if (moviesBtn) moviesBtn.classList.add('active');
+        } else {
+            moviesWidget.classList.add('hidden');
+            if (moviesBtn) moviesBtn.classList.remove('active');
+        }
+        if (moviesState.x !== null && moviesState.y !== null) {
+            moviesWidget.style.left = moviesState.x + 'px';
+            moviesWidget.style.top = moviesState.y + 'px';
+            moviesWidget.style.bottom = 'auto';
+            moviesWidget.style.right = 'auto';
+        }
+        if (moviesState.zIndex) {
+            moviesWidget.style.zIndex = moviesState.zIndex;
+            if (moviesState.zIndex > maxZIndex) maxZIndex = moviesState.zIndex;
+        }
+        moviesTabs.forEach(tab => {
+            const isActive = tab.dataset.moviesTab === moviesState.activeTab;
+            tab.classList.toggle('active', isActive);
+            tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+    }
+
+    async function fetchMovies(tabKey = moviesState.activeTab, forceRefresh = false) {
+        if (!moviesLoading || !moviesList) return;
+        const activeTabKey = moviesSources[tabKey] ? tabKey : 'netflix';
+        const tab = moviesSources[activeTabKey];
+        moviesState.activeTab = activeTabKey;
+        applyMoviesState();
+
+        const cached = getFreshMoviesCache(activeTabKey);
+        if (!forceRefresh && cached) {
+            renderMovies(cached.items, tab);
+            return;
+        }
+
+        moviesLoading.classList.remove('hidden');
+        moviesList.innerHTML = '';
+        if (moviesRefresh) moviesRefresh.disabled = true;
+        try {
+            const items = dedupeMovieItems(await loadMovieItems(activeTabKey));
+            moviesCache[activeTabKey] = {
+                fetchedAt: Date.now(),
+                items
+            };
+            renderMovies(items, tab);
+            saveMoviesCache();
+        } catch (e) {
+            moviesList.innerHTML = `<div class="movies-error">${escapeHtml(e.message || 'Failed to load movie data.')}</div>`;
+        } finally {
+            moviesLoading.classList.add('hidden');
+            if (moviesRefresh) moviesRefresh.disabled = false;
+        }
+    }
+
+    async function loadMovieItems(tabKey) {
+        if (tabKey === 'netflix') return fetchNetflixTop10();
+        if (tabKey === 'cinema') return fetchMovieSourceCards(getCinemaSources());
+        if (tabKey === 'guides') return fetchMovieSourceCards(getWatchGuideSources());
+        if (tabKey === 'links') return getMovieLinks();
+        return fetchNetflixTop10();
+    }
+
+    async function fetchNetflixTop10() {
+        const regionSlug = getNetflixRegionSlug();
+        const urls = [
+            regionSlug ? `https://www.netflix.com/tudum/top10/${regionSlug}.html` : '',
+            'https://www.netflix.com/tudum/top10/movies',
+            'https://www.netflix.com/tudum/top10/'
+        ].filter(Boolean);
+
+        for (const url of urls) {
+            try {
+                const res = await fetch(url);
+                if (!res.ok) continue;
+                const text = await res.text();
+                const doc = new DOMParser().parseFromString(text, 'text/html');
+                const parsed = parseNetflixTop10(doc, url);
+                if (parsed.length) return parsed;
+            } catch (e) {
+                // Try the next public Netflix page before falling back.
+            }
+        }
+
+        return [{
+                title: 'Netflix Top 10 Movies',
+                url: 'https://www.netflix.com/tudum/top10/movies',
+                summary: 'Official weekly Netflix movie rankings. Open this public page for the latest regional and global lists.',
+                image: '',
+                badge: 'Netflix',
+                meta: ['Official Top 10', 'Updated weekly']
+            },
+            {
+                title: 'Netflix Top 10 Global',
+                url: 'https://www.netflix.com/tudum/top10/',
+                summary: 'Netflix publishes weekly global lists for films and TV, including English and non-English titles.',
+                image: '',
+                badge: 'Netflix',
+                meta: ['Films', 'TV']
+            }
+        ];
+    }
+
+    function parseNetflixTop10(doc, sourceUrl) {
+        const bodyText = (doc.body?.textContent || '').replace(/\s+/g, ' ').trim();
+        const titleCandidates = [];
+        doc.querySelectorAll('h1, h2, h3, a, button').forEach(node => {
+            const text = (node.textContent || '').replace(/\s+/g, ' ').trim();
+            if (!text || text.length < 2 || text.length > 90) return;
+            if (/^(my list|watch|explore|global|movies|shows|top 10|overview)$/i.test(text)) return;
+            if (/^#?\d+$/.test(text)) return;
+            titleCandidates.push(text);
+        });
+
+        const ranked = [];
+        titleCandidates.forEach((title, index) => {
+            const rankMatch = bodyText.match(new RegExp(`#${index + 1}\\s+in\\s+(Movies|Films|Shows)`, 'i'));
+            if (index < 10 || rankMatch) {
+                ranked.push({
+                    title,
+                    url: sourceUrl,
+                    summary: 'Netflix public Top 10 entry. Open the Netflix page for viewing options and the complete weekly ranking.',
+                    image: getOgImage(doc),
+                    badge: `#${ranked.length + 1} Netflix`,
+                    meta: ['Official Netflix Top 10']
+                });
+            }
+        });
+
+        return dedupeMovieItems(ranked).slice(0, 10);
+    }
+
+    async function fetchMovieSourceCards(sources) {
+        const results = await Promise.allSettled(sources.map(source => fetchMovieSourceCard(source)));
+        return results
+            .map((result, index) => result.status === 'fulfilled' ? result.value : getMovieSourceFallback(sources[index]))
+            .filter(Boolean);
+    }
+
+    async function fetchMovieSourceCard(source) {
+        const res = await fetch(source.url);
+        if (!res.ok) return getMovieSourceFallback(source);
+        const text = await res.text();
+        const doc = new DOMParser().parseFromString(text, 'text/html');
+        return {
+            title: getOgValue(doc, 'og:title') || source.title,
+            url: source.url,
+            summary: truncateText(getOgValue(doc, 'og:description') || getMetaDescription(doc) || source.summary, 220),
+            image: getOgImage(doc) || source.image || '',
+            badge: source.badge,
+            meta: source.meta
+        };
+    }
+
+    function getMovieSourceFallback(source) {
+        return {
+            title: source.title,
+            url: source.url,
+            summary: source.summary,
+            image: source.image || '',
+            badge: source.badge,
+            meta: source.meta
+        };
+    }
+
+    function getCinemaSources() {
+        return [{
+                title: 'IMDb Coming Soon',
+                url: 'https://www.imdb.com/calendar/',
+                summary: 'Cinema and streaming release calendar with upcoming films by region and date.',
+                badge: 'Cinema',
+                meta: ['IMDb', 'Coming soon']
+            },
+            {
+                title: 'Rotten Tomatoes: Movies Opening',
+                url: 'https://www.rottentomatoes.com/browse/movies_in_theaters/sort:popular',
+                summary: 'Popular movies currently in theaters, with critic and audience context.',
+                badge: 'In Theaters',
+                meta: ['Rotten Tomatoes']
+            },
+            {
+                title: 'Rotten Tomatoes: Upcoming Movies',
+                url: 'https://www.rottentomatoes.com/browse/movies_coming_soon/sort:popular',
+                summary: 'Upcoming theatrical releases sorted by public interest.',
+                badge: 'Coming Soon',
+                meta: ['Rotten Tomatoes']
+            },
+            {
+                title: 'IMDb Showtimes',
+                url: 'https://www.imdb.com/showtimes/',
+                summary: 'Find cinema showtimes near you when IMDb supports your location.',
+                badge: 'Showtimes',
+                meta: ['IMDb']
+            }
+        ];
+    }
+
+    function getWatchGuideSources() {
+        return [{
+                title: 'JustWatch Streaming Guide',
+                url: getJustWatchUrl(),
+                summary: 'Streaming guide for finding where films and shows are available across Netflix, Prime Video, Disney+, Apple TV, Paramount+, and more.',
+                badge: 'Where to Watch',
+                meta: ['JustWatch', getMovieRegion()]
+            },
+            {
+                title: 'Rotten Tomatoes: Streaming Movies',
+                url: 'https://www.rottentomatoes.com/browse/movies_at_home/sort:popular',
+                summary: 'Popular movies available to watch at home, including streaming, digital rental, and purchase options.',
+                badge: 'At Home',
+                meta: ['Rotten Tomatoes']
+            },
+            {
+                title: 'IMDb: Most Popular Movies',
+                url: 'https://www.imdb.com/chart/moviemeter/',
+                summary: 'IMDb popularity chart for movies people are currently looking up.',
+                badge: 'Popular',
+                meta: ['IMDb']
+            },
+            {
+                title: 'Netflix Tudum',
+                url: 'https://www.netflix.com/tudum/',
+                summary: 'Netflix editorial hub for new releases, trailers, cast guides, and what to watch next.',
+                badge: 'Editorial',
+                meta: ['Netflix']
+            }
+        ];
+    }
+
+    function getOgValue(doc, property) {
+        return doc.querySelector(`meta[property="${property}"]`)?.getAttribute('content')?.trim() || '';
+    }
+
+    function getOgImage(doc) {
+        return getOgValue(doc, 'og:image') || doc.querySelector('meta[name="twitter:image"]')?.getAttribute('content')?.trim() || '';
+    }
+
+    function getMetaDescription(doc) {
+        return doc.querySelector('meta[name="description"]')?.getAttribute('content')?.trim() || '';
+    }
+
+    function getNetflixRegionSlug() {
+        const region = getMovieRegion();
+        const slugs = {
+            US: 'united-states',
+            GB: 'united-kingdom',
+            CA: 'canada',
+            AU: 'australia',
+            DE: 'germany',
+            FR: 'france',
+            ES: 'spain',
+            IT: 'italy',
+            JP: 'japan',
+            BR: 'brazil',
+            MX: 'mexico'
+        };
+        return slugs[region] || '';
+    }
+
+    function getJustWatchUrl() {
+        const region = getMovieRegion().toLowerCase();
+        const supported = ['us', 'gb', 'ca', 'au', 'de', 'fr', 'es', 'it', 'jp', 'br', 'mx'];
+        return `https://www.justwatch.com/${supported.includes(region) ? region : 'us'}`;
+    }
+
+    function dedupeMovieItems(items) {
+        const seen = new Set();
+        return (items || []).filter(item => {
+            const key = normalizeMovieTitle(item.title);
+            if (!key || seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+    }
+
+    function normalizeMovieTitle(title) {
+        return String(title || '')
+            .toLowerCase()
+            .replace(/\b(official site|watch|explore|my list|trailer|movie|film|series|season)\b/g, '')
+            .replace(/\(\d{4}\)|\b\d{4}\b/g, '')
+            .replace(/[^a-z0-9]+/g, ' ')
+            .trim();
+    }
+
+    function getMovieRegion() {
+        const localeRegion = (navigator.language || 'en-US').split('-')[1];
+        return (localeRegion || 'US').toUpperCase();
+    }
+
+    function getMovieLinks() {
+        return [{
+                title: 'Netflix Top 10',
+                url: 'https://www.netflix.com/tudum/top10/',
+                summary: 'Official weekly Netflix rankings for films and TV, including global and country lists.',
+                image: '',
+                badge: 'Netflix',
+                meta: ['Official', 'Weekly']
+            },
+            {
+                title: 'JustWatch',
+                url: getJustWatchUrl(),
+                summary: 'Find where films and shows are available across major streaming providers in your region.',
+                image: '',
+                badge: 'Where to Watch',
+                meta: [getMovieRegion()]
+            },
+            {
+                title: 'IMDb Coming Soon',
+                url: 'https://www.imdb.com/calendar/',
+                summary: 'Upcoming releases and cinema calendar pages for planning what to watch next.',
+                image: '',
+                badge: 'Cinemas',
+                meta: ['IMDb']
+            },
+            {
+                title: 'Rotten Tomatoes: At Home',
+                url: 'https://www.rottentomatoes.com/browse/movies_at_home/sort:popular',
+                summary: 'Popular movies available to watch at home, with critic and audience context.',
+                image: '',
+                badge: 'Streaming',
+                meta: ['Rotten Tomatoes']
+            },
+            {
+                title: 'Rotten Tomatoes: Coming Soon',
+                url: 'https://www.rottentomatoes.com/browse/movies_coming_soon/sort:popular',
+                summary: 'Upcoming cinema releases sorted by public interest.',
+                image: '',
+                badge: 'Coming Soon',
+                meta: ['Rotten Tomatoes']
+            }
+        ];
+    }
+
+    function renderMovies(items, tab) {
+        if (!moviesList) return;
+        if (!items.length) {
+            moviesList.innerHTML = `<div class="movies-error">No ${escapeHtml(tab.label)} items found.</div>`;
+            return;
+        }
+        moviesList.innerHTML = items.map(item => `
+            <a href="${escapeHtml(item.url)}" target="_blank" class="movie-item">
+                ${item.image ? `<img src="${escapeHtml(item.image)}" class="movie-poster" loading="lazy" alt="">` : '<div class="movie-poster movie-poster-placeholder">FILM</div>'}
+                <div class="movie-body">
+                    <span class="movie-badge">${escapeHtml(item.badge || tab.label)}</span>
+                    <div class="movie-title">${escapeHtml(item.title)}</div>
+                    <div class="movie-summary">${escapeHtml(truncateText(item.summary, 220))}</div>
+                    <div class="movie-meta">
+                        ${(item.meta || []).map(meta => `<span>${escapeHtml(meta)}</span>`).join('')}
+                    </div>
+                </div>
+            </a>
+        `).join('');
+    }
+
+    function truncateText(value, limit) {
+        const text = String(value || '').replace(/\s+/g, ' ').trim();
+        if (text.length <= limit) return text;
+        return text.slice(0, limit - 1).trim() + '...';
+    }
+
+    if (moviesBtn) moviesBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        widgetsMenu.classList.add('hidden');
+        moviesState.isOpen = !moviesState.isOpen;
+        if (moviesState.isOpen) {
+            bringToFront(moviesWidget);
+            moviesState.zIndex = maxZIndex;
+            fetchMovies(moviesState.activeTab);
+        }
+        applyMoviesState();
+        saveMoviesState();
+    });
+    if (moviesMinimize) moviesMinimize.addEventListener('click', () => {
+        moviesState.isOpen = false;
+        applyMoviesState();
+        saveMoviesState();
+    });
+    if (moviesRefresh) moviesRefresh.addEventListener('click', () => fetchMovies(moviesState.activeTab, true));
+    moviesTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const tabKey = tab.dataset.moviesTab;
+            if (!moviesSources[tabKey]) return;
+            moviesState.activeTab = tabKey;
+            saveMoviesState();
+            fetchMovies(tabKey);
+        });
+    });
+
+    let isDraggingMovies = false,
+        dragOffsetMoviesX = 0,
+        dragOffsetMoviesY = 0;
+    if (moviesHeader) moviesHeader.addEventListener('mousedown', (e) => {
+        if (e.target.tagName === 'BUTTON') return;
+        isDraggingMovies = true;
+        const r = moviesWidget.getBoundingClientRect();
+        dragOffsetMoviesX = e.clientX - r.left;
+        dragOffsetMoviesY = e.clientY - r.top;
+        document.addEventListener('mousemove', onMouseMoveMovies);
+        document.addEventListener('mouseup', onMouseUpMovies);
+        moviesHeader.style.cursor = 'grabbing';
+    });
+
+    function onMouseMoveMovies(e) {
+        if (!isDraggingMovies) return;
+        let x = e.clientX - dragOffsetMoviesX,
+            y = e.clientY - dragOffsetMoviesY;
+        x = Math.max(0, Math.min(x, window.innerWidth - moviesWidget.offsetWidth));
+        y = Math.max(0, Math.min(y, window.innerHeight - moviesWidget.offsetHeight));
+        moviesWidget.style.left = x + 'px';
+        moviesWidget.style.top = y + 'px';
+        moviesWidget.style.bottom = 'auto';
+        moviesWidget.style.right = 'auto';
+    }
+
+    function onMouseUpMovies() {
+        if (!isDraggingMovies) return;
+        isDraggingMovies = false;
+        moviesHeader.style.cursor = 'grab';
+        document.removeEventListener('mousemove', onMouseMoveMovies);
+        document.removeEventListener('mouseup', onMouseUpMovies);
+        moviesState.x = parseInt(moviesWidget.style.left);
+        moviesState.y = parseInt(moviesWidget.style.top);
+        bringToFront(moviesWidget);
+        moviesState.zIndex = maxZIndex;
+        saveMoviesState();
+    }
+
     // --- Generic Z-Index Logic ---
-    const widgets = [spotifyWidget, footballWidget, todoWidget, notesWidget, techNewsWidget, githubReposWidget, blenderDevWidget];
+    const widgets = [spotifyWidget, footballWidget, todoWidget, notesWidget, techNewsWidget, githubReposWidget, blenderDevWidget, moviesWidget];
     widgets.forEach(w => {
         if (w) w.addEventListener('mousedown', () => bringToFront(w));
     });

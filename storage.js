@@ -78,11 +78,44 @@ class ExtensionStorage {
         });
     }
 
+    async getLocal(keys) {
+        return new Promise((resolve) => {
+            chrome.storage.local.get(keys, (res) => {
+                if (this.handleError()) {
+                    resolve({});
+                } else {
+                    resolve(res);
+                }
+            });
+        });
+    }
+
+    async setLocal(items) {
+        return new Promise((resolve, reject) => {
+            chrome.storage.local.set(items, () => {
+                if (this.handleError()) {
+                    reject(new Error(chrome.runtime.lastError.message));
+                } else {
+                    resolve();
+                }
+            });
+        });
+    }
+
     async remove(keys) {
         const sync = await this.isSyncEnabled();
         const storage = sync ? chrome.storage.sync : chrome.storage.local;
         return new Promise((resolve) => {
             storage.remove(keys, () => {
+                this.handleError();
+                resolve();
+            });
+        });
+    }
+
+    async removeSync(keys) {
+        return new Promise((resolve) => {
+            chrome.storage.sync.remove(keys, () => {
                 this.handleError();
                 resolve();
             });
