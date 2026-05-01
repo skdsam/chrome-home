@@ -2104,10 +2104,18 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
                 value: 'wnba',
                 name: 'WNBA'
             }
+        ],
+        boxing: [{
+                value: 'boxing',
+                name: 'Boxing'
+            }
         ]
     };
 
     let footballInterval = null;
+    let liveStatsInterval = null;
+    let activeLiveStatsEventId = null;
+    let latestSportsEvents = [];
 
     // Load State
     window.storageManager.get(['footballState']).then((result) => {
@@ -2136,6 +2144,7 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
             footballWidget.classList.add('hidden');
             footballBtn.classList.remove('active');
             stopFootballUpdates();
+            stopLiveStatsUpdates();
         }
 
         // Minimized
@@ -2166,14 +2175,11 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
             sportSelect.value = footballState.selectedSport;
             updateLeagueOptions();
         }
+        updateFavoriteTeamVisibility();
 
         // League Select
         if (footballLeagueSelect.value !== footballState.selectedLeague) {
             footballLeagueSelect.value = footballState.selectedLeague;
-        }
-
-        if (footballState.isOpen) {
-            startFootballUpdates();
         }
 
         // Fav Team Input
@@ -2214,10 +2220,11 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
         bringToFront(footballWidget);
         footballState.zIndex = maxZIndex;
 
-        footballState.selectedLeague = e.target.value;
-        saveFootballState();
-        fetchScores(footballState.selectedSport, footballState.selectedLeague);
-    });
+            footballState.selectedLeague = e.target.value;
+            saveFootballState();
+            stopLiveStatsUpdates();
+            fetchScores(footballState.selectedSport, footballState.selectedLeague);
+        });
 
     if (sportSelect) {
         sportSelect.addEventListener('change', (e) => {
@@ -2230,7 +2237,9 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
             footballState.selectedLeague = sportLeagues[footballState.selectedSport][0].value;
 
             updateLeagueOptions();
+            updateFavoriteTeamVisibility();
             saveFootballState();
+            stopLiveStatsUpdates();
             fetchScores(footballState.selectedSport, footballState.selectedLeague);
         });
     }
@@ -2240,6 +2249,12 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
         const leagues = sportLeagues[footballState.selectedSport] || [];
         footballLeagueSelect.innerHTML = leagues.map(l => `<option value="${l.value}">${l.name}</option>`).join('');
         footballLeagueSelect.value = footballState.selectedLeague;
+    }
+
+    function updateFavoriteTeamVisibility() {
+        const favoriteTeamGroup = favoriteTeamInput?.closest('.favorite-team-group');
+        if (!favoriteTeamGroup) return;
+        favoriteTeamGroup.classList.toggle('hidden', footballState.selectedSport !== 'soccer');
     }
 
     if (favoriteTeamInput) {
@@ -2289,8 +2304,9 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
 
     function renderMatches(data) {
         footballMatches.innerHTML = '';
+        latestSportsEvents = data.events || [];
 
-        if (!data.events || data.events.length === 0) {
+        if (!latestSportsEvents.length) {
             footballMatches.innerHTML = '<div style="padding:15px; text-align:center; color:#888;">No matches today</div>';
             return;
         }
@@ -2298,7 +2314,7 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
         const favName = (footballState.favoriteTeam || '').toLowerCase();
 
         // Sort events: put matches with favorite team at the top
-        const sortedEvents = [...data.events].sort((a, b) => {
+        const sortedEvents = [...latestSportsEvents].sort((a, b) => {
             if (!favName) return 0;
             const aHasFav = a.name.toLowerCase().includes(favName);
             const bHasFav = b.name.toLowerCase().includes(favName);
@@ -2308,22 +2324,24 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
         });
 
         sortedEvents.forEach(event => {
-            const competition = event.competitions[0];
-            const home = competition.competitors.find(c => c.homeAway === 'home');
-            const away = competition.competitors.find(c => c.homeAway === 'away');
-            const status = event.status.type.shortDetail; // "FT", "12'", "13:00"
-            const isLive = event.status.type.state === 'in';
+            const competition = event.competitions?.[0] || {};
+            const competitors = competition.competitors || [];
+            const home = competitors.find(c => c.homeAway === 'home') || competitors[0];
+            const away = competitors.find(c => c.homeAway === 'away') || competitors[1];
+            const status = event.status?.type?.shortDetail || event.status?.type?.detail || '';
+            const isLive = event.status?.type?.state === 'in';
+            const isLiveStatsOpen = activeLiveStatsEventId === event.id;
 
             const isFavored = favName && (
-                home.team.displayName.toLowerCase().includes(favName) ||
-                home.team.shortDisplayName.toLowerCase().includes(favName) ||
-                away.team.displayName.toLowerCase().includes(favName) ||
-                away.team.shortDisplayName.toLowerCase().includes(favName)
+                getCompetitorName(home).toLowerCase().includes(favName) ||
+                getCompetitorShortName(home).toLowerCase().includes(favName) ||
+                getCompetitorName(away).toLowerCase().includes(favName) ||
+                getCompetitorShortName(away).toLowerCase().includes(favName)
             );
 
             // Time logic
             let timeDisplay = status;
-            if (event.status.type.state === 'pre') {
+            if (event.status?.type?.state === 'pre') {
                 // Format start time
                 const date = new Date(event.date);
                 timeDisplay = date.toLocaleTimeString([], {
@@ -2338,29 +2356,151 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
             item.innerHTML = `
                 <div class="match-header">
                     <span class="match-status ${isLive ? 'live' : ''}">${timeDisplay}</span>
-                    <span>${event.season.year || ''}</span> 
+                    <span>${event.season?.year || ''}</span> 
                 </div>
                 <div class="match-teams">
                     <div class="team-row">
                         <div class="team-info">
-                            <img src="${home.team.logo}" class="team-logo" onerror="this.src='icon-placeholder.png'">
-                            <span>${home.team.shortDisplayName}</span>
+                            ${getCompetitorLogo(home)}
+                            <span>${escapeHtml(getCompetitorShortName(home))}</span>
                         </div>
-                        <span class="team-score">${home.score}</span>
+                        <span class="team-score">${home ? home.score || '0' : '-'}</span>
                     </div>
                     <div class="team-row">
                         <div class="team-info">
-                            <img src="${away.team.logo}" class="team-logo" onerror="this.src='icon-placeholder.png'">
-                            <span>${away.team.shortDisplayName}</span>
+                            ${getCompetitorLogo(away)}
+                            <span>${escapeHtml(getCompetitorShortName(away))}</span>
                         </div>
-                        <span class="team-score">${away.score}</span>
+                        <span class="team-score">${away ? away.score || '0' : '-'}</span>
                     </div>
+                </div>
+                ${isLive ? `<button class="live-stats-btn" type="button" data-event-id="${event.id}">${isLiveStatsOpen ? 'Hide live stats' : 'View live stats'}</button>` : ''}
+                <div class="live-stats-panel ${isLiveStatsOpen ? '' : 'hidden'}" id="live-stats-${event.id}">
+                    ${isLiveStatsOpen ? '<div class="live-stats-loading">Loading live stats...</div>' : ''}
                 </div>
             `;
             footballMatches.appendChild(item);
         });
+
+        footballMatches.querySelectorAll('.live-stats-btn').forEach(button => {
+            button.addEventListener('click', () => toggleLiveStats(button.dataset.eventId));
+        });
+
+        if (activeLiveStatsEventId) {
+            const activeEventStillLive = latestSportsEvents.some(event => event.id === activeLiveStatsEventId && event.status?.type?.state === 'in');
+            if (activeEventStillLive) {
+                fetchLiveStats(activeLiveStatsEventId);
+            } else {
+                stopLiveStatsUpdates();
+            }
+        }
     }
 
+    function getCompetitorName(competitor) {
+        return competitor?.team?.displayName || competitor?.athlete?.displayName || competitor?.displayName || 'TBD';
+    }
+
+    function getCompetitorShortName(competitor) {
+        return competitor?.team?.shortDisplayName || competitor?.athlete?.shortName || competitor?.athlete?.displayName || getCompetitorName(competitor);
+    }
+
+    function getCompetitorLogo(competitor) {
+        const logo = competitor?.team?.logo || competitor?.athlete?.headshot?.href || '';
+        if (!logo) return '<span class="team-logo team-logo-placeholder"></span>';
+        return `<img src="${escapeHtml(logo)}" class="team-logo" onerror="this.style.visibility='hidden'">`;
+    }
+
+    function getSportsApiPath(sport, leagueCode, endpoint) {
+        return `https://site.api.espn.com/apis/site/v2/sports/${sport}/${leagueCode}/${endpoint}`;
+    }
+
+    function toggleLiveStats(eventId) {
+        if (activeLiveStatsEventId === eventId) {
+            stopLiveStatsUpdates();
+            renderMatches({
+                events: latestSportsEvents
+            });
+            return;
+        }
+
+        activeLiveStatsEventId = eventId;
+        if (liveStatsInterval) clearInterval(liveStatsInterval);
+        liveStatsInterval = setInterval(() => fetchLiveStats(eventId), 20000);
+        renderMatches({
+            events: latestSportsEvents
+        });
+        fetchLiveStats(eventId);
+    }
+
+    async function fetchLiveStats(eventId) {
+        const panel = document.getElementById(`live-stats-${eventId}`);
+        if (!panel) return;
+        panel.classList.remove('hidden');
+        panel.innerHTML = '<div class="live-stats-loading">Loading live stats...</div>';
+
+        try {
+            const url = `${getSportsApiPath(footballState.selectedSport, footballState.selectedLeague, 'summary')}?event=${encodeURIComponent(eventId)}`;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Live stats unavailable');
+            const data = await response.json();
+            panel.innerHTML = renderLiveStats(data);
+        } catch (error) {
+            panel.innerHTML = '<div class="live-stats-empty">Live stats are not available for this event yet.</div>';
+        }
+    }
+
+    function renderLiveStats(data) {
+        const event = data.header?.competitions?.[0] || data.boxscore;
+        const status = data.header?.competitions?.[0]?.status?.type?.shortDetail || data.header?.competitions?.[0]?.status?.type?.detail || '';
+        const situation = data.situation;
+        const scoringPlays = data.scoringPlays || [];
+        const boxscoreTeams = data.boxscore?.teams || [];
+        const leaders = data.leaders || [];
+        const details = [];
+
+        if (status) details.push(`<div class="live-stat-row"><span>Status</span><strong>${escapeHtml(status)}</strong></div>`);
+        if (situation?.shortDownDistanceText) details.push(`<div class="live-stat-row"><span>Situation</span><strong>${escapeHtml(situation.shortDownDistanceText)}</strong></div>`);
+        if (situation?.possessionText) details.push(`<div class="live-stat-row"><span>Possession</span><strong>${escapeHtml(situation.possessionText)}</strong></div>`);
+        if (event?.venue?.fullName) details.push(`<div class="live-stat-row"><span>Venue</span><strong>${escapeHtml(event.venue.fullName)}</strong></div>`);
+
+        const teamStats = boxscoreTeams.map(team => {
+            const stats = (team.statistics || []).slice(0, 4).map(stat => `
+                <div class="live-stat-row"><span>${escapeHtml(stat.label || stat.name)}</span><strong>${escapeHtml(stat.displayValue || stat.value || '-')}</strong></div>
+            `).join('');
+            return stats ? `<div class="live-stats-group"><h4>${escapeHtml(team.team?.shortDisplayName || team.team?.displayName || 'Team')}</h4>${stats}</div>` : '';
+        }).join('');
+
+        const leaderRows = leaders.slice(0, 3).map(group => {
+            const athlete = group.leaders?.[0];
+            if (!athlete) return '';
+            return `<div class="live-stat-row"><span>${escapeHtml(group.displayName || group.name)}</span><strong>${escapeHtml(athlete.displayValue || athlete.athlete?.displayName || '-')}</strong></div>`;
+        }).join('');
+
+        const playRows = scoringPlays.slice(-3).reverse().map(play => `
+            <div class="live-play">
+                <strong>${escapeHtml(play.period?.displayValue || play.clock?.displayValue || 'Update')}</strong>
+                <span>${escapeHtml(play.text || play.shortText || '')}</span>
+            </div>
+        `).join('');
+
+        const empty = !details.length && !teamStats && !leaderRows && !playRows;
+        if (empty) return '<div class="live-stats-empty">No extra live stats are available from the free feed yet.</div>';
+
+        return `
+            <div class="live-stats-card">
+                ${details.join('')}
+                ${teamStats}
+                ${leaderRows ? `<div class="live-stats-group"><h4>Leaders</h4>${leaderRows}</div>` : ''}
+                ${playRows ? `<div class="live-stats-group"><h4>Recent scoring</h4>${playRows}</div>` : ''}
+            </div>
+        `;
+    }
+
+    function stopLiveStatsUpdates() {
+        if (liveStatsInterval) clearInterval(liveStatsInterval);
+        liveStatsInterval = null;
+        activeLiveStatsEventId = null;
+    }
 
 
     function startFootballUpdates() {
@@ -2975,30 +3115,71 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
     const githubReposRefresh = document.getElementById('github-repos-refresh');
     const githubReposList = document.getElementById('github-repos-list');
     const githubReposLoading = document.getElementById('github-repos-loading');
+    const githubReposTabs = Array.from(document.querySelectorAll('.github-repos-tab'));
+
+    const githubRepoCategories = {
+        popular: {
+            label: 'Popular',
+            query: 'stars:>1000'
+        },
+        ai: {
+            label: 'AI',
+            query: 'ai OR artificial-intelligence OR machine-learning OR llm OR generative-ai'
+        },
+        webDesign: {
+            label: 'Web Design',
+            query: 'web-design OR css OR design-system OR ui OR frontend'
+        },
+        developerTools: {
+            label: 'Developer Tools',
+            query: 'developer-tools OR cli OR productivity OR build-tool OR tooling'
+        }
+    };
+    const githubReposCacheTtl = 60 * 60 * 1000;
 
     let githubReposState = {
         isOpen: false,
         x: null,
         y: null,
         zIndex: 100,
+        activeCategory: 'popular',
         lastFetched: null
     };
+    let githubReposCache = {};
 
-    window.storageManager.get(['githubReposState']).then((result) => {
+    window.storageManager.get(['githubReposState', 'githubReposCache']).then((result) => {
         if (result.githubReposState) {
             githubReposState = {
                 ...githubReposState,
                 ...result.githubReposState
             };
         }
+        if (result.githubReposCache) {
+            githubReposCache = result.githubReposCache;
+        }
         applyGithubReposState();
-        if (githubReposState.isOpen) fetchGithubRepos();
+        if (githubReposState.isOpen) fetchGithubRepos(githubReposState.activeCategory);
     });
 
     function saveGithubReposState() {
         window.storageManager.set({
             githubReposState
         });
+    }
+
+    function saveGithubReposCache() {
+        window.storageManager.set({
+            githubReposCache
+        }).catch(() => {
+            // Cache failures should not break the widget; fetching can still work.
+        });
+    }
+
+    function getFreshGithubReposCache(categoryKey) {
+        const cached = githubReposCache[categoryKey];
+        if (!cached || !Array.isArray(cached.repos) || !cached.fetchedAt) return null;
+        if (Date.now() - cached.fetchedAt > githubReposCacheTtl) return null;
+        return cached;
     }
 
     function applyGithubReposState() {
@@ -3020,10 +3201,25 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
             githubReposWidget.style.zIndex = githubReposState.zIndex;
             if (githubReposState.zIndex > maxZIndex) maxZIndex = githubReposState.zIndex;
         }
+        githubReposTabs.forEach(tab => {
+            const isActive = tab.dataset.githubCategory === githubReposState.activeCategory;
+            tab.classList.toggle('active', isActive);
+            tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
     }
 
-    async function fetchGithubRepos() {
+    async function fetchGithubRepos(categoryKey = githubReposState.activeCategory, forceRefresh = false) {
         if (!githubReposLoading || !githubReposList) return;
+        const category = githubRepoCategories[categoryKey] || githubRepoCategories.popular;
+        githubReposState.activeCategory = categoryKey;
+        applyGithubReposState();
+
+        const cached = getFreshGithubReposCache(categoryKey);
+        if (!forceRefresh && cached) {
+            renderGithubRepos(cached.repos, category);
+            return;
+        }
+
         githubReposLoading.classList.remove('hidden');
         githubReposList.innerHTML = '';
         if (githubReposRefresh) githubReposRefresh.disabled = true;
@@ -3031,7 +3227,8 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
             const oneYearAgo = new Date();
             oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
             const since = oneYearAgo.toISOString().slice(0, 10);
-            const url = `https://api.github.com/search/repositories?q=stars:%3E1000+pushed:%3E${since}&sort=stars&order=desc&per_page=15`;
+            const query = `${category.query} pushed:>${since}`;
+            const url = `https://api.github.com/search/repositories?q=${encodeURIComponent(query)}&sort=stars&order=desc&per_page=15`;
             const res = await fetch(url, {
                 headers: {
                     Accept: 'application/vnd.github+json'
@@ -3043,9 +3240,14 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
             }
             const data = await res.json();
             const repos = (data.items || []).map(analyzeGithubRepo);
-            renderGithubRepos(repos);
+            githubReposCache[categoryKey] = {
+                fetchedAt: Date.now(),
+                repos
+            };
+            renderGithubRepos(repos, category);
             githubReposState.lastFetched = Date.now();
             saveGithubReposState();
+            saveGithubReposCache();
         } catch (e) {
             githubReposList.innerHTML = `<div class="github-repos-error">${escapeHtml(e.message || 'Failed to load repositories.')}</div>`;
         } finally {
@@ -3079,10 +3281,10 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
         };
     }
 
-    function renderGithubRepos(repos) {
+    function renderGithubRepos(repos, category) {
         if (!githubReposList) return;
         if (!repos.length) {
-            githubReposList.innerHTML = '<div class="github-repos-error">No repositories found.</div>';
+            githubReposList.innerHTML = `<div class="github-repos-error">No ${escapeHtml(category.label)} repositories found.</div>`;
             return;
         }
         githubReposList.innerHTML = repos.map(repo => `
@@ -3124,7 +3326,7 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
         if (githubReposState.isOpen) {
             bringToFront(githubReposWidget);
             githubReposState.zIndex = maxZIndex;
-            fetchGithubRepos();
+            fetchGithubRepos(githubReposState.activeCategory);
         }
         applyGithubReposState();
         saveGithubReposState();
@@ -3134,7 +3336,16 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
         applyGithubReposState();
         saveGithubReposState();
     });
-    if (githubReposRefresh) githubReposRefresh.addEventListener('click', () => fetchGithubRepos());
+    if (githubReposRefresh) githubReposRefresh.addEventListener('click', () => fetchGithubRepos(githubReposState.activeCategory, true));
+    githubReposTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const categoryKey = tab.dataset.githubCategory;
+            if (!githubRepoCategories[categoryKey]) return;
+            githubReposState.activeCategory = categoryKey;
+            saveGithubReposState();
+            fetchGithubRepos(categoryKey);
+        });
+    });
 
     let isDraggingGithubRepos = false,
         dragOffsetGithubReposX = 0,

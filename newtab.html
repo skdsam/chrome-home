@@ -107,7 +107,7 @@
                     <path d="M4.93 4.93l14.14 14.14"></path>
                     <path d="M14.07 4.93L4.93 19.07"></path>
                 </svg>
-                <span>Football</span>
+                <span>Sports</span>
             </div>
             <div id="todo-btn" class="widget-menu-item">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -302,11 +302,11 @@
 
     </div>
 
-    <!-- Football Widget -->
+    <!-- Sports Widget -->
     <div id="football-widget" class="spotify-widget football-widget hidden">
         <div class="spotify-header" id="football-header">
             <span class="spotify-title">
-                Football
+                Sports
             </span>
             <div class="spotify-controls">
                 <button id="football-minimize">-</button>
@@ -318,6 +318,7 @@
                     <option value="soccer">Football (Soccer)</option>
                     <option value="football">American Football</option>
                     <option value="basketball">Basketball</option>
+                    <option value="boxing">Boxing</option>
                 </select>
                 <select id="football-league-select" class="football-select">
                     <option value="eng.1">Premier League</option>
@@ -403,6 +404,12 @@
             </div>
         </div>
         <div class="spotify-content github-repos-content" id="github-repos-content">
+            <div class="github-repos-tabs" role="tablist" aria-label="GitHub repository categories">
+                <button class="github-repos-tab active" type="button" data-github-category="popular">Popular</button>
+                <button class="github-repos-tab" type="button" data-github-category="ai">AI</button>
+                <button class="github-repos-tab" type="button" data-github-category="webDesign">Web Design</button>
+                <button class="github-repos-tab" type="button" data-github-category="developerTools">Developer Tools</button>
+            </div>
             <div id="github-repos-loading" class="github-repos-loading">Loading repositories...</div>
             <div id="github-repos-list" class="github-repos-list">
                 <!-- Repositories injected here -->
