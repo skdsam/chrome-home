@@ -13,6 +13,9 @@
     "topSites",
     "history"
   ],
+  "host_permissions": [
+    "https://api.github.com/*"
+  ],
   "chrome_url_overrides": {
     "newtab": "newtab.html"
   },

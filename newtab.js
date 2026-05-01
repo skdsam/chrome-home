@@ -2967,8 +2967,216 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
         saveTechNewsState();
     }
 
+    // --- GitHub Repos Widget Logic ---
+    const githubReposBtn = document.getElementById('github-repos-btn');
+    const githubReposWidget = document.getElementById('github-repos-widget');
+    const githubReposHeader = document.getElementById('github-repos-header');
+    const githubReposMinimize = document.getElementById('github-repos-minimize');
+    const githubReposRefresh = document.getElementById('github-repos-refresh');
+    const githubReposList = document.getElementById('github-repos-list');
+    const githubReposLoading = document.getElementById('github-repos-loading');
+
+    let githubReposState = {
+        isOpen: false,
+        x: null,
+        y: null,
+        zIndex: 100,
+        lastFetched: null
+    };
+
+    window.storageManager.get(['githubReposState']).then((result) => {
+        if (result.githubReposState) {
+            githubReposState = {
+                ...githubReposState,
+                ...result.githubReposState
+            };
+        }
+        applyGithubReposState();
+        if (githubReposState.isOpen) fetchGithubRepos();
+    });
+
+    function saveGithubReposState() {
+        window.storageManager.set({
+            githubReposState
+        });
+    }
+
+    function applyGithubReposState() {
+        if (!githubReposWidget) return;
+        if (githubReposState.isOpen) {
+            githubReposWidget.classList.remove('hidden');
+            if (githubReposBtn) githubReposBtn.classList.add('active');
+        } else {
+            githubReposWidget.classList.add('hidden');
+            if (githubReposBtn) githubReposBtn.classList.remove('active');
+        }
+        if (githubReposState.x !== null && githubReposState.y !== null) {
+            githubReposWidget.style.left = githubReposState.x + 'px';
+            githubReposWidget.style.top = githubReposState.y + 'px';
+            githubReposWidget.style.bottom = 'auto';
+            githubReposWidget.style.right = 'auto';
+        }
+        if (githubReposState.zIndex) {
+            githubReposWidget.style.zIndex = githubReposState.zIndex;
+            if (githubReposState.zIndex > maxZIndex) maxZIndex = githubReposState.zIndex;
+        }
+    }
+
+    async function fetchGithubRepos() {
+        if (!githubReposLoading || !githubReposList) return;
+        githubReposLoading.classList.remove('hidden');
+        githubReposList.innerHTML = '';
+        if (githubReposRefresh) githubReposRefresh.disabled = true;
+        try {
+            const oneYearAgo = new Date();
+            oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+            const since = oneYearAgo.toISOString().slice(0, 10);
+            const url = `https://api.github.com/search/repositories?q=stars:%3E1000+pushed:%3E${since}&sort=stars&order=desc&per_page=15`;
+            const res = await fetch(url, {
+                headers: {
+                    Accept: 'application/vnd.github+json'
+                }
+            });
+            if (!res.ok) {
+                if (res.status === 403) throw new Error('GitHub rate limit reached. Try again later.');
+                throw new Error('GitHub request failed.');
+            }
+            const data = await res.json();
+            const repos = (data.items || []).map(analyzeGithubRepo);
+            renderGithubRepos(repos);
+            githubReposState.lastFetched = Date.now();
+            saveGithubReposState();
+        } catch (e) {
+            githubReposList.innerHTML = `<div class="github-repos-error">${escapeHtml(e.message || 'Failed to load repositories.')}</div>`;
+        } finally {
+            githubReposLoading.classList.add('hidden');
+            if (githubReposRefresh) githubReposRefresh.disabled = false;
+        }
+    }
+
+    function analyzeGithubRepo(repo) {
+        const language = repo.language || 'Mixed';
+        const description = repo.description || 'No description provided.';
+        const topics = Array.isArray(repo.topics) ? repo.topics.slice(0, 4) : [];
+        const signals = [];
+        if (repo.stargazers_count) signals.push(`${formatCompactNumber(repo.stargazers_count)} stars`);
+        if (repo.forks_count) signals.push(`${formatCompactNumber(repo.forks_count)} forks`);
+        if (repo.open_issues_count) signals.push(`${formatCompactNumber(repo.open_issues_count)} open issues`);
+
+        let analysis = `${description} Built mainly with ${language}.`;
+        if (topics.length) analysis += ` Topics: ${topics.join(', ')}.`;
+        analysis += ` Popularity signals: ${signals.join(', ') || 'strong GitHub search ranking'}.`;
+
+        return {
+            name: repo.full_name,
+            url: repo.html_url,
+            language,
+            stars: repo.stargazers_count || 0,
+            forks: repo.forks_count || 0,
+            updated: timeAgo(new Date(repo.pushed_at || repo.updated_at).getTime()),
+            analysis,
+            topics
+        };
+    }
+
+    function renderGithubRepos(repos) {
+        if (!githubReposList) return;
+        if (!repos.length) {
+            githubReposList.innerHTML = '<div class="github-repos-error">No repositories found.</div>';
+            return;
+        }
+        githubReposList.innerHTML = repos.map(repo => `
+            <a href="${escapeHtml(repo.url)}" target="_blank" class="github-repo-item">
+                <div class="github-repo-main">
+                    <div class="github-repo-name">${escapeHtml(repo.name)}</div>
+                    <div class="github-repo-language">${escapeHtml(repo.language)}</div>
+                </div>
+                <div class="github-repo-analysis">${escapeHtml(repo.analysis)}</div>
+                <div class="github-repo-meta">
+                    <span>Stars ${formatCompactNumber(repo.stars)}</span>
+                    <span>Forks ${formatCompactNumber(repo.forks)}</span>
+                    <span>Updated ${escapeHtml(repo.updated)}</span>
+                </div>
+            </a>
+        `).join('');
+    }
+
+    function formatCompactNumber(value) {
+        return Intl.NumberFormat('en', {
+            notation: 'compact',
+            maximumFractionDigits: 1
+        }).format(value || 0);
+    }
+
+    function escapeHtml(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    if (githubReposBtn) githubReposBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        widgetsMenu.classList.add('hidden');
+        githubReposState.isOpen = !githubReposState.isOpen;
+        if (githubReposState.isOpen) {
+            bringToFront(githubReposWidget);
+            githubReposState.zIndex = maxZIndex;
+            fetchGithubRepos();
+        }
+        applyGithubReposState();
+        saveGithubReposState();
+    });
+    if (githubReposMinimize) githubReposMinimize.addEventListener('click', () => {
+        githubReposState.isOpen = false;
+        applyGithubReposState();
+        saveGithubReposState();
+    });
+    if (githubReposRefresh) githubReposRefresh.addEventListener('click', () => fetchGithubRepos());
+
+    let isDraggingGithubRepos = false,
+        dragOffsetGithubReposX = 0,
+        dragOffsetGithubReposY = 0;
+    if (githubReposHeader) githubReposHeader.addEventListener('mousedown', (e) => {
+        if (e.target.tagName === 'BUTTON') return;
+        isDraggingGithubRepos = true;
+        const r = githubReposWidget.getBoundingClientRect();
+        dragOffsetGithubReposX = e.clientX - r.left;
+        dragOffsetGithubReposY = e.clientY - r.top;
+        document.addEventListener('mousemove', onMouseMoveGithubRepos);
+        document.addEventListener('mouseup', onMouseUpGithubRepos);
+        githubReposHeader.style.cursor = 'grabbing';
+    });
+
+    function onMouseMoveGithubRepos(e) {
+        if (!isDraggingGithubRepos) return;
+        let x = e.clientX - dragOffsetGithubReposX,
+            y = e.clientY - dragOffsetGithubReposY;
+        x = Math.max(0, Math.min(x, window.innerWidth - githubReposWidget.offsetWidth));
+        y = Math.max(0, Math.min(y, window.innerHeight - githubReposWidget.offsetHeight));
+        githubReposWidget.style.left = x + 'px';
+        githubReposWidget.style.top = y + 'px';
+        githubReposWidget.style.bottom = 'auto';
+        githubReposWidget.style.right = 'auto';
+    }
+
+    function onMouseUpGithubRepos() {
+        if (!isDraggingGithubRepos) return;
+        isDraggingGithubRepos = false;
+        githubReposHeader.style.cursor = 'grab';
+        document.removeEventListener('mousemove', onMouseMoveGithubRepos);
+        document.removeEventListener('mouseup', onMouseUpGithubRepos);
+        githubReposState.x = parseInt(githubReposWidget.style.left);
+        githubReposState.y = parseInt(githubReposWidget.style.top);
+        bringToFront(githubReposWidget);
+        githubReposState.zIndex = maxZIndex;
+        saveGithubReposState();
+    }
+
     // --- Generic Z-Index Logic ---
-    const widgets = [spotifyWidget, footballWidget, todoWidget, notesWidget, techNewsWidget];
+    const widgets = [spotifyWidget, footballWidget, todoWidget, notesWidget, techNewsWidget, githubReposWidget];
     widgets.forEach(w => {
         if (w) w.addEventListener('mousedown', () => bringToFront(w));
     });
