@@ -2249,6 +2249,7 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
         const leagues = sportLeagues[footballState.selectedSport] || [];
         footballLeagueSelect.innerHTML = leagues.map(l => `<option value="${l.value}">${l.name}</option>`).join('');
         footballLeagueSelect.value = footballState.selectedLeague;
+        footballLeagueSelect.classList.toggle('hidden', leagues.length <= 1);
     }
 
     function updateFavoriteTeamVisibility() {
@@ -2273,6 +2274,7 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
         if (!footballState.isOpen) return;
 
         footballLoading.style.display = 'block';
+        footballLoading.textContent = 'Loading...';
         if (footballMatches.children.length === 0) {
             footballLoading.style.display = 'block';
         }
@@ -2288,7 +2290,7 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
                 // NBA/NCAA endpoint: basketball/nba/scoreboard
             }
 
-            const url = `https://site.api.espn.com/apis/site/v2/sports/${sportType}/${leagueCode}/scoreboard`;
+            const url = getSportsApiPath(sportType, leagueCode, 'scoreboard');
             const response = await fetch(url);
             const data = await response.json();
 
@@ -2315,6 +2317,10 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
 
         // Sort events: put matches with favorite team at the top
         const sortedEvents = [...latestSportsEvents].sort((a, b) => {
+            const aLive = a.status?.type?.state === 'in';
+            const bLive = b.status?.type?.state === 'in';
+            if (aLive && !bLive) return -1;
+            if (!aLive && bLive) return 1;
             if (!favName) return 0;
             const aHasFav = a.name.toLowerCase().includes(favName);
             const bHasFav = b.name.toLowerCase().includes(favName);
@@ -2356,7 +2362,7 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
             item.innerHTML = `
                 <div class="match-header">
                     <span class="match-status ${isLive ? 'live' : ''}">${timeDisplay}</span>
-                    <span>${event.season?.year || ''}</span> 
+                    <span>${escapeHtml(event.leagueName || event.season?.year || '')}</span> 
                 </div>
                 <div class="match-teams">
                     <div class="team-row">
@@ -3386,8 +3392,448 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
         saveGithubReposState();
     }
 
+    // --- Blender Dev Widget Logic ---
+    const blenderDevBtn = document.getElementById('blender-dev-btn');
+    const blenderDevWidget = document.getElementById('blender-dev-widget');
+    const blenderDevHeader = document.getElementById('blender-dev-header');
+    const blenderDevMinimize = document.getElementById('blender-dev-minimize');
+    const blenderDevRefresh = document.getElementById('blender-dev-refresh');
+    const blenderDevList = document.getElementById('blender-dev-list');
+    const blenderDevLoading = document.getElementById('blender-dev-loading');
+    const blenderDevTabs = Array.from(document.querySelectorAll('.blender-dev-tab'));
+
+    const blenderDevSources = {
+        news: {
+            label: 'News',
+            cacheKey: 'news'
+        },
+        releases: {
+            label: 'Releases',
+            cacheKey: 'releases'
+        },
+        api: {
+            label: 'API',
+            cacheKey: 'api'
+        },
+        links: {
+            label: 'Links',
+            cacheKey: 'links'
+        }
+    };
+    const blenderDevCacheTtl = 12 * 60 * 60 * 1000;
+
+    let blenderDevState = {
+        isOpen: false,
+        x: null,
+        y: null,
+        zIndex: 100,
+        activeTab: 'news'
+    };
+    let blenderDevCache = {};
+
+    window.storageManager.get(['blenderDevState', 'blenderDevCache']).then((result) => {
+        if (result.blenderDevState) {
+            blenderDevState = {
+                ...blenderDevState,
+                ...result.blenderDevState
+            };
+        }
+        if (result.blenderDevCache) {
+            blenderDevCache = result.blenderDevCache;
+        }
+        applyBlenderDevState();
+        if (blenderDevState.isOpen) fetchBlenderDev(blenderDevState.activeTab);
+    });
+
+    function saveBlenderDevState() {
+        window.storageManager.set({
+            blenderDevState
+        });
+    }
+
+    function saveBlenderDevCache() {
+        window.storageManager.set({
+            blenderDevCache
+        }).catch(() => {
+            // Cache failures should not stop the widget from rendering fresh data.
+        });
+    }
+
+    function getFreshBlenderDevCache(tabKey) {
+        const cached = blenderDevCache[tabKey];
+        if (!cached || !Array.isArray(cached.items) || !cached.fetchedAt) return null;
+        if (Date.now() - cached.fetchedAt > blenderDevCacheTtl) return null;
+        return cached;
+    }
+
+    function applyBlenderDevState() {
+        if (!blenderDevWidget) return;
+        if (blenderDevState.isOpen) {
+            blenderDevWidget.classList.remove('hidden');
+            if (blenderDevBtn) blenderDevBtn.classList.add('active');
+        } else {
+            blenderDevWidget.classList.add('hidden');
+            if (blenderDevBtn) blenderDevBtn.classList.remove('active');
+        }
+        if (blenderDevState.x !== null && blenderDevState.y !== null) {
+            blenderDevWidget.style.left = blenderDevState.x + 'px';
+            blenderDevWidget.style.top = blenderDevState.y + 'px';
+            blenderDevWidget.style.bottom = 'auto';
+            blenderDevWidget.style.right = 'auto';
+        }
+        if (blenderDevState.zIndex) {
+            blenderDevWidget.style.zIndex = blenderDevState.zIndex;
+            if (blenderDevState.zIndex > maxZIndex) maxZIndex = blenderDevState.zIndex;
+        }
+        blenderDevTabs.forEach(tab => {
+            const isActive = tab.dataset.blenderTab === blenderDevState.activeTab;
+            tab.classList.toggle('active', isActive);
+            tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+    }
+
+    async function fetchBlenderDev(tabKey = blenderDevState.activeTab, forceRefresh = false) {
+        if (!blenderDevLoading || !blenderDevList) return;
+        const tab = blenderDevSources[tabKey] || blenderDevSources.news;
+        blenderDevState.activeTab = tabKey;
+        applyBlenderDevState();
+
+        const cached = getFreshBlenderDevCache(tabKey);
+        if (!forceRefresh && cached) {
+            renderBlenderDevItems(cached.items, tab);
+            return;
+        }
+
+        blenderDevLoading.classList.remove('hidden');
+        blenderDevList.innerHTML = '';
+        if (blenderDevRefresh) blenderDevRefresh.disabled = true;
+        try {
+            const items = await loadBlenderDevItems(tabKey);
+            blenderDevCache[tabKey] = {
+                fetchedAt: Date.now(),
+                items
+            };
+            renderBlenderDevItems(items, tab);
+            saveBlenderDevCache();
+        } catch (e) {
+            blenderDevList.innerHTML = `<div class="blender-dev-error">${escapeHtml(e.message || 'Failed to load Blender updates.')}</div>`;
+        } finally {
+            blenderDevLoading.classList.add('hidden');
+            if (blenderDevRefresh) blenderDevRefresh.disabled = false;
+        }
+    }
+
+    async function loadBlenderDevItems(tabKey) {
+        if (tabKey === 'news') return fetchBlenderNews();
+        if (tabKey === 'releases') return fetchBlenderReleases();
+        if (tabKey === 'api') return fetchBlenderApiNotes();
+        return getBlenderLinks();
+    }
+
+    async function fetchBlenderNews() {
+        const feedUrls = [
+            'https://www.blender.org/feed/',
+            'https://www.blender.org/category/news/feed/'
+        ];
+
+        for (const feedUrl of feedUrls) {
+            try {
+                const res = await fetch(feedUrl);
+                if (!res.ok) continue;
+                const text = await res.text();
+                const doc = new DOMParser().parseFromString(text, 'application/xml');
+                const items = Array.from(doc.querySelectorAll('item')).slice(0, 8).map(item => {
+                    const title = getXmlText(item, 'title');
+                    const link = getXmlText(item, 'link');
+                    const date = getXmlText(item, 'pubDate');
+                    const description = stripHtml(getXmlText(item, 'description')).slice(0, 180);
+                    return {
+                        title,
+                        url: link,
+                        summary: description || 'Official Blender update.',
+                        badge: 'Official News',
+                        meta: [date ? timeAgo(new Date(date).getTime()) : 'Blender.org']
+                    };
+                }).filter(item => item.title && item.url);
+                if (items.length) return items;
+            } catch (e) {
+                // Try the next official feed before using pinned official links.
+            }
+        }
+
+        return [{
+                title: 'Blender News',
+                url: 'https://www.blender.org/category/news/',
+                summary: 'Official Blender news, Foundation updates, feature announcements, and project posts.',
+                badge: 'Official News',
+                meta: ['Open source']
+            },
+            {
+                title: 'Blender Press Releases',
+                url: 'https://www.blender.org/press/',
+                summary: 'Major release announcements and Foundation press updates from blender.org.',
+                badge: 'Press',
+                meta: ['Blender.org']
+            },
+            {
+                title: 'Blender Developer Portal',
+                url: 'https://developer.blender.org/',
+                summary: 'Developer-facing updates, documentation, build guidance, and contribution entry points.',
+                badge: 'Developer',
+                meta: ['Official']
+            }
+        ];
+    }
+
+    async function fetchBlenderReleases() {
+        const fallbackItems = [
+            {
+                title: 'Blender 5.1 alpha',
+                url: 'https://developer.blender.org/docs/release_notes/5.1/',
+                summary: 'Under development on main; useful for tracking upcoming feature work and compatibility notes.',
+                badge: 'Alpha',
+                meta: ['Release notes', 'Official developer docs']
+            },
+            {
+                title: 'Blender 5.0 beta',
+                url: 'https://developer.blender.org/docs/release_notes/5.0/',
+                summary: 'Upcoming release in bug-fixing mode; useful for testing add-ons and pipeline compatibility.',
+                badge: 'Beta',
+                meta: ['Release notes', 'Official developer docs']
+            },
+            {
+                title: 'Blender 4.5 LTS',
+                url: 'https://developer.blender.org/docs/release_notes/4.5/',
+                summary: 'Current long-term support release with extended maintenance for production work.',
+                badge: 'LTS',
+                meta: ['Release notes', 'Official developer docs']
+            },
+            {
+                title: 'Blender 4.2 LTS',
+                url: 'https://developer.blender.org/docs/release_notes/4.2/',
+                summary: 'Long-term support branch maintained until July 2026.',
+                badge: 'LTS',
+                meta: ['Release notes', 'Official developer docs']
+            },
+            {
+                title: 'Release cycle',
+                url: 'https://developer.blender.org/docs/handbook/release_process/release_cycle/',
+                summary: 'Blender targets a stable release roughly every four months, with one long-term support release each year.',
+                badge: 'Schedule',
+                meta: ['Release process']
+            }
+        ];
+
+        try {
+            const res = await fetch('https://developer.blender.org/docs/release_notes/');
+            if (!res.ok) return fallbackItems;
+            const text = await res.text();
+            const doc = new DOMParser().parseFromString(text, 'text/html');
+            const bodyText = doc.body?.textContent || '';
+            const activeMatch = bodyText.match(/Currently Active([\s\S]*?)Previous Versions/);
+            const activeLines = activeMatch ? activeMatch[1].split('\n').map(line => line.trim()).filter(Boolean) : [];
+            const releaseItems = activeLines
+                .filter(line => /^Blender\s+\d/.test(line))
+                .slice(0, 6)
+                .map(line => ({
+                    title: line,
+                    url: 'https://developer.blender.org/docs/release_notes/',
+                    summary: getReleaseSummary(line),
+                    badge: line.includes('LTS') ? 'LTS' : line.includes('alpha') ? 'Alpha' : line.includes('beta') ? 'Beta' : 'Release',
+                    meta: ['Release notes', 'Official developer docs']
+                }));
+
+            if (!releaseItems.length) return fallbackItems;
+            return [
+                ...releaseItems,
+                fallbackItems[fallbackItems.length - 1]
+            ];
+        } catch (e) {
+            return fallbackItems;
+        }
+    }
+
+    function getReleaseSummary(line) {
+        if (line.includes('alpha')) return 'Under active development on main; feature work and larger changes may still be moving.';
+        if (line.includes('beta')) return 'Upcoming release in bug-fixing mode; useful for testing compatibility before final release.';
+        if (line.includes('current stable')) return 'Current stable production release; good baseline for day-to-day Blender work.';
+        if (line.includes('supported until')) return 'Long-term support branch with extended bug-fix maintenance.';
+        return 'Official Blender release notes and compatibility information.';
+    }
+
+    async function fetchBlenderApiNotes() {
+        const apiPages = [{
+                version: '5.0',
+                url: 'https://developer.blender.org/docs/release_notes/5.0/python_api/'
+            },
+            {
+                version: '4.5 LTS',
+                url: 'https://developer.blender.org/docs/release_notes/4.5/python_api/'
+            }
+        ];
+        const results = await Promise.allSettled(apiPages.map(async page => {
+            const res = await fetch(page.url);
+            if (!res.ok) throw new Error('API notes unavailable');
+            const text = await res.text();
+            const doc = new DOMParser().parseFromString(text, 'text/html');
+            const bodyText = (doc.body?.textContent || '').replace(/\s+/g, ' ').trim();
+            const breakingIndex = bodyText.indexOf('Breaking Changes');
+            const summary = breakingIndex >= 0 ? bodyText.slice(breakingIndex, breakingIndex + 260) : bodyText.slice(0, 260);
+            return {
+                title: `Blender ${page.version} Python API`,
+                url: page.url,
+                summary: summary || 'Python API release notes and compatibility changes.',
+                badge: page.version.includes('LTS') ? 'LTS API' : 'API Changes',
+                meta: ['Python API', 'Breaking changes']
+            };
+        }));
+
+        const items = results.flatMap(result => result.status === 'fulfilled' ? [result.value] : []);
+        items.push({
+            title: 'Python API change log',
+            url: 'https://docs.blender.org/api/current/change_log.html',
+            summary: 'Official change log for Blender Python API additions, removals, and compatibility notes.',
+            badge: 'Reference',
+            meta: ['docs.blender.org']
+        });
+        return items;
+    }
+
+    function getBlenderLinks() {
+        return [{
+                title: 'Blender Developer Portal',
+                url: 'https://developer.blender.org/',
+                summary: 'Start point for building Blender, reading architecture docs, triaging bugs, and joining development.',
+                badge: 'Portal',
+                meta: ['Developer']
+            },
+            {
+                title: 'Release Notes',
+                url: 'https://developer.blender.org/docs/release_notes/',
+                summary: 'Version-by-version release notes, active branches, LTS status, and compatibility changes.',
+                badge: 'Docs',
+                meta: ['Releases']
+            },
+            {
+                title: 'Python API',
+                url: 'https://docs.blender.org/api/current/',
+                summary: 'Current Blender Python API reference for add-ons, scripts, and pipeline tools.',
+                badge: 'API',
+                meta: ['Reference']
+            },
+            {
+                title: 'Daily Builds',
+                url: 'https://builder.blender.org/download/daily/',
+                summary: 'Fresh builds for testing fixes, alpha work, and compatibility before stable releases.',
+                badge: 'Builds',
+                meta: ['Testing']
+            },
+            {
+                title: 'Developer Forum',
+                url: 'https://devtalk.blender.org/',
+                summary: 'Official development discussion forum for technical topics, announcements, and design feedback.',
+                badge: 'Forum',
+                meta: ['Community']
+            }
+        ];
+    }
+
+    function getXmlText(node, selector) {
+        return node.querySelector(selector)?.textContent?.trim() || '';
+    }
+
+    function stripHtml(value) {
+        const doc = new DOMParser().parseFromString(String(value), 'text/html');
+        return (doc.body?.textContent || '').replace(/\s+/g, ' ').trim();
+    }
+
+    function renderBlenderDevItems(items, tab) {
+        if (!blenderDevList) return;
+        if (!items.length) {
+            blenderDevList.innerHTML = `<div class="blender-dev-error">No ${escapeHtml(tab.label)} items found.</div>`;
+            return;
+        }
+        blenderDevList.innerHTML = items.map(item => `
+            <a href="${escapeHtml(item.url)}" target="_blank" class="blender-dev-item">
+                <span class="blender-dev-badge">${escapeHtml(item.badge || tab.label)}</span>
+                <div class="blender-dev-title">${escapeHtml(item.title)}</div>
+                <div class="blender-dev-summary">${escapeHtml(item.summary)}</div>
+                <div class="blender-dev-meta">
+                    ${(item.meta || []).map(meta => `<span>${escapeHtml(meta)}</span>`).join('')}
+                </div>
+            </a>
+        `).join('');
+    }
+
+    if (blenderDevBtn) blenderDevBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        widgetsMenu.classList.add('hidden');
+        blenderDevState.isOpen = !blenderDevState.isOpen;
+        if (blenderDevState.isOpen) {
+            bringToFront(blenderDevWidget);
+            blenderDevState.zIndex = maxZIndex;
+            fetchBlenderDev(blenderDevState.activeTab);
+        }
+        applyBlenderDevState();
+        saveBlenderDevState();
+    });
+    if (blenderDevMinimize) blenderDevMinimize.addEventListener('click', () => {
+        blenderDevState.isOpen = false;
+        applyBlenderDevState();
+        saveBlenderDevState();
+    });
+    if (blenderDevRefresh) blenderDevRefresh.addEventListener('click', () => fetchBlenderDev(blenderDevState.activeTab, true));
+    blenderDevTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const tabKey = tab.dataset.blenderTab;
+            if (!blenderDevSources[tabKey]) return;
+            blenderDevState.activeTab = tabKey;
+            saveBlenderDevState();
+            fetchBlenderDev(tabKey);
+        });
+    });
+
+    let isDraggingBlenderDev = false,
+        dragOffsetBlenderDevX = 0,
+        dragOffsetBlenderDevY = 0;
+    if (blenderDevHeader) blenderDevHeader.addEventListener('mousedown', (e) => {
+        if (e.target.tagName === 'BUTTON') return;
+        isDraggingBlenderDev = true;
+        const r = blenderDevWidget.getBoundingClientRect();
+        dragOffsetBlenderDevX = e.clientX - r.left;
+        dragOffsetBlenderDevY = e.clientY - r.top;
+        document.addEventListener('mousemove', onMouseMoveBlenderDev);
+        document.addEventListener('mouseup', onMouseUpBlenderDev);
+        blenderDevHeader.style.cursor = 'grabbing';
+    });
+
+    function onMouseMoveBlenderDev(e) {
+        if (!isDraggingBlenderDev) return;
+        let x = e.clientX - dragOffsetBlenderDevX,
+            y = e.clientY - dragOffsetBlenderDevY;
+        x = Math.max(0, Math.min(x, window.innerWidth - blenderDevWidget.offsetWidth));
+        y = Math.max(0, Math.min(y, window.innerHeight - blenderDevWidget.offsetHeight));
+        blenderDevWidget.style.left = x + 'px';
+        blenderDevWidget.style.top = y + 'px';
+        blenderDevWidget.style.bottom = 'auto';
+        blenderDevWidget.style.right = 'auto';
+    }
+
+    function onMouseUpBlenderDev() {
+        if (!isDraggingBlenderDev) return;
+        isDraggingBlenderDev = false;
+        blenderDevHeader.style.cursor = 'grab';
+        document.removeEventListener('mousemove', onMouseMoveBlenderDev);
+        document.removeEventListener('mouseup', onMouseUpBlenderDev);
+        blenderDevState.x = parseInt(blenderDevWidget.style.left);
+        blenderDevState.y = parseInt(blenderDevWidget.style.top);
+        bringToFront(blenderDevWidget);
+        blenderDevState.zIndex = maxZIndex;
+        saveBlenderDevState();
+    }
+
     // --- Generic Z-Index Logic ---
-    const widgets = [spotifyWidget, footballWidget, todoWidget, notesWidget, techNewsWidget, githubReposWidget];
+    const widgets = [spotifyWidget, footballWidget, todoWidget, notesWidget, techNewsWidget, githubReposWidget, blenderDevWidget];
     widgets.forEach(w => {
         if (w) w.addEventListener('mousedown', () => bringToFront(w));
     });

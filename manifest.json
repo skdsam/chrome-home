@@ -14,7 +14,11 @@
     "history"
   ],
   "host_permissions": [
-    "https://api.github.com/*"
+    "https://api.github.com/*",
+    "https://blender.org/*",
+    "https://www.blender.org/*",
+    "https://developer.blender.org/*",
+    "https://docs.blender.org/*"
   ],
   "chrome_url_overrides": {
     "newtab": "newtab.html"

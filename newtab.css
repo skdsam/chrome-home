@@ -1684,3 +1684,134 @@ input:checked + .slider:before {
 .github-repos-content::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.25);
 }
+
+/* Blender Dev Widget */
+.blender-dev-widget {
+    width: 440px;
+    max-height: 560px;
+}
+
+.blender-dev-content {
+    max-height: 470px;
+    overflow-y: auto;
+    padding: 0 !important;
+}
+
+.blender-dev-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+    padding: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(0, 0, 0, 0.18);
+}
+
+.blender-dev-tab {
+    min-width: 0;
+    height: 32px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: #aeb6c2;
+    cursor: pointer;
+    font-family: var(--font-main);
+    font-size: 0.74rem;
+    font-weight: 600;
+    overflow: hidden;
+    padding: 0 6px;
+    text-overflow: ellipsis;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    white-space: nowrap;
+}
+
+.blender-dev-tab:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #f1f3f5;
+}
+
+.blender-dev-tab.active {
+    background: rgba(245, 134, 52, 0.16);
+    border-color: rgba(245, 134, 52, 0.38);
+    color: #fff4e9;
+}
+
+.blender-dev-loading,
+.blender-dev-error {
+    padding: 28px;
+    text-align: center;
+    color: #a8adb7;
+    font-size: 0.9rem;
+}
+
+.blender-dev-error {
+    color: #ffad8b;
+}
+
+.blender-dev-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.blender-dev-item {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    color: inherit;
+    text-decoration: none;
+    transition: background 0.2s ease;
+}
+
+.blender-dev-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.blender-dev-title {
+    color: #f5f7fa;
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.blender-dev-summary {
+    color: #c4cad3;
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
+.blender-dev-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    color: #9099a8;
+    font-size: 0.74rem;
+}
+
+.blender-dev-badge {
+    align-self: flex-start;
+    border: 1px solid rgba(245, 134, 52, 0.28);
+    border-radius: 999px;
+    background: rgba(245, 134, 52, 0.1);
+    color: #ffd8b8;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 3px 8px;
+}
+
+.blender-dev-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.blender-dev-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.blender-dev-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+}
+
+.blender-dev-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+}

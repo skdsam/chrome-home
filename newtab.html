@@ -148,6 +148,17 @@
                 </svg>
                 <span>GitHub Repos</span>
             </div>
+            <div id="blender-dev-btn" class="widget-menu-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 16.5c0 3-3.6 5.5-8 5.5s-8-2.5-8-5.5 3.6-5.5 8-5.5 8 2.5 8 5.5Z"></path>
+                    <path d="M13 11 3 3"></path>
+                    <path d="m7 7 8-4"></path>
+                    <path d="m11 10 6-3"></path>
+                    <circle cx="13" cy="16.5" r="2.5"></circle>
+                </svg>
+                <span>Blender Dev</span>
+            </div>
         </div>
 
         <!-- Notification Bell -->
@@ -413,6 +424,29 @@
             <div id="github-repos-loading" class="github-repos-loading">Loading repositories...</div>
             <div id="github-repos-list" class="github-repos-list">
                 <!-- Repositories injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Blender Dev Widget -->
+    <div id="blender-dev-widget" class="spotify-widget blender-dev-widget hidden">
+        <div class="spotify-header" id="blender-dev-header">
+            <span class="spotify-title">Blender Dev</span>
+            <div class="spotify-controls">
+                <button id="blender-dev-refresh" title="Refresh">Refresh</button>
+                <button id="blender-dev-minimize">-</button>
+            </div>
+        </div>
+        <div class="spotify-content blender-dev-content" id="blender-dev-content">
+            <div class="blender-dev-tabs" role="tablist" aria-label="Blender developer information">
+                <button class="blender-dev-tab active" type="button" data-blender-tab="news">News</button>
+                <button class="blender-dev-tab" type="button" data-blender-tab="releases">Releases</button>
+                <button class="blender-dev-tab" type="button" data-blender-tab="api">API</button>
+                <button class="blender-dev-tab" type="button" data-blender-tab="links">Links</button>
+            </div>
+            <div id="blender-dev-loading" class="blender-dev-loading">Loading Blender updates...</div>
+            <div id="blender-dev-list" class="blender-dev-list">
+                <!-- Blender items injected here -->
             </div>
         </div>
     </div>
