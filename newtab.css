@@ -16,6 +16,40 @@
     padding: 0;
 }
 
+/* =============================================
+   Global Themed Scrollbars
+   ============================================= */
+
+/* WebKit (Chrome, Edge, Safari) */
+::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(124, 77, 255, 0.3);   /* --accent-color at low opacity */
+    border-radius: 99px;
+    transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(124, 77, 255, 0.65);
+}
+
+::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+/* Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(124, 77, 255, 0.3) transparent;
+}
+
 body {
     background-color: var(--bg-color);
     color: var(--text-color);
@@ -1276,41 +1310,175 @@ input[type="text"] {
     opacity: 1;
 }
 
-/* Notes Widget */
-.notes-content {
-    height: 300px;
-    padding: 0;
-    display: flex;
-    width: 250px;
-}
+/* ── Notes Widget v2 ── */
+.notes-widget { width: 320px; }
 
-.notes-content textarea {
-    width: 100%;
-    height: 100%;
-    background: transparent;
-    border: none;
-    resize: none;
+/* Tab strip */
+.notes-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 5px 8px;
+    background: rgba(0,0,0,0.18);
+    border-bottom: 1px solid var(--glass-border);
+    overflow-x: auto;
+    flex-shrink: 0;
+}
+.notes-tab {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.5);
+    background: rgba(255,255,255,0.05);
+    border: 1px solid transparent;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+    max-width: 110px;
+    user-select: none;
+}
+.notes-tab.active {
+    color: #fff;
+    background: rgba(124,77,255,0.2);
+    border-color: rgba(124,77,255,0.4);
+}
+.notes-tab:hover:not(.active) { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.8); }
+.notes-tab-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.notes-tab-close {
+    background: none; border: none; color: rgba(255,255,255,0.35);
+    cursor: pointer; padding: 0; font-size: 1rem; line-height: 1;
+    flex-shrink: 0; transition: color 0.15s;
+}
+.notes-tab-close:hover { color: #ff5252; }
+
+/* Toolbar */
+.notes-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 5px 8px;
+    background: rgba(0,0,0,0.12);
+    border-bottom: 1px solid var(--glass-border);
+    flex-shrink: 0;
+    flex-wrap: nowrap;
+}
+.notes-toolbar-group { display: flex; align-items: center; gap: 2px; }
+.notes-toolbar-group + .notes-toolbar-group {
+    padding-left: 5px;
+    border-left: 1px solid rgba(255,255,255,0.1);
+    margin-left: 3px;
+}
+.notes-fmt-btn {
+    background: none;
+    border: 1px solid transparent;
+    color: rgba(255,255,255,0.6);
+    border-radius: 4px;
+    width: 26px; height: 26px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 0.85rem;
+    transition: all 0.15s ease;
+}
+.notes-fmt-btn:hover, .notes-fmt-btn.active {
+    background: rgba(124,77,255,0.25);
+    border-color: rgba(124,77,255,0.45);
+    color: #fff;
+}
+.notes-select {
+    background: rgba(0,0,0,0.35);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.7);
+    border-radius: 4px;
+    padding: 2px 4px;
+    font-size: 0.74rem;
+    cursor: pointer;
+    outline: none;
+    height: 26px;
+}
+.notes-select option { background: #1e1e24; }
+
+/* Colour pickers */
+.notes-clr-group { position: relative; }
+.notes-color-btn {
+    background: none;
+    border: 1px solid rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.7);
+    border-radius: 4px;
+    height: 26px; padding: 0 6px;
+    cursor: pointer; font-size: 0.8rem;
+    display: flex; align-items: center; gap: 4px;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+}
+.notes-color-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+#notes-text-color-dot {
+    display: inline-block;
+    width: 11px; height: 11px;
+    border-radius: 3px;
+    background: #ffffff;
+    border: 1px solid rgba(255,255,255,0.3);
+    flex-shrink: 0;
+}
+.notes-palette {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    background: rgba(18,18,26,0.98);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: 8px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+    z-index: 9999;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.55);
+    min-width: 116px;
+}
+.notes-palette-swatch {
+    width: 22px; height: 22px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.15s, border-color 0.15s;
+}
+.notes-palette-swatch:hover { transform: scale(1.2); border-color: rgba(255,255,255,0.5); }
+.notes-palette-swatch.active { border-color: #fff; }
+
+/* Editor */
+.notes-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+    transition: background 0.3s ease;
+}
+.notes-editor {
+    flex: 1;
     padding: 12px;
+    outline: none;
     color: #eee;
     font-family: inherit;
     font-size: 0.95rem;
-    outline: none;
-    line-height: 1.5;
+    line-height: 1.6;
+    overflow-y: auto;
+    min-height: 220px;
+    max-height: 300px;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+    background: transparent;
+}
+.notes-editor:empty::before {
+    content: attr(data-placeholder);
+    color: rgba(255,255,255,0.22);
+    pointer-events: none;
 }
 
-.notes-content textarea::placeholder {
-    color: rgba(255,255,255,0.3);
-}
-
-.notes-content textarea::-webkit-scrollbar {
-    width: 6px;
-}
-
-.notes-content textarea::-webkit-scrollbar-thumb {
-    background: var(--glass-border);
-    border-radius: 3px;
-}
-
+/* Hide inner parts when minimized */
+.spotify-widget.minimized .notes-tabs,
+.spotify-widget.minimized .notes-toolbar,
+.spotify-widget.minimized .notes-content { display: none; }
 
 
 /* Utility */

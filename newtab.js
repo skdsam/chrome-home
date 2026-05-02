@@ -18,6 +18,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }).catch(() => {});
     }
+    // Fix stale notesState with off-screen position (left: 950px was the old broken default)
+    if (window.storageManager?.get) {
+        window.storageManager.get(['notesState']).then(result => {
+            if (result.notesState?.position?.left === '950px') {
+                const fixed = { ...result.notesState, position: { top: '100px', left: '20px' } };
+                window.storageManager.set({ notesState: fixed }).catch(() => {});
+            }
+        }).catch(() => {});
+    }
 
     // --- Unified Custom Dialog Logic ---
     const dialogOverlay = document.getElementById('custom-dialog-overlay');
@@ -2816,46 +2825,181 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
         }
     }
 
-    // --- Quick Notes Widget Logic ---
-    const notesBtn = document.getElementById('notes-btn');
-    const notesWidget = document.getElementById('notes-widget');
-    const notesHeader = document.getElementById('notes-header');
+    // --- Quick Notes Widget v2 ---
+    const notesBtn         = document.getElementById('notes-btn');
+    const notesWidget      = document.getElementById('notes-widget');
+    const notesHeader      = document.getElementById('notes-header');
     const notesMinimizeBtn = document.getElementById('notes-minimize');
+    const notesNewBtn      = document.getElementById('notes-new-btn');
+    const notesTabsEl      = document.getElementById('notes-tabs');
+    const notesEditor      = document.getElementById('notes-editor');
+    const notesContentEl   = document.getElementById('notes-content');
+    const notesFontSize    = document.getElementById('notes-font-size');
+    const notesTextColorBtn= document.getElementById('notes-text-color-btn');
+    const notesTextColorDot= document.getElementById('notes-text-color-dot');
+    const notesTextPalette = document.getElementById('notes-text-palette');
+    const notesBgColorBtn  = document.getElementById('notes-bg-color-btn');
+    const notesBgPalette   = document.getElementById('notes-bg-palette');
 
-    const notesInput = document.getElementById('notes-input');
+    const NOTES_TEXT_COLORS = ['#ffffff','#f87171','#fb923c','#fbbf24','#4ade80','#60a5fa','#c084fc','#f472b6'];
+    const NOTES_BG_COLORS = [
+        { label:'Default', value:'' },
+        { label:'Purple',  value:'rgba(124,77,255,0.13)' },
+        { label:'Blue',    value:'rgba(79,172,254,0.13)' },
+        { label:'Green',   value:'rgba(74,222,128,0.11)' },
+        { label:'Red',     value:'rgba(248,113,113,0.13)' },
+        { label:'Amber',   value:'rgba(251,191,36,0.11)' },
+        { label:'Pink',    value:'rgba(244,114,182,0.13)' },
+        { label:'Teal',    value:'rgba(45,212,191,0.11)' },
+    ];
 
-    // State
-    let notesState = {
-        isOpen: false,
-        isMinimized: false,
-        zIndex: 100,
-        position: {
-            top: '100px',
-            left: '950px'
-        },
-        content: ''
-    };
-
-    // Load State
-    window.storageManager.get(['notesState']).then((result) => {
-        if (result.notesState) {
-            notesState = {
-                ...notesState,
-                ...result.notesState
-            };
-            applyNotesState();
-            notesInput.value = notesState.content;
-        }
+    // Build text-colour palette
+    NOTES_TEXT_COLORS.forEach(color => {
+        const sw = document.createElement('div');
+        sw.className = 'notes-palette-swatch';
+        sw.style.background = color;
+        sw.title = color;
+        sw.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            notesEditor.focus();
+            document.execCommand('foreColor', false, color);
+            notesTextColorDot.style.background = color;
+            notesTextPalette.classList.add('hidden');
+        });
+        notesTextPalette.appendChild(sw);
     });
 
-    function saveNotesState() {
-        window.storageManager.set({
-            notesState
+    // Build bg-colour palette
+    NOTES_BG_COLORS.forEach(bg => {
+        const sw = document.createElement('div');
+        sw.className = 'notes-palette-swatch';
+        sw.style.background = bg.value || 'rgba(255,255,255,0.06)';
+        if (!bg.value) sw.style.border = '2px solid rgba(255,255,255,0.25)';
+        sw.title = bg.label;
+        sw.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const note = notesGetActive();
+            if (note) { note.color = bg.value; notesApplyBg(bg.value); notesSave(); }
+            notesBgPalette.classList.add('hidden');
+        });
+        notesBgPalette.appendChild(sw);
+    });
+
+    // ── State ──
+    let notesState = {
+        isOpen: false, isMinimized: false, zIndex: 100,
+        position: { top:'100px', left: Math.max(20, Math.min(window.innerWidth - 340, Math.round(window.innerWidth/2) - 160)) + 'px' },
+        activeNoteId: null,
+        notes: []
+    };
+    let notesSaveTimer = null;
+
+    function notesMake() {
+        return { id: Date.now() + Math.random(), title:'', content:'', color:'', createdAt: Date.now() };
+    }
+    function notesGetActive() {
+        return notesState.notes.find(n => n.id === notesState.activeNoteId) || null;
+    }
+    function notesSave() {
+        window.storageManager.set({ notesState });
+    }
+    function notesDebouncedSave() {
+        clearTimeout(notesSaveTimer);
+        notesSaveTimer = setTimeout(notesSave, 600);
+    }
+    function notesApplyBg(color) {
+        notesContentEl.style.background = color || 'transparent';
+        notesEditor.style.background    = 'transparent';
+    }
+    function notesSaveContent() {
+        const note = notesGetActive();
+        if (!note) return;
+        note.content = notesEditor.innerHTML;
+        note.title   = (notesEditor.textContent || '').trim().slice(0, 22) || 'Untitled';
+    }
+
+    function notesRenderTabs() {
+        notesTabsEl.innerHTML = '';
+        notesState.notes.forEach(note => {
+            const tab = document.createElement('div');
+            tab.className = 'notes-tab' + (note.id === notesState.activeNoteId ? ' active' : '');
+
+            const label = document.createElement('span');
+            label.className = 'notes-tab-label';
+            label.textContent = note.title || 'Note';
+
+            const closeBtn = document.createElement('button');
+            closeBtn.className   = 'notes-tab-close';
+            closeBtn.textContent = '×';
+            closeBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (notesState.notes.length === 1) {
+                    notesEditor.innerHTML = '';
+                    const n = notesGetActive();
+                    if (n) { n.content = ''; n.title = ''; }
+                    notesRenderTabs(); notesSave(); return;
+                }
+                if (note.content && note.content.length > 10) {
+                    const ok = await window.customConfirm('Delete Note', `Delete "${note.title || 'this note'}"?`);
+                    if (!ok) return;
+                }
+                notesDeleteNote(note.id);
+            });
+
+            tab.appendChild(label);
+            tab.appendChild(closeBtn);
+            tab.addEventListener('click', (e) => {
+                if (e.target === closeBtn) return;
+                notesSwitch(note.id);
+            });
+            notesTabsEl.appendChild(tab);
         });
     }
 
+    function notesRenderEditor() {
+        const note = notesGetActive();
+        if (!note) return;
+        notesEditor.innerHTML = note.content || '';
+        notesApplyBg(note.color);
+    }
+
+    function notesSwitch(id) {
+        notesSaveContent();
+        notesState.activeNoteId = id;
+        notesRenderTabs();
+        notesRenderEditor();
+        notesSave();
+    }
+
+    function notesCreate() {
+        notesSaveContent();
+        const note = notesMake();
+        note.title = 'Note ' + (notesState.notes.length + 1);
+        notesState.notes.push(note);
+        notesState.activeNoteId = note.id;
+        notesRenderTabs();
+        notesRenderEditor();
+        notesSave();
+        notesEditor.focus();
+    }
+
+    function notesDeleteNote(id) {
+        const idx = notesState.notes.findIndex(n => n.id === id);
+        if (idx === -1) return;
+        notesState.notes.splice(idx, 1);
+        if (notesState.notes.length === 0) {
+            const blank = notesMake(); blank.title = 'Note 1';
+            notesState.notes.push(blank);
+            notesState.activeNoteId = blank.id;
+        } else if (notesState.activeNoteId === id) {
+            notesState.activeNoteId = notesState.notes[Math.min(idx, notesState.notes.length - 1)].id;
+        }
+        notesRenderTabs();
+        notesRenderEditor();
+        notesSave();
+    }
+
     function applyNotesState() {
-        // Visibility
         if (notesState.isOpen) {
             notesWidget.classList.remove('hidden');
             notesBtn.classList.add('active');
@@ -2863,8 +3007,6 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
             notesWidget.classList.add('hidden');
             notesBtn.classList.remove('active');
         }
-
-        // Minimized
         if (notesState.isMinimized) {
             notesWidget.classList.add('minimized');
             notesMinimizeBtn.textContent = '+';
@@ -2872,104 +3014,161 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
             notesWidget.classList.remove('minimized');
             notesMinimizeBtn.textContent = '-';
         }
-
-        // Position
-        notesWidget.style.top = notesState.position.top;
-        notesWidget.style.left = notesState.position.left;
+        notesWidget.style.top    = notesState.position.top;
+        notesWidget.style.left   = notesState.position.left;
         notesWidget.style.bottom = 'auto';
-        notesWidget.style.right = 'auto';
-
-        // Z-Index
+        notesWidget.style.right  = 'auto';
         if (notesState.zIndex) {
             notesWidget.style.zIndex = notesState.zIndex;
             if (notesState.zIndex > maxZIndex) maxZIndex = notesState.zIndex;
         }
     }
 
-    // Event Listeners
+    // Load & migrate old single-note format
+    window.storageManager.get(['notesState']).then(result => {
+        if (result.notesState) {
+            const saved = result.notesState;
+            if (saved.content !== undefined && !saved.notes) {
+                // Migrate v1 → v2
+                const m = notesMake();
+                m.content = saved.content ? `<p>${escapeHtml(saved.content)}</p>` : '';
+                m.title   = (saved.content || '').trim().slice(0, 22) || 'Note 1';
+                notesState = { ...notesState, isOpen: saved.isOpen||false, isMinimized: saved.isMinimized||false,
+                    position: saved.position || notesState.position, zIndex: saved.zIndex||100,
+                    notes: [m], activeNoteId: m.id };
+            } else {
+                notesState = { ...notesState, ...saved };
+            }
+        }
+        if (!notesState.notes || notesState.notes.length === 0) {
+            const first = notesMake(); first.title = 'Note 1';
+            notesState.notes = [first]; notesState.activeNoteId = first.id;
+        }
+        if (!notesState.activeNoteId) notesState.activeNoteId = notesState.notes[0].id;
+        notesRenderTabs();
+        notesRenderEditor();
+        applyNotesState();
+    });
+
+    // Toggle open
     notesBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        widgetsMenu.classList.add('hidden'); // Close Menu
-
+        widgetsMenu.classList.add('hidden');
         notesState.isOpen = !notesState.isOpen;
         if (notesState.isOpen) {
-            bringToFront(notesWidget);
-            notesState.zIndex = maxZIndex;
+            const wW = 340, wH = 420;
+            let top  = Math.max(10, Math.min(parseInt(notesState.position.top)||100, window.innerHeight - wH));
+            let left = Math.max(10, Math.min(parseInt(notesState.position.left)||20, window.innerWidth - wW));
+            notesState.position = { top: top+'px', left: left+'px' };
+            bringToFront(notesWidget); notesState.zIndex = maxZIndex;
         }
         applyNotesState();
-        saveNotesState();
+        notesSave();
     });
 
     notesMinimizeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         notesState.isMinimized = !notesState.isMinimized;
-        bringToFront(notesWidget);
-        notesState.zIndex = maxZIndex;
-        applyNotesState();
-        saveNotesState();
+        bringToFront(notesWidget); notesState.zIndex = maxZIndex;
+        applyNotesState(); notesSave();
     });
 
-    // Auto-save content
-    notesInput.addEventListener('input', () => {
-        notesState.content = notesInput.value;
-        saveNotesState();
+    notesNewBtn.addEventListener('click', (e) => { e.stopPropagation(); notesCreate(); });
+
+    // Editor auto-save
+    notesEditor.addEventListener('input', () => {
+        notesSaveContent();
+        notesRenderTabs(); // update tab title live
+        notesDebouncedSave();
     });
 
-    // Drag Logic
-    let isDraggingNotes = false;
-    let dragOffsetNotesX = 0;
-    let dragOffsetNotesY = 0;
+    // Bring to front on click
+    notesWidget.addEventListener('mousedown', () => {
+        bringToFront(notesWidget); notesState.zIndex = maxZIndex;
+    });
+
+    // Formatting buttons
+    document.querySelectorAll('.notes-fmt-btn').forEach(btn => {
+        btn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            notesEditor.focus();
+            document.execCommand(btn.dataset.cmd, false, null);
+            btn.classList.toggle('active', document.queryCommandState(btn.dataset.cmd));
+        });
+    });
+
+    // Update button active states on selection change
+    notesEditor.addEventListener('keyup',   updateFmtButtons);
+    notesEditor.addEventListener('mouseup', updateFmtButtons);
+    function updateFmtButtons() {
+        ['bold','italic','underline'].forEach(cmd => {
+            const btn = document.querySelector(`.notes-fmt-btn[data-cmd="${cmd}"]`);
+            if (btn) btn.classList.toggle('active', document.queryCommandState(cmd));
+        });
+    }
+
+    // Font size
+    notesFontSize.addEventListener('change', () => {
+        notesEditor.focus();
+        document.execCommand('fontSize', false, notesFontSize.value);
+    });
+
+    // Text colour toggle
+    notesTextColorBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        notesTextPalette.classList.toggle('hidden');
+        notesBgPalette.classList.add('hidden');
+    });
+
+    // BG colour toggle
+    notesBgColorBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        notesBgPalette.classList.toggle('hidden');
+        notesTextPalette.classList.add('hidden');
+    });
+
+    // Close palettes on outside click
+    document.addEventListener('click', () => {
+        notesTextPalette.classList.add('hidden');
+        notesBgPalette.classList.add('hidden');
+    });
+
+    // Drag logic
+    let isDraggingNotes = false, dragOffsetNotesX = 0, dragOffsetNotesY = 0;
 
     notesHeader.addEventListener('mousedown', (e) => {
         if (e.target.tagName === 'BUTTON') return;
-
         isDraggingNotes = true;
         const rect = notesWidget.getBoundingClientRect();
         dragOffsetNotesX = e.clientX - rect.left;
         dragOffsetNotesY = e.clientY - rect.top;
-
         document.addEventListener('mousemove', onMouseMoveNotes);
-        document.addEventListener('mouseup', onMouseUpNotes);
+        document.addEventListener('mouseup',   onMouseUpNotes);
         notesHeader.style.cursor = 'grabbing';
     });
 
     function onMouseMoveNotes(e) {
         if (!isDraggingNotes) return;
-
-        let newLeft = e.clientX - dragOffsetNotesX;
-        let newTop = e.clientY - dragOffsetNotesY;
-
-        const maxLeft = window.innerWidth - notesWidget.offsetWidth;
-        const maxTop = window.innerHeight - notesHeader.offsetHeight;
-
-        if (newLeft < 0) newLeft = 0;
-        if (newLeft > maxLeft) newLeft = maxLeft;
-        if (newTop < 0) newTop = 0;
-        if (newTop > window.innerHeight - 20) newTop = window.innerHeight - 20;
-
+        let newLeft = Math.max(0, Math.min(e.clientX - dragOffsetNotesX, window.innerWidth  - notesWidget.offsetWidth));
+        let newTop  = Math.max(0, Math.min(e.clientY - dragOffsetNotesY, window.innerHeight - 20));
         notesWidget.style.left = `${newLeft}px`;
-        notesWidget.style.top = `${newTop}px`;
+        notesWidget.style.top  = `${newTop}px`;
         notesWidget.style.bottom = 'auto';
     }
 
     function onMouseUpNotes() {
-        if (isDraggingNotes) {
-            isDraggingNotes = false;
-            document.removeEventListener('mousemove', onMouseMoveNotes);
-            document.removeEventListener('mouseup', onMouseUpNotes);
-            notesHeader.style.cursor = 'move';
-
-            notesState.position.top = notesWidget.style.top;
-            notesState.position.left = notesWidget.style.left;
-
-            bringToFront(notesWidget);
-            notesState.zIndex = maxZIndex;
-
-            saveNotesState();
-        }
+        if (!isDraggingNotes) return;
+        isDraggingNotes = false;
+        document.removeEventListener('mousemove', onMouseMoveNotes);
+        document.removeEventListener('mouseup',   onMouseUpNotes);
+        notesHeader.style.cursor = 'move';
+        notesState.position.top  = notesWidget.style.top;
+        notesState.position.left = notesWidget.style.left;
+        bringToFront(notesWidget); notesState.zIndex = maxZIndex;
+        notesSave();
     }
-
     // --- Tech News Widget Logic ---
+
     const techNewsBtn = document.getElementById('tech-news-btn');
     const techNewsWidget = document.getElementById('tech-news-widget');
     const techNewsHeader = document.getElementById('tech-news-header');

@@ -383,18 +383,44 @@
         </div>
     </div>
 
-    <!-- Notes Widget -->
+    <!-- Notes Widget v2 -->
     <div id="notes-widget" class="spotify-widget notes-widget hidden">
         <div class="spotify-header" id="notes-header">
-            <span class="spotify-title">Quick Notes</span>
+            <span class="spotify-title">📝 Quick Notes</span>
             <div class="spotify-controls">
+                <button id="notes-new-btn" title="New Note">+</button>
                 <button id="notes-minimize">-</button>
             </div>
         </div>
-        <div class="spotify-content notes-content" id="notes-content">
-            <textarea id="notes-input" placeholder="Type something..."></textarea>
+        <div id="notes-tabs" class="notes-tabs"></div>
+        <div id="notes-toolbar" class="notes-toolbar">
+            <div class="notes-toolbar-group">
+                <button class="notes-fmt-btn" data-cmd="bold" title="Bold"><b>B</b></button>
+                <button class="notes-fmt-btn" data-cmd="italic" title="Italic"><i>I</i></button>
+                <button class="notes-fmt-btn" data-cmd="underline" title="Underline"><u>U</u></button>
+            </div>
+            <div class="notes-toolbar-group">
+                <select id="notes-font-size" class="notes-select" title="Font Size">
+                    <option value="1">Small</option>
+                    <option value="3" selected>Normal</option>
+                    <option value="5">Large</option>
+                    <option value="7">Huge</option>
+                </select>
+            </div>
+            <div class="notes-toolbar-group notes-clr-group" title="Text Colour">
+                <button class="notes-color-btn" id="notes-text-color-btn"><span id="notes-text-color-dot"></span>A</button>
+                <div id="notes-text-palette" class="notes-palette hidden"></div>
+            </div>
+            <div class="notes-toolbar-group notes-clr-group" title="Note Background">
+                <button class="notes-color-btn" id="notes-bg-color-btn">🎨</button>
+                <div id="notes-bg-palette" class="notes-palette hidden"></div>
+            </div>
+        </div>
+        <div class="notes-content" id="notes-content">
+            <div id="notes-editor" class="notes-editor" contenteditable="true" spellcheck="true" data-placeholder="Start typing..."></div>
         </div>
     </div>
+
 
     <!-- Tech News Widget -->
     <div id="tech-news-widget" class="spotify-widget tech-news-widget hidden">
