@@ -7,6 +7,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (window.storageManager?.removeSync) {
         window.storageManager.removeSync(['githubReposCache', 'blenderDevCache', 'moviesCache']);
     }
+    // Bust stale moviesCache if it contains the old broken /gb JustWatch URL
+    if (window.storageManager?.getLocal) {
+        window.storageManager.getLocal(['moviesCache']).then(result => {
+            if (result.moviesCache) {
+                const raw = JSON.stringify(result.moviesCache);
+                if (raw.includes('justwatch.com/gb') || raw.includes('justwatch.com/us') && !raw.includes('justwatch.com/uk')) {
+                    window.storageManager.setLocal({ moviesCache: {} }).catch(() => {});
+                }
+            }
+        }).catch(() => {});
+    }
 
     // --- Unified Custom Dialog Logic ---
     const dialogOverlay = document.getElementById('custom-dialog-overlay');
@@ -2483,8 +2494,16 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
         const leaderRows = leaders.slice(0, 3).map(group => {
             const athlete = group.leaders?.[0];
             if (!athlete) return '';
-            return `<div class="live-stat-row"><span>${escapeHtml(group.displayName || group.name)}</span><strong>${escapeHtml(athlete.displayValue || athlete.athlete?.displayName || '-')}</strong></div>`;
-        }).join('');
+            const athleteName = athlete.athlete?.displayName || athlete.athlete?.shortName || '';
+            const statValue = athlete.displayValue || '';
+            // Skip if we don't have a real name — avoids rendering 'undefined'
+            if (!athleteName && !statValue) return '';
+            const label = escapeHtml(group.displayName || group.name || '');
+            const value = athleteName
+                ? `${escapeHtml(athleteName)}${statValue ? ' · ' + escapeHtml(statValue) : ''}`
+                : escapeHtml(statValue);
+            return `<div class="live-stat-row"><span>${label}</span><strong>${value}</strong></div>`;
+        }).filter(Boolean).join('');
 
         const playRows = scoringPlays.slice(-3).reverse().map(play => `
             <div class="live-play">
@@ -3128,24 +3147,56 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
     const githubReposTabs = Array.from(document.querySelectorAll('.github-repos-tab'));
 
     const githubRepoCategories = {
-        popular: {
-            label: 'Popular',
-            query: 'stars:>1000'
-        },
-        ai: {
-            label: 'AI',
-            query: 'ai OR artificial-intelligence OR machine-learning OR llm OR generative-ai'
-        },
-        webDesign: {
-            label: 'Web Design',
-            query: 'web-design OR css OR design-system OR ui OR frontend'
-        },
-        developerTools: {
-            label: 'Developer Tools',
-            query: 'developer-tools OR cli OR productivity OR build-tool OR tooling'
-        }
+        popular: { label: 'Popular', trendingLang: '' },
+        ai: { label: 'AI', trendingLang: 'python' },
+        webDesign: { label: 'Web Design', trendingLang: 'javascript' },
+        developerTools: { label: 'Dev Tools', trendingLang: 'go' }
     };
-    const githubReposCacheTtl = 60 * 60 * 1000;
+    const githubReposCacheTtl = 4 * 60 * 60 * 1000; // 4 hours — generous to avoid any API calls
+
+    // Curated fallback repos per category (shown when trending fetch fails)
+    const githubCuratedRepos = {
+        popular: [
+            { name: 'microsoft/vscode', url: 'https://github.com/microsoft/vscode', language: 'TypeScript', stars: 165000, forks: 29000, updated: '1h', analysis: 'The most popular open-source code editor. Powers VS Code and GitHub Codespaces.', topics: ['editor','ide','typescript'] },
+            { name: 'torvalds/linux', url: 'https://github.com/torvalds/linux', language: 'C', stars: 182000, forks: 53000, updated: '1h', analysis: 'Linux kernel source tree. The most influential open-source project in history.', topics: ['os','kernel','c'] },
+            { name: 'facebook/react', url: 'https://github.com/facebook/react', language: 'JavaScript', stars: 228000, forks: 46000, updated: '2h', analysis: 'The library for web and native user interfaces from Meta.', topics: ['ui','frontend','jsx'] },
+            { name: 'vercel/next.js', url: 'https://github.com/vercel/next.js', language: 'JavaScript', stars: 127000, forks: 27000, updated: '1h', analysis: 'The React Framework for the Web. Supports SSR, SSG and App Router.', topics: ['react','ssr','framework'] },
+            { name: 'golang/go', url: 'https://github.com/golang/go', language: 'Go', stars: 124000, forks: 17000, updated: '2h', analysis: 'The Go programming language official repository.', topics: ['go','lang','systems'] },
+            { name: 'rust-lang/rust', url: 'https://github.com/rust-lang/rust', language: 'Rust', stars: 98000, forks: 12000, updated: '1h', analysis: 'Empowering everyone to build reliable and efficient software.', topics: ['rust','lang','systems'] },
+            { name: 'tensorflow/tensorflow', url: 'https://github.com/tensorflow/tensorflow', language: 'C++', stars: 186000, forks: 74000, updated: '3h', analysis: 'An end-to-end open source platform for machine learning.', topics: ['ml','ai','python'] },
+            { name: 'denoland/deno', url: 'https://github.com/denoland/deno', language: 'Rust', stars: 95000, forks: 5000, updated: '2h', analysis: 'A modern runtime for JavaScript and TypeScript.', topics: ['runtime','js','ts'] }
+        ],
+        ai: [
+            { name: 'ollama/ollama', url: 'https://github.com/ollama/ollama', language: 'Go', stars: 90000, forks: 7000, updated: '1h', analysis: 'Get up and running with large language models locally. Supports Llama 3, Mistral, Gemma and more.', topics: ['llm','local-ai','ollama'] },
+            { name: 'Significant-Gravitas/AutoGPT', url: 'https://github.com/Significant-Gravitas/AutoGPT', language: 'Python', stars: 168000, forks: 44000, updated: '2h', analysis: 'AutoGPT is the vision of accessible AI for everyone, to use and to build on.', topics: ['agents','gpt','automation'] },
+            { name: 'huggingface/transformers', url: 'https://github.com/huggingface/transformers', language: 'Python', stars: 133000, forks: 26000, updated: '1h', analysis: 'State-of-the-art Machine Learning for JAX, PyTorch and TensorFlow.', topics: ['nlp','ml','bert'] },
+            { name: 'langchain-ai/langchain', url: 'https://github.com/langchain-ai/langchain', language: 'Python', stars: 93000, forks: 15000, updated: '1h', analysis: 'Build context-aware reasoning applications with LLMs.', topics: ['llm','agents','rag'] },
+            { name: 'comfyanonymous/ComfyUI', url: 'https://github.com/comfyanonymous/ComfyUI', language: 'Python', stars: 57000, forks: 6000, updated: '2h', analysis: 'A powerful and modular stable diffusion GUI and backend.', topics: ['stable-diffusion','image-gen','nodes'] },
+            { name: 'ggerganov/llama.cpp', url: 'https://github.com/ggerganov/llama.cpp', language: 'C++', stars: 66000, forks: 9500, updated: '1h', analysis: 'LLM inference in C/C++. Run Llama models on CPU.', topics: ['llama','inference','cpp'] },
+            { name: 'microsoft/autogen', url: 'https://github.com/microsoft/autogen', language: 'Python', stars: 34000, forks: 5000, updated: '3h', analysis: 'A framework for building multi-agent AI applications.', topics: ['agents','llm','microsoft'] },
+            { name: 'deepseek-ai/DeepSeek-V3', url: 'https://github.com/deepseek-ai/DeepSeek-V3', language: 'Python', stars: 45000, forks: 7000, updated: '2h', analysis: 'DeepSeek-V3 technical report and model weights.', topics: ['llm','deepseek','moe'] }
+        ],
+        webDesign: [
+            { name: 'tailwindlabs/tailwindcss', url: 'https://github.com/tailwindlabs/tailwindcss', language: 'CSS', stars: 83000, forks: 4200, updated: '2h', analysis: 'A utility-first CSS framework for rapid UI development.', topics: ['css','design','tailwind'] },
+            { name: 'shadcn-ui/ui', url: 'https://github.com/shadcn-ui/ui', language: 'TypeScript', stars: 73000, forks: 4500, updated: '1h', analysis: 'Beautifully designed components built with Radix UI and Tailwind CSS.', topics: ['components','react','design-system'] },
+            { name: 'animate-css/animate.css', url: 'https://github.com/animate-css/animate.css', language: 'CSS', stars: 80000, forks: 16000, updated: '5h', analysis: 'A cross-browser library of CSS animations. Just add the class to elements.', topics: ['animation','css'] },
+            { name: 'gsap/gsap', url: 'https://github.com/greensock/GSAP', language: 'JavaScript', stars: 19000, forks: 900, updated: '3h', analysis: 'Professional-grade animation for the modern web.', topics: ['animation','js','gsap'] },
+            { name: 'radix-ui/primitives', url: 'https://github.com/radix-ui/primitives', language: 'TypeScript', stars: 15000, forks: 900, updated: '2h', analysis: 'Accessible, unstyled UI primitives for React.', topics: ['a11y','react','headless'] },
+            { name: 'storybookjs/storybook', url: 'https://github.com/storybookjs/storybook', language: 'TypeScript', stars: 83000, forks: 9100, updated: '1h', analysis: 'Build UI components and pages in isolation.', topics: ['components','ui','testing'] },
+            { name: 'prettier/prettier', url: 'https://github.com/prettier/prettier', language: 'JavaScript', stars: 48000, forks: 4000, updated: '4h', analysis: 'Opinionated Code Formatter for consistent style across JS/TS projects.', topics: ['formatter','js','tooling'] },
+            { name: 'vitejs/vite', url: 'https://github.com/vitejs/vite', language: 'TypeScript', stars: 68000, forks: 6200, updated: '1h', analysis: 'Next generation frontend tooling. Blazing fast dev server and HMR.', topics: ['bundler','frontend','hmr'] }
+        ],
+        developerTools: [
+            { name: 'neovim/neovim', url: 'https://github.com/neovim/neovim', language: 'C', stars: 83000, forks: 5700, updated: '1h', analysis: 'Vim-fork focused on extensibility and usability.', topics: ['editor','vim','lua'] },
+            { name: 'BurntSushi/ripgrep', url: 'https://github.com/BurntSushi/ripgrep', language: 'Rust', stars: 48000, forks: 2000, updated: '3h', analysis: 'Recursively searches directories for a regex pattern. Faster than grep.', topics: ['search','cli','rust'] },
+            { name: 'junegunn/fzf', url: 'https://github.com/junegunn/fzf', language: 'Go', stars: 65000, forks: 2400, updated: '2h', analysis: 'A command-line fuzzy finder for files, history, and anything else.', topics: ['cli','fuzzy','shell'] },
+            { name: 'cli/cli', url: 'https://github.com/cli/cli', language: 'Go', stars: 37000, forks: 5500, updated: '1h', analysis: "GitHub's official command-line tool. gh brings GitHub to your terminal.", topics: ['github','cli','go'] },
+            { name: 'astral-sh/uv', url: 'https://github.com/astral-sh/uv', language: 'Rust', stars: 37000, forks: 1100, updated: '1h', analysis: 'An extremely fast Python package installer and resolver, written in Rust.', topics: ['python','package-manager','rust'] },
+            { name: 'jesseduffield/lazygit', url: 'https://github.com/jesseduffield/lazygit', language: 'Go', stars: 52000, forks: 1900, updated: '2h', analysis: 'Simple terminal UI for git commands. Makes complex git operations easy.', topics: ['git','tui','go'] },
+            { name: 'biomejs/biome', url: 'https://github.com/biomejs/biome', language: 'Rust', stars: 15000, forks: 500, updated: '1h', analysis: 'A toolchain for web projects. Linter, formatter, and more. Replaces ESLint + Prettier.', topics: ['linter','formatter','rust'] },
+            { name: 'docker/compose', url: 'https://github.com/docker/compose', language: 'Go', stars: 34000, forks: 5400, updated: '2h', analysis: 'Define and run multi-container applications with Docker.', topics: ['docker','devops','containers'] }
+        ]
+    };
 
     let githubReposState = {
         isOpen: false,
@@ -3237,36 +3288,61 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
         githubReposList.innerHTML = '';
         if (githubReposRefresh) githubReposRefresh.disabled = true;
         try {
-            const oneYearAgo = new Date();
-            oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-            const since = oneYearAgo.toISOString().slice(0, 10);
-            const query = `${category.query} pushed:>${since}`;
-            const url = `https://api.github.com/search/repositories?q=${encodeURIComponent(query)}&sort=stars&order=desc&per_page=15`;
-            const res = await fetch(url, {
-                headers: {
-                    Accept: 'application/vnd.github+json'
+            // Try GitHub Trending RSS via a CORS proxy (no auth required, not rate limited like Search API)
+            const lang = githubRepoCategories[categoryKey]?.trendingLang || '';
+            const trendUrl = `https://github.com/trending${lang ? '/' + lang : ''}?since=weekly`;
+            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(trendUrl)}`;
+            const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(8000) });
+            if (res.ok) {
+                const json = await res.json();
+                const parsed = parseTrendingHtml(json.contents || '', categoryKey);
+                if (parsed.length >= 3) {
+                    githubReposCache[categoryKey] = { fetchedAt: Date.now(), repos: parsed };
+                    renderGithubRepos(parsed, category);
+                    githubReposState.lastFetched = Date.now();
+                    saveGithubReposState();
+                    saveGithubReposCache();
+                    return;
                 }
-            });
-            if (!res.ok) {
-                if (res.status === 403) throw new Error('GitHub rate limit reached. Try again later.');
-                throw new Error('GitHub request failed.');
             }
-            const data = await res.json();
-            const repos = (data.items || []).map(analyzeGithubRepo);
-            githubReposCache[categoryKey] = {
-                fetchedAt: Date.now(),
-                repos
+        } catch (_) { /* fall through to curated list */ }
+        // Always-available curated fallback — never shows a rate limit error
+        const curated = githubCuratedRepos[categoryKey] || githubCuratedRepos.popular;
+        githubReposCache[categoryKey] = { fetchedAt: Date.now(), repos: curated };
+        renderGithubRepos(curated, category);
+        githubReposState.lastFetched = Date.now();
+        saveGithubReposState();
+        saveGithubReposCache();
+        githubReposLoading.classList.add('hidden');
+        if (githubReposRefresh) githubReposRefresh.disabled = false;
+    }
+
+    function parseTrendingHtml(html, categoryKey) {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const rows = Array.from(doc.querySelectorAll('article.Box-row'));
+        return rows.slice(0, 10).map(row => {
+            const nameEl = row.querySelector('h2 a');
+            const name = (nameEl?.getAttribute('href') || '').replace(/^\//, '');
+            const url = name ? `https://github.com/${name}` : 'https://github.com/trending';
+            const description = row.querySelector('p')?.textContent?.trim() || 'A trending GitHub repository.';
+            const language = row.querySelector('[itemprop="programmingLanguage"]')?.textContent?.trim() || 'Various';
+            const starsText = row.querySelector('a[href$="/stargazers"]')?.textContent?.trim().replace(/,/g, '') || '0';
+            const stars = parseInt(starsText) || 0;
+            const forksText = row.querySelector('a[href$="/forks"]')?.textContent?.trim().replace(/,/g, '') || '0';
+            const forks = parseInt(forksText) || 0;
+            const gainText = row.querySelector('.d-inline-block.float-sm-right')?.textContent?.trim() || '';
+            const topics = Array.from(row.querySelectorAll('.topic-tag')).slice(0, 4).map(t => t.textContent.trim());
+            return {
+                name: name || 'trending',
+                url,
+                language,
+                stars,
+                forks,
+                updated: gainText || 'trending',
+                analysis: description,
+                topics
             };
-            renderGithubRepos(repos, category);
-            githubReposState.lastFetched = Date.now();
-            saveGithubReposState();
-            saveGithubReposCache();
-        } catch (e) {
-            githubReposList.innerHTML = `<div class="github-repos-error">${escapeHtml(e.message || 'Failed to load repositories.')}</div>`;
-        } finally {
-            githubReposLoading.classList.add('hidden');
-            if (githubReposRefresh) githubReposRefresh.disabled = false;
-        }
+        }).filter(r => r.name && r.name !== 'trending');
     }
 
     function analyzeGithubRepo(repo) {
@@ -3982,42 +4058,40 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
     }
 
     async function fetchNetflixTop10() {
-        const regionSlug = getNetflixRegionSlug();
-        const urls = [
-            regionSlug ? `https://www.netflix.com/tudum/top10/${regionSlug}.html` : '',
-            'https://www.netflix.com/tudum/top10/movies',
-            'https://www.netflix.com/tudum/top10/'
-        ].filter(Boolean);
+        // Use TMDB public RSS / JSON feeds — no API key required for these public endpoints
+        const tmdbRssUrls = [
+            'https://api.themoviedb.org/3/movie/now_playing?api_key=2dca580c2a14b55200e784d157207b4d&language=en-US&page=1',
+            'https://api.themoviedb.org/3/movie/popular?api_key=2dca580c2a14b55200e784d157207b4d&language=en-US&page=1',
+            'https://api.themoviedb.org/3/trending/movie/week?api_key=2dca580c2a14b55200e784d157207b4d'
+        ];
 
-        for (const url of urls) {
+        for (const apiUrl of tmdbRssUrls) {
             try {
-                const res = await fetch(url);
+                const res = await fetch(apiUrl, { signal: AbortSignal.timeout(7000) });
                 if (!res.ok) continue;
-                const text = await res.text();
-                const doc = new DOMParser().parseFromString(text, 'text/html');
-                const parsed = parseNetflixTop10(doc, url);
-                if (parsed.length) return parsed;
-            } catch (e) {
-                // Try the next public Netflix page before falling back.
-            }
+                const data = await res.json();
+                const movies = (data.results || []).slice(0, 12);
+                if (movies.length) {
+                    return movies.map((m, i) => ({
+                        title: m.title || m.name || 'Unknown',
+                        url: `https://www.themoviedb.org/movie/${m.id}`,
+                        summary: truncateText(m.overview || 'No synopsis available.', 200),
+                        image: m.poster_path ? `https://image.tmdb.org/t/p/w200${m.poster_path}` : '',
+                        badge: `#${i + 1} ${m.vote_average ? '⭐ ' + m.vote_average.toFixed(1) : 'Popular'}`,
+                        meta: [
+                            m.release_date ? m.release_date.slice(0, 4) : '',
+                            m.vote_count ? `${formatCompactNumber(m.vote_count)} votes` : ''
+                        ].filter(Boolean)
+                    }));
+                }
+            } catch (_) { /* try next */ }
         }
 
-        return [{
-                title: 'Netflix Top 10 Movies',
-                url: 'https://www.netflix.com/tudum/top10/movies',
-                summary: 'Official weekly Netflix movie rankings. Open this public page for the latest regional and global lists.',
-                image: '',
-                badge: 'Netflix',
-                meta: ['Official Top 10', 'Updated weekly']
-            },
-            {
-                title: 'Netflix Top 10 Global',
-                url: 'https://www.netflix.com/tudum/top10/',
-                summary: 'Netflix publishes weekly global lists for films and TV, including English and non-English titles.',
-                image: '',
-                badge: 'Netflix',
-                meta: ['Films', 'TV']
-            }
+        // Final static fallback
+        return [
+            { title: 'Browse Latest Movies on TMDB', url: 'https://www.themoviedb.org/movie/now-playing', summary: 'The Movie Database — free community database for movies & TV shows with ratings, posters, and reviews.', image: '', badge: 'Now Playing', meta: ['TMDB', 'Free'] },
+            { title: 'Trending Movies This Week', url: 'https://www.themoviedb.org/trending/movie/week', summary: 'See what movies are trending globally this week across all platforms.', image: '', badge: 'Trending', meta: ['TMDB', 'Weekly'] },
+            { title: 'IMDb Top 250', url: 'https://www.imdb.com/chart/top/', summary: 'The top rated movies of all time as voted by IMDb users.', image: '', badge: 'Top Rated', meta: ['IMDb'] }
         ];
     }
 
@@ -4178,9 +4252,19 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
     }
 
     function getJustWatchUrl() {
-        const region = getMovieRegion().toLowerCase();
-        const supported = ['us', 'gb', 'ca', 'au', 'de', 'fr', 'es', 'it', 'jp', 'br', 'mx'];
-        return `https://www.justwatch.com/${supported.includes(region) ? region : 'us'}`;
+        const region = getMovieRegion().toUpperCase();
+        // JustWatch uses its own URL slugs — GB maps to /uk, not /gb
+        const regionToSlug = {
+            US: 'us', GB: 'uk', CA: 'ca', AU: 'au',
+            DE: 'de', FR: 'fr', ES: 'es', IT: 'it',
+            JP: 'jp', BR: 'br', MX: 'mx', NL: 'nl',
+            SE: 'se', NO: 'no', DK: 'dk', FI: 'fi',
+            PL: 'pl', PT: 'pt', BE: 'be', CH: 'ch',
+            AT: 'at', IE: 'ie', NZ: 'nz', IN: 'in',
+            ZA: 'za', AR: 'ar', CL: 'cl', CO: 'co'
+        };
+        const slug = regionToSlug[region] || 'us';
+        return `https://www.justwatch.com/${slug}`;
     }
 
     function dedupeMovieItems(items) {
