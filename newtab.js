@@ -4634,4 +4634,77 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
         if (w) w.addEventListener('mousedown', () => bringToFront(w));
     });
 
+    // --- Global Widget Resize Observer ---
+    const resizeTimeouts = {};
+
+    const widgetResizeObserver = new ResizeObserver(entries => {
+        for (let entry of entries) {
+            const widget = entry.target;
+            // Skip tracking if the widget is minimized
+            if (widget.classList.contains('minimized')) continue;
+            
+            const stateKeyMap = {
+                'spotify-widget': 'spotifyState',
+                'football-widget': 'footballState',
+                'todo-widget': 'todoState',
+                'notes-widget': 'notesState',
+                'tech-news-widget': 'techNewsState',
+                'github-repos-widget': 'githubReposState',
+                'blender-dev-widget': 'blenderDevState',
+                'movies-widget': 'moviesState'
+            };
+            
+            const stateKey = stateKeyMap[widget.id];
+            if (stateKey) {
+                const newWidth = widget.style.width;
+                if (newWidth) {
+                    if (resizeTimeouts[stateKey]) {
+                        clearTimeout(resizeTimeouts[stateKey]);
+                    }
+                    
+                    resizeTimeouts[stateKey] = setTimeout(() => {
+                        window.storageManager.get([stateKey]).then(result => {
+                            const currentState = result[stateKey] || {};
+                            if (currentState.width !== newWidth) {
+                                currentState.width = newWidth;
+                                window.storageManager.set({ [stateKey]: currentState });
+                            }
+                        });
+                    }, 500); // 500ms debounce
+                }
+            }
+        }
+    });
+
+    widgets.forEach(w => {
+        if (w) widgetResizeObserver.observe(w);
+    });
+
+    // --- Restore Widget Widths on Init ---
+    async function restoreWidgetWidths() {
+        const stateKeys = ['spotifyState', 'footballState', 'todoState', 'notesState', 'techNewsState', 'githubReposState', 'blenderDevState', 'moviesState'];
+        const result = await window.storageManager.get(stateKeys);
+        
+        const idMap = {
+            'spotifyState': 'spotify-widget',
+            'footballState': 'football-widget',
+            'todoState': 'todo-widget',
+            'notesState': 'notes-widget',
+            'techNewsState': 'tech-news-widget',
+            'githubReposState': 'github-repos-widget',
+            'blenderDevState': 'blender-dev-widget',
+            'moviesState': 'movies-widget'
+        };
+        
+        for (const key of stateKeys) {
+            if (result[key] && result[key].width) {
+                const el = document.getElementById(idMap[key]);
+                if (el) {
+                    el.style.width = result[key].width;
+                }
+            }
+        }
+    }
+    restoreWidgetWidths();
+
 });

@@ -875,9 +875,12 @@ input[type="text"] {
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     z-index: 1000;
     overflow: hidden;
-    transition: width 0.3s, height 0.3s, opacity 0.3s;
+    transition: opacity 0.3s;
     display: flex;
     flex-direction: column;
+    resize: horizontal;
+    min-width: 200px;
+    max-width: 800px;
 }
 
 .spotify-header {
@@ -923,14 +926,15 @@ input[type="text"] {
 
 .spotify-widget.minimized {
     height: auto !important; /* Override drag height if needed */
-    width: 200px; /* Smaller width when minimized */
+    width: 200px !important; /* Smaller width when minimized */
+    resize: none;
 }
 /* Football Widget */
 .football-content {
     /* Height adjusts based on content, but max-height to avoid overflow */
     max-height: 400px;
     overflow-y: auto;
-    width: 300px; /* Base width */
+    width: 100%; /* Base width */
 }
 
 /* Scrollbar for football widget */
@@ -1206,7 +1210,7 @@ input[type="text"] {
     /* Height adjusts based on content, but max-height to avoid overflow */
     max-height: 400px;
     overflow-y: auto;
-    width: 250px; /* Slimmer than football widget */
+    width: 100%; /* Slimmer than football widget */
     display: flex;
     flex-direction: column;
 }
