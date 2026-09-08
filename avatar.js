@@ -10,6 +10,8 @@
         speech: true,
         weather: true,
         mishaps: true,
+        funContent: true,
+        liveUpdates: true,
         quality: 'auto',
         debug: 'final'
     };
@@ -27,6 +29,15 @@
         rebuild: ['All parts accounted for.'],
         wave: ['Hello there!'],
         drag: ['Wheee! Careful with the antenna.'],
+        juggle: ['A little coordination practice.'],
+        scavenge: ['I found something beyond the edge.'],
+        zoom: ['Maximum browser velocity!'],
+        nap: ['Entering extremely brief sleep mode.'],
+        dance: ['This tab has excellent acoustics.'],
+        scan: ['Inspecting the local pixels.'],
+        balance: ['Perfectly calibrated. Probably.'],
+        peek: ['Just checking whether the edge is still here.'],
+        broadcast: ['I have a tiny update from the outside world.'],
         focus: ['Quiet engines. You have this.']
     };
 
@@ -44,7 +55,15 @@
         widget: 6600,
         shortcut: 5000,
         break: 5200,
-        wave: 2400
+        wave: 2400,
+        juggle: 7200,
+        scavenge: 5600,
+        nap: 8200,
+        dance: 6500,
+        scan: 5600,
+        balance: 6200,
+        peek: 5200,
+        broadcast: 7200
     };
 
     const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -101,9 +120,17 @@
             this.settings = { ...DEFAULT_SETTINGS };
             this.memory = { actionCounts: {}, recentLines: [], discovered: [], visits: 0 };
             this.dialogue = FALLBACK_DIALOGUE;
-            this.random = seededRandom(daySeed());
+            const entropy = typeof crypto !== 'undefined' && crypto.getRandomValues
+                ? crypto.getRandomValues(new Uint32Array(1))[0]
+                : Date.now() >>> 0;
+            this.randomSeed = (daySeed() ^ entropy) >>> 0;
+            this.random = seededRandom(this.randomSeed);
             this.viewport = { width: window.innerWidth, height: window.innerHeight };
-            this.screenPosition = { x: Math.max(80, window.innerWidth - 118), y: window.innerHeight - 22 };
+            this.screenPosition = {
+                x: clamp(80 + this.random() * Math.max(1, window.innerWidth - 160), 80, window.innerWidth - 80),
+                y: window.innerHeight - 22
+            };
+            this.floorRoamX = this.screenPosition.x;
             this.cursor = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
             this.phase = 'idle';
             this.action = 'idle';
@@ -120,6 +147,13 @@
             this.dragState = null;
             this.throwState = null;
             this.jointVelocity = { head: 0, torso: 0, leftArm: 0, rightArm: 0, leftLeg: 0, rightLeg: 0 };
+            this.restPose = 'stand';
+            this.lastRestName = '';
+            this.lastAutonomousAction = '';
+            this.actionStage = '';
+            this.zoomState = null;
+            this.nextLiveContentAt = performance.now() + 45000;
+            this.liveRequestToken = 0;
             this.running = true;
             this.reducedMotion = false;
             this.materials = [];
@@ -231,6 +265,8 @@
             const graphiteSoft = this.material({ color: 0x394655, roughness: .42, metalness: .32 });
             const cyan = this.material({ color: 0x6df4ff, emissive: 0x27bad2, emissiveIntensity: 1.8, roughness: .15, metalness: .08 });
             const violet = this.material({ color: 0xb68cff, emissive: 0x7241d4, emissiveIntensity: 1.25, roughness: .2, metalness: .2 });
+            const gold = this.material({ color: 0xffc85b, emissive: 0x7a3f08, emissiveIntensity: .45, roughness: .26, metalness: .62 });
+            const mint = this.material({ color: 0x72f1ad, emissive: 0x167a4b, emissiveIntensity: .42, roughness: .34, metalness: .12 });
             const visor = this.material({ color: 0x101b2a, emissive: 0x07111d, emissiveIntensity: .4, roughness: .12, metalness: .65 });
             const flameBlue = new THREE.MeshBasicMaterial({ color: 0x6ef7ff, transparent: true, opacity: .9, blending: THREE.AdditiveBlending, depthWrite: false });
             const flameViolet = new THREE.MeshBasicMaterial({ color: 0xb479ff, transparent: true, opacity: .55, blending: THREE.AdditiveBlending, depthWrite: false });
@@ -321,6 +357,67 @@
             hook.position.set(3.8, -1, 0);
             this.umbrella.visible = false;
 
+            this.propRoot = new THREE.Group();
+            this.propRoot.name = 'ActivityProps';
+            root.add(this.propRoot);
+
+            this.juggleBalls = [cyan, violet, gold].map((ballMaterial, index) => {
+                const ball = this.mesh(new THREE.SphereGeometry(3.2, 18, 14), ballMaterial, this.propRoot, `JuggleBall${index + 1}`);
+                ball.visible = false;
+                return ball;
+            });
+
+            this.scannerBeam = this.mesh(
+                new THREE.ConeGeometry(12, 42, 24, 1, true),
+                new THREE.MeshBasicMaterial({ color: 0x65edff, transparent: true, opacity: .13, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }),
+                this.propRoot,
+                'ScannerBeam'
+            );
+            this.materials.push(this.scannerBeam.material);
+            this.scannerBeam.rotation.z = Math.PI;
+            this.scannerBeam.position.set(0, 14, -1);
+            this.scannerBeam.visible = false;
+
+            this.foundItems = [];
+            const star = new THREE.Group();
+            star.name = 'FoundStar';
+            this.mesh(new THREE.OctahedronGeometry(5.2, 0), gold, star, 'StarCore');
+            this.foundItems.push(star);
+
+            const key = new THREE.Group();
+            key.name = 'FoundKey';
+            const keyRing = this.mesh(new THREE.TorusGeometry(4.2, 1.05, 10, 22), gold, key, 'KeyRing');
+            keyRing.position.y = 5;
+            const keyStem = this.mesh(new THREE.CylinderGeometry(1, 1, 12, 10), gold, key, 'KeyStem');
+            keyStem.position.y = -3;
+            const keyTooth = this.mesh(new THREE.BoxGeometry(5, 2, 2), gold, key, 'KeyTooth');
+            keyTooth.position.set(2, -8, 0);
+            this.foundItems.push(key);
+
+            const cube = new THREE.Group();
+            cube.name = 'FoundDataCube';
+            this.mesh(new THREE.BoxGeometry(8, 8, 8), violet, cube, 'DataCube');
+            const cubeRing = this.mesh(new THREE.TorusGeometry(6.2, .6, 8, 22), cyan, cube, 'DataCubeRing');
+            cubeRing.rotation.x = Math.PI / 2;
+            this.foundItems.push(cube);
+
+            const leaf = new THREE.Group();
+            leaf.name = 'FoundLeaf';
+            const leafBlade = this.mesh(new THREE.SphereGeometry(5, 18, 12), mint, leaf, 'LeafBlade');
+            leafBlade.scale.set(.55, 1.25, .22);
+            leafBlade.rotation.z = -.55;
+            const leafStem = this.mesh(new THREE.CylinderGeometry(.45, .6, 8, 8), graphiteSoft, leaf, 'LeafStem');
+            leafStem.position.set(3, -4, 0);
+            leafStem.rotation.z = -.55;
+            this.foundItems.push(leaf);
+
+            this.foundItems.forEach(item => {
+                item.position.set(22, 36, 10);
+                item.visible = false;
+                this.propRoot.add(item);
+            });
+            this.activeFoundItem = null;
+
             this.pieces = [this.head, this.torso, this.leftArm, this.rightArm, this.leftLeg, this.rightLeg, this.backpack].map((object, index) => ({
                 object,
                 index,
@@ -370,6 +467,8 @@
                 'avatar-speech-enabled': ['speech', 'checked'],
                 'avatar-weather-enabled': ['weather', 'checked'],
                 'avatar-break-enabled': ['mishaps', 'checked'],
+                'avatar-fun-content': ['funContent', 'checked'],
+                'avatar-live-updates': ['liveUpdates', 'checked'],
                 'avatar-quality': ['quality', 'value'],
                 'avatar-debug-mode': ['debug', 'value']
             };
@@ -450,8 +549,10 @@
             this.testQueue = [];
             this.flight = null;
             this.throwState = null;
+            this.zoomState = null;
+            this.character.visible = true;
             this.setRocketVisible(false);
-            this.umbrella.visible = false;
+            this.hideActivityProps();
             this.character.scale.setScalar(this.settings.scale / 100);
             this.character.userData.bob = 0;
             this.phase = 'dragging';
@@ -540,8 +641,10 @@
             this.flight = null;
             this.throwState = null;
             this.dragState = null;
+            this.zoomState = null;
+            this.character.visible = true;
             this.setRocketVisible(false);
-            this.umbrella.visible = false;
+            this.hideActivityProps();
             this.character.scale.setScalar(this.settings.scale / 100);
             this.character.rotation.z = 0;
             this.phase = 'perform';
@@ -598,8 +701,8 @@
                 this.springRotation(this.torso, 0, 'torso', 42, 10, dt);
                 this.springRotation(this.leftArm, -.12, 'leftArm', 36, 9, dt);
                 this.springRotation(this.rightArm, .12, 'rightArm', 36, 9, dt);
-                this.springRotation(this.leftLeg, .02, 'leftLeg', 36, 9, dt);
-                this.springRotation(this.rightLeg, -.02, 'rightLeg', 36, 9, dt);
+                this.springRotation(this.leftLeg, this.restPose === 'sit' ? .58 : .02, 'leftLeg', 36, 9, dt);
+                this.springRotation(this.rightLeg, this.restPose === 'sit' ? -.58 : -.02, 'rightLeg', 36, 9, dt);
                 if (now - this.phaseStarted > 900) {
                     this.phase = 'idle';
                     this.action = 'idle';
@@ -636,7 +739,7 @@
                     state.velocityX *= .7;
                     state.angularVelocity *= .68;
                     state.bounces += 1;
-                    state.settledSurface = surface.name;
+                    state.settledSurface = surface;
                 }
             }
 
@@ -654,6 +757,10 @@
                 state.velocityX = 0;
                 state.velocityY = 0;
                 state.angularVelocity = 0;
+                this.restPose = state.settledSurface && state.settledSurface.name !== 'floor' ? 'sit' : 'stand';
+                if (this.restPose === 'sit' && state.settledSurface) {
+                    this.screenPosition.y = state.settledSurface.y + 18 * (this.settings.scale / 100);
+                }
                 this.phase = 'recovering';
                 this.phaseStarted = now;
             }
@@ -717,13 +824,14 @@
             };
         }
 
-        elementAnchor(selector, xFactor, yOffset) {
+        elementAnchor(selector, xFactor, yOffset, pose) {
             const element = document.querySelector(selector);
             if (!element || element.classList.contains('hidden')) return null;
             const rect = element.getBoundingClientRect();
             if (!rect.width || !rect.height || rect.bottom < 0 || rect.top > this.viewport.height) return null;
             return {
                 element,
+                pose: pose || 'stand',
                 point: {
                     x: clamp(rect.left + rect.width * xFactor, 44, this.viewport.width - 44),
                     y: clamp(rect.top + yOffset, 76, this.viewport.height - 10)
@@ -733,11 +841,11 @@
 
         getAnchors() {
             const anchors = {
-                home: { point: { x: Math.max(82, this.viewport.width - 118), y: this.viewport.height - 16 }, element: null },
-                search: this.elementAnchor('.search-bar', .72, 3),
-                weather: this.elementAnchor('#weather-display', .52, 3),
-                clock: this.elementAnchor('#dashboard-clock', .66, 5),
-                ai: this.elementAnchor('#ai-sidebar .ai-sidebar-handle', .5, 4)
+                home: { point: { x: this.floorRoamX, y: this.viewport.height - 16 }, element: null, pose: 'stand', name: 'floor' },
+                search: this.elementAnchor('.search-bar', .72, 21, 'sit'),
+                weather: this.elementAnchor('#weather-display', .52, 3, 'stand'),
+                clock: this.elementAnchor('#dashboard-clock', .66, 5, 'stand'),
+                ai: this.elementAnchor('#ai-sidebar .ai-sidebar-handle', .5, 4, 'stand')
             };
 
             const visibleWidgets = Array.from(document.querySelectorAll('.spotify-widget:not(.hidden)'))
@@ -750,7 +858,8 @@
                 const rect = widget.getBoundingClientRect();
                 anchors.widget = {
                     element: widget,
-                    point: { x: clamp(rect.left + rect.width * .7, 44, this.viewport.width - 44), y: clamp(rect.top + 4, 76, this.viewport.height - 10) }
+                    pose: 'sit',
+                    point: { x: clamp(rect.left + rect.width * .7, 44, this.viewport.width - 44), y: clamp(rect.top + 21, 76, this.viewport.height - 10) }
                 };
             } else anchors.widget = null;
 
@@ -760,10 +869,32 @@
                 const rect = shortcut.getBoundingClientRect();
                 anchors.shortcut = {
                     element: shortcut,
-                    point: { x: clamp(rect.left + rect.width * .5, 44, this.viewport.width - 44), y: clamp(rect.top + 6, 76, this.viewport.height - 10) }
+                    pose: 'sit',
+                    point: { x: clamp(rect.left + rect.width * .5, 44, this.viewport.width - 44), y: clamp(rect.top + 19, 76, this.viewport.height - 10) }
                 };
             } else anchors.shortcut = null;
             return anchors;
+        }
+
+        chooseRestDestination(preferSit) {
+            this.floorRoamX = clamp(68 + this.random() * Math.max(1, this.viewport.width - 136), 68, this.viewport.width - 68);
+            const anchors = this.getAnchors();
+            const choices = [];
+            const add = (name, anchor, weight) => {
+                if (!anchor || name === this.lastRestName) return;
+                for (let i = 0; i < weight; i += 1) choices.push({ ...anchor, name });
+            };
+            add('search', anchors.search, preferSit ? 4 : 2);
+            add('widget', anchors.widget, preferSit ? 5 : 3);
+            add('shortcut', anchors.shortcut, preferSit ? 4 : 2);
+            add('clock', anchors.clock, 1);
+            add('weather', anchors.weather, 1);
+            add('floor', anchors.home, preferSit ? 1 : 4);
+
+            if (!choices.length) return anchors.home;
+            const chosen = choices[Math.floor(this.random() * choices.length)];
+            this.lastRestName = chosen.name;
+            return chosen;
         }
 
         updateAnchorsDebug() {
@@ -785,17 +916,61 @@
 
         isRaining() {
             const background = document.getElementById('bg-container');
-            return Boolean(background && /weather-(rain|storm)/.test(background.className));
+            const hasRainBg = Boolean(background && /weather-(rain|storm)/.test(background.className));
+            const rainDiag = document.getElementById('rain-diagnostics');
+            const isSimulatedRain = Boolean(rainDiag && !rainDiag.classList.contains('hidden') && !rainDiag.textContent.includes('No-rain'));
+            return hasRainBg || isSimulatedRain;
+        }
+
+        getWeatherCommentary() {
+            const tempEl = document.getElementById('weather-temp');
+            const iconEl = document.getElementById('weather-icon');
+            const tempText = tempEl?.textContent?.trim() || '';
+            const iconText = iconEl?.textContent?.trim() || '';
+            const raining = this.isRaining();
+
+            if (tempText && !tempText.toLowerCase().includes('location off')) {
+                if (raining) {
+                    const rainPhrases = [
+                        `Rain confirmed at ${tempText}. Umbrella deployed and circuits dry!`,
+                        `Precipitation detected (${tempText}). Good thing I kept the umbrella ready.`,
+                        `Current weather is ${tempText}. Full rain mode engaged!`
+                    ];
+                    return rainPhrases[Math.floor(this.random() * rainPhrases.length)];
+                } else {
+                    const dryPhrases = [
+                        `Current weather: ${tempText} ${iconText}. No umbrella needed today!`,
+                        `Atmosphere check: ${tempText}. Skies look clear, keeping the umbrella stowed.`,
+                        `Current conditions: ${tempText}. Perfect weather for exploring the dashboard.`
+                    ];
+                    return dryPhrases[Math.floor(this.random() * dryPhrases.length)];
+                }
+            }
+
+            if (raining) {
+                return 'Rain detected! Umbrella deployed and circuits safe.';
+            }
+
+            return '';
         }
 
         eligibleActions() {
             const anchors = this.getAnchors();
-            const actions = ['search', 'clock'];
+            let actions = [
+                'search', 'clock', 'juggle', 'juggle', 'scavenge', 'zoom', 'zoom',
+                'nap', 'dance', 'dance', 'scan', 'balance', 'peek'
+            ];
             if (anchors.ai) actions.push('ai');
             if (anchors.widget) actions.push('widget');
             if (anchors.shortcut) actions.push('shortcut');
-            if (this.settings.weather && this.isRaining()) actions.push('weather', 'weather');
+            if (this.settings.weather) actions.push('weather');
+            if (this.settings.weather && this.isRaining()) actions.push('weather');
+            if ((this.settings.funContent || this.settings.liveUpdates) && performance.now() >= this.nextLiveContentAt) {
+                actions.push('broadcast', 'broadcast');
+            }
             if (this.settings.mishaps && (this.memory.actionCounts.break || 0) < Math.max(1, (this.memory.visits || 1) / 3) && this.random() < .09) actions.push('break');
+            const withoutRepeat = actions.filter(action => action !== this.lastAutonomousAction);
+            if (withoutRepeat.length) actions = withoutRepeat;
             return actions;
         }
 
@@ -815,7 +990,7 @@
             }
             const settingsModal = document.getElementById('settings-modal-overlay');
             if (settingsModal) settingsModal.classList.add('hidden');
-            this.testQueue = ['weather', 'clock', 'ai', 'widget', 'shortcut', 'break'];
+            this.testQueue = ['juggle', 'scavenge', 'zoom', 'nap', 'dance', 'scan', 'balance', 'peek', 'weather', 'clock', 'ai', 'widget', 'shortcut', 'break'];
             if (this.phase === 'idle') requestAnimationFrame(() => this.beginAction('search', true));
             this.speak('rocket', 'Test flight started. I will visit each page system, then perform a magnetic rebuild.');
         }
@@ -824,6 +999,35 @@
             const anchors = this.getAnchors();
             let anchor = anchors[action];
             if (action === 'break') anchor = anchors.home;
+            if (action === 'juggle' || action === 'dance' || action === 'balance' || action === 'broadcast') {
+                anchor = this.chooseRestDestination(false);
+            } else if (action === 'nap') {
+                anchor = this.chooseRestDestination(true);
+            } else if (action === 'scan') {
+                anchor = anchors.shortcut || anchors.search || this.chooseRestDestination(false);
+            } else if (action === 'peek') {
+                const left = this.random() < .5;
+                anchor = {
+                    name: left ? 'left-edge' : 'right-edge',
+                    pose: 'peek',
+                    element: null,
+                    point: { x: left ? 18 : this.viewport.width - 18, y: clamp(150 + this.random() * (this.viewport.height - 300), 110, this.viewport.height - 90) }
+                };
+            } else if (action === 'scavenge') {
+                const left = this.random() < .5;
+                anchor = {
+                    name: 'outside',
+                    pose: 'fly',
+                    element: null,
+                    point: { x: left ? -95 : this.viewport.width + 95, y: clamp(this.screenPosition.y - 80 - this.random() * 180, 90, this.viewport.height - 90) }
+                };
+                this.actionStage = 'leaving';
+            } else if (action === 'zoom') {
+                this.rememberAction(action);
+                this.lastAutonomousAction = action;
+                this.beginZoom();
+                return;
+            }
             if (!anchor) {
                 if (force || this.testQueue.length) anchor = anchors.home;
                 else return this.scheduleNext();
@@ -832,12 +1036,14 @@
             this.action = action;
             this.actionStarted = performance.now();
             this.clockEffectShown = false;
-            this.umbrella.visible = false;
+            this.contentRequested = false;
+            this.hideActivityProps();
             this.rememberAction(action, anchor);
-            this.beginTravel(anchor.point, action);
+            this.lastAutonomousAction = action;
+            this.beginTravel(anchor.point, action, false, anchor.pose);
         }
 
-        beginTravel(target, action, returning) {
+        beginTravel(target, action, returning, restPose) {
             const start = { ...this.screenPosition };
             const distance = Math.hypot(target.x - start.x, target.y - start.y);
             const upward = start.y - target.y;
@@ -855,12 +1061,69 @@
                 duration: clamp(850 + distance * 1.3, 1000, 2400),
                 rocket,
                 returning: Boolean(returning),
+                restPose: restPose || 'stand',
                 action
             };
             this.phase = returning ? 'return' : 'travel';
             this.phaseStarted = this.flight.startTime;
             this.setRocketVisible(rocket);
             if (rocket && !returning && this.random() < .44) this.speak('rocket');
+        }
+
+        beginZoom() {
+            this.action = 'zoom';
+            this.actionStarted = performance.now();
+            this.phaseStarted = this.actionStarted;
+            this.phase = 'zooming';
+            this.hideActivityProps();
+            this.character.visible = true;
+            const direction = this.random() < .5 ? -1 : 1;
+            this.zoomState = {
+                direction,
+                start: { ...this.screenPosition },
+                exit: { x: direction > 0 ? this.viewport.width + 105 : -105, y: clamp(this.screenPosition.y - 70, 95, this.viewport.height - 95) },
+                passY: clamp(120 + this.random() * (this.viewport.height - 240), 95, this.viewport.height - 95),
+                wrapped: false
+            };
+            this.setRocketVisible(true);
+            this.speak('zoom');
+        }
+
+        updateZoom(now) {
+            const state = this.zoomState;
+            if (!state) return;
+            const elapsed = (now - this.phaseStarted) / 1000;
+            if (elapsed < .72) {
+                const t = easeInOutCubic(elapsed / .72);
+                this.screenPosition.x = lerp(state.start.x, state.exit.x, t);
+                this.screenPosition.y = lerp(state.start.y, state.exit.y, t) - Math.sin(t * Math.PI) * 65;
+                this.character.rotation.z = -.28 * state.direction;
+                this.animateFlames(now);
+                return;
+            }
+            if (elapsed < .88) {
+                this.character.visible = false;
+                return;
+            }
+            if (!state.wrapped) {
+                state.wrapped = true;
+                this.character.visible = true;
+            }
+            if (elapsed < 2.05) {
+                const t = smoothstep((elapsed - .88) / 1.17);
+                const fromX = state.direction > 0 ? -105 : this.viewport.width + 105;
+                const toX = state.direction > 0 ? this.viewport.width + 105 : -105;
+                this.screenPosition.x = lerp(fromX, toX, t);
+                this.screenPosition.y = state.passY + Math.sin(t * Math.PI * 2.4) * 42;
+                this.character.rotation.z = -.32 * state.direction + Math.sin(t * Math.PI * 2) * .08;
+                this.animateFlames(now);
+                return;
+            }
+            this.character.visible = true;
+            this.character.rotation.z = 0;
+            this.setRocketVisible(false);
+            this.zoomState = null;
+            this.finishAction();
         }
 
         updateTravel(now) {
@@ -878,18 +1141,31 @@
             this.screenPosition = { ...flight.target };
             this.character.rotation.z = 0;
             this.setRocketVisible(false);
+            if (this.action === 'scavenge' && this.actionStage === 'leaving') {
+                this.chooseFoundItem();
+                this.actionStage = 'returning-with-item';
+                const destination = this.chooseRestDestination(this.random() < .5);
+                this.beginTravel(destination.point, this.action, false, destination.pose);
+                return;
+            }
             if (flight.returning) {
+                this.restPose = flight.restPose || 'stand';
                 this.phase = 'idle';
                 this.action = 'idle';
                 this.flight = null;
                 this.scheduleNext();
                 return;
             }
+            this.performancePose = flight.restPose || 'stand';
             this.phaseStarted = now;
             if (this.action === 'break') this.beginBreak(now);
             else {
                 this.phase = 'perform';
-                this.speak(this.action);
+                if (this.action === 'weather') {
+                    this.speak('weather', this.getWeatherCommentary());
+                } else {
+                    this.speak(this.action);
+                }
             }
         }
 
@@ -898,11 +1174,16 @@
             const progress = clamp((now - this.phaseStarted) / duration, 0, 1);
             if (this.action === 'search') this.performSearchDive(progress);
             if (this.action === 'clock' && !this.clockEffectShown && progress > .32) this.spinClockDigit();
+            this.updateActivityProps(now, progress);
+            if (this.action === 'broadcast' && !this.contentRequested) {
+                this.contentRequested = true;
+                this.requestLiveSnippet();
+            }
             if (progress >= 1) this.finishAction();
         }
 
         finishAction() {
-            this.umbrella.visible = false;
+            this.hideActivityProps();
             if (this.action === 'wave') {
                 this.phase = 'idle';
                 this.action = 'idle';
@@ -915,8 +1196,8 @@
                 this.phase = 'idle';
                 return;
             }
-            const home = this.getAnchors().home.point;
-            this.beginTravel(home, this.action, true);
+            const destination = this.chooseRestDestination(this.random() < .58);
+            this.beginTravel(destination.point, this.action, true, destination.pose);
         }
 
         performSearchDive(progress) {
@@ -1032,6 +1313,58 @@
             });
         }
 
+        hideActivityProps() {
+            this.umbrella.visible = false;
+            if (this.juggleBalls) this.juggleBalls.forEach(ball => { ball.visible = false; });
+            if (this.scannerBeam) this.scannerBeam.visible = false;
+            if (this.foundItems) this.foundItems.forEach(item => { item.visible = false; });
+            this.activeFoundItem = null;
+        }
+
+        chooseFoundItem() {
+            this.foundItems.forEach(item => { item.visible = false; });
+            this.activeFoundItem = this.foundItems[Math.floor(this.random() * this.foundItems.length)];
+            this.activeFoundItem.visible = true;
+            this.activeFoundItem.position.set(22, 36, 10);
+            this.activeFoundItem.scale.setScalar(1);
+            return this.activeFoundItem;
+        }
+
+        updateActivityProps(now, progress) {
+            const time = now / 1000;
+            if (this.action === 'juggle') {
+                this.juggleBalls.forEach((ball, index) => {
+                    const u = (time * .72 + index / this.juggleBalls.length) % 1;
+                    const direction = index % 2 ? 1 - u : u;
+                    ball.visible = true;
+                    ball.position.set(lerp(-17, 17, direction), 38 + 4 * u * (1 - u) * 34, 8 + index * .4);
+                    ball.rotation.x = time * 2.8 + index;
+                    ball.rotation.y = time * 3.6 + index * .7;
+                });
+            } else if (this.action === 'scan') {
+                this.scannerBeam.visible = true;
+                this.scannerBeam.rotation.z = Math.PI + Math.sin(time * 1.8) * .38;
+                this.scannerBeam.material.opacity = .09 + Math.sin(time * 5) * .035;
+            } else if (this.action === 'scavenge') {
+                if (this.activeFoundItem) {
+                    this.activeFoundItem.visible = true;
+                    this.activeFoundItem.position.set(21 + Math.sin(time * 2.4) * 2, 37 + Math.sin(time * 3.1) * 1.5, 10);
+                    this.activeFoundItem.rotation.y = time * 1.5;
+                    this.activeFoundItem.rotation.z = Math.sin(time * 1.7) * .18;
+                }
+            } else if (this.action === 'balance') {
+                if (!this.activeFoundItem) this.chooseFoundItem();
+                this.activeFoundItem.visible = true;
+                this.activeFoundItem.position.set(Math.sin(time * 1.9) * 2.2, 73, 6);
+                this.activeFoundItem.rotation.z = Math.sin(time * 2.2) * .3;
+                this.activeFoundItem.rotation.y = time * 1.2;
+            }
+
+            if (this.action === 'nap' && progress > .24 && progress < .76 && this.settings.speech && this.speechUntil < now) {
+                this.speak('nap', this.random() < .5 ? 'z z z…' : 'Charging one tiny dream…');
+            }
+        }
+
         applyPose(now, dt) {
             if (this.phase === 'breaking' || this.phase === 'rebuilding') return;
             if (this.phase === 'dragging' || this.phase === 'thrown' || this.phase === 'recovering') {
@@ -1040,12 +1373,15 @@
                 return;
             }
             const time = now / 1000;
-            const isFlying = this.phase === 'travel' || this.phase === 'return';
+            const isFlying = this.phase === 'travel' || this.phase === 'return' || this.phase === 'zooming';
             const action = this.phase === 'perform' ? this.action : 'idle';
+            const seated = (action === 'idle' && this.restPose === 'sit') ||
+                (this.phase === 'perform' && this.performancePose === 'sit') ||
+                action === 'search' || action === 'widget' || action === 'nap';
             const activeScale = this.character.scale.x || this.settings.scale / 100;
             if (action !== 'search') this.character.scale.setScalar(lerp(activeScale, this.settings.scale / 100, 1 - Math.exp(-10 * dt)));
 
-            const idleBob = this.reducedMotion ? 0 : Math.sin(time * 1.45) * 1.15;
+            const idleBob = this.reducedMotion || seated ? 0 : Math.sin(time * 1.45) * 1.15;
             this.character.userData.bob = idleBob;
             this.torso.rotation.z = lerp(this.torso.rotation.z, action === 'widget' ? -.08 : Math.sin(time * .72) * .018, .08);
             this.head.rotation.z = lerp(this.head.rotation.z, action === 'weather' ? .12 : action === 'ai' ? -.1 : Math.sin(time * .55) * .035, .1);
@@ -1054,6 +1390,12 @@
             let rightArm = .12;
             let leftLeg = .02;
             let rightLeg = -.02;
+            if (seated) {
+                leftLeg = .58 + Math.sin(time * 2.1) * .08;
+                rightLeg = -.58 - Math.sin(time * 2.1) * .08;
+                leftArm = -.28;
+                rightArm = .28;
+            }
             if (isFlying) {
                 leftArm = .72;
                 rightArm = -.72;
@@ -1063,8 +1405,14 @@
                 rightArm = 1.65 + Math.sin(time * 3) * .08;
                 leftArm = -.25;
             } else if (action === 'weather') {
-                rightArm = 1.14;
-                leftArm = -.55;
+                const showUmbrella = this.isRaining();
+                if (showUmbrella) {
+                    rightArm = 1.14;
+                    leftArm = -.55;
+                } else {
+                    rightArm = .85 + Math.sin(time * 3) * .08;
+                    leftArm = -.35;
+                }
             } else if (action === 'widget' || action === 'search') {
                 leftLeg = .42 + Math.sin(time * 2.4) * .14;
                 rightLeg = -.42 - Math.sin(time * 2.4) * .14;
@@ -1072,6 +1420,42 @@
                 rightArm = .32;
             } else if (action === 'shortcut') {
                 rightArm = .72 + Math.sin(time * 6) * .55;
+            } else if (action === 'juggle') {
+                leftArm = -.62 + Math.sin(time * 4.5) * .42;
+                rightArm = .62 - Math.sin(time * 4.5) * .42;
+                leftLeg = .12;
+                rightLeg = -.12;
+            } else if (action === 'dance') {
+                leftArm = -1.05 + Math.sin(time * 6.2) * .72;
+                rightArm = 1.05 + Math.sin(time * 6.2 + Math.PI) * .72;
+                leftLeg = .3 + Math.sin(time * 6.2) * .28;
+                rightLeg = -.3 + Math.sin(time * 6.2 + Math.PI) * .28;
+                this.torso.rotation.z = Math.sin(time * 6.2) * .16;
+                this.head.rotation.z = -Math.sin(time * 6.2) * .12;
+            } else if (action === 'scan') {
+                leftArm = -.85;
+                rightArm = .85;
+                this.head.rotation.z = Math.sin(time * 1.8) * .25;
+            } else if (action === 'balance') {
+                leftArm = -1.45 + Math.sin(time * 2) * .08;
+                rightArm = 1.45 - Math.sin(time * 2) * .08;
+                this.torso.rotation.z = Math.sin(time * 1.9) * .11;
+                this.head.rotation.z = -this.torso.rotation.z * .7;
+            } else if (action === 'nap') {
+                leftArm = -.12;
+                rightArm = .12;
+                this.head.rotation.z = -.28 + Math.sin(time * 1.1) * .025;
+                this.torso.rotation.z = -.08;
+            } else if (action === 'peek') {
+                leftArm = -.72;
+                rightArm = .72 + Math.sin(time * 5.5) * .32;
+                this.head.rotation.z = this.screenPosition.x < this.viewport.width / 2 ? -.18 : .18;
+            } else if (action === 'scavenge') {
+                rightArm = 1.08;
+                leftArm = -.42;
+            } else if (action === 'broadcast') {
+                leftArm = -.35 + Math.sin(time * 2.8) * .16;
+                rightArm = 1.1 + Math.sin(time * 2.8) * .22;
             } else if (action === 'wave') {
                 rightArm = 1.15 + (this.reducedMotion ? .35 : Math.sin(time * 7.5) * .62);
                 leftArm = -.2;
@@ -1081,10 +1465,14 @@
             this.rightArm.rotation.z = lerp(this.rightArm.rotation.z, rightArm, .12);
             this.leftLeg.rotation.z = lerp(this.leftLeg.rotation.z, leftLeg, .12);
             this.rightLeg.rotation.z = lerp(this.rightLeg.rotation.z, rightLeg, .12);
-            this.umbrella.visible = action === 'weather';
+            this.umbrella.visible = action === 'weather' && this.isRaining();
             if (this.umbrella.visible) this.umbrella.rotation.z = Math.sin(time * 1.4) * .035;
 
             this.updateEyes(now);
+            if (action === 'nap') {
+                this.leftEye.scale.y = .12;
+                this.rightEye.scale.y = .12;
+            }
         }
 
         updateEyes(now) {
@@ -1118,8 +1506,127 @@
             this.hitTarget.style.height = `${height}px`;
             this.hitTarget.style.left = `${this.screenPosition.x - width / 2}px`;
             this.hitTarget.style.top = `${this.screenPosition.y - height + 7 * scale}px`;
-            const disabled = this.phase === 'breaking' || this.phase === 'rebuilding' || scale < .35;
+            const disabled = !this.character.visible || this.phase === 'breaking' || this.phase === 'rebuilding' || this.phase === 'zooming' || scale < .35;
             this.hitTarget.classList.toggle('is-disabled', disabled);
+        }
+
+        async fetchWithTimeout(url, timeoutMs) {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), timeoutMs || 5200);
+            try {
+                const response = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+                if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+                return await response.json();
+            } finally {
+                clearTimeout(timeout);
+            }
+        }
+
+        cleanExternalText(value, maxLength) {
+            const clean = String(value || '')
+                .replace(/<[^>]*>/g, '')
+                .replace(/&amp;/g, '&')
+                .replace(/&quot;/g, '"')
+                .replace(/&#39;|&apos;/g, "'")
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/\s+/g, ' ')
+                .trim();
+            if (!clean) return '';
+            const limit = maxLength || 190;
+            return clean.length <= limit ? clean : `${clean.slice(0, limit - 1).replace(/\s+\S*$/, '')}…`;
+        }
+
+        readSportsWidget() {
+            const matches = Array.from(document.querySelectorAll('#football-matches .match-item'));
+            if (!matches.length) return '';
+            const match = matches[Math.floor(this.random() * matches.length)];
+            const teams = Array.from(match.querySelectorAll('.team-info span')).map(node => this.cleanExternalText(node.textContent, 42));
+            const scores = Array.from(match.querySelectorAll('.team-score')).map(node => this.cleanExternalText(node.textContent, 8));
+            const status = this.cleanExternalText(match.querySelector('.match-status')?.textContent, 35);
+            if (teams.length < 2) return '';
+            return scores.length >= 2
+                ? `Sports check: ${teams[0]} ${scores[0]}, ${teams[1]} ${scores[1]}. ${status}`.trim()
+                : `Sports check: ${teams[0]} against ${teams[1]}. ${status}`.trim();
+        }
+
+        async fetchQuote() {
+            const data = await this.fetchWithTimeout('https://dummyjson.com/quotes/random', 4800);
+            const quote = this.cleanExternalText(data.quote, 145);
+            const author = this.cleanExternalText(data.author, 45);
+            return quote ? `A quote I found: “${quote}”${author ? ` — ${author}` : ''}` : '';
+        }
+
+        async fetchJoke() {
+            const data = await this.fetchWithTimeout('https://v2.jokeapi.dev/joke/Programming,Misc,Pun?safe-mode&type=single&lang=en', 4800);
+            const joke = this.cleanExternalText(data.joke, 175);
+            return joke ? `Incoming tiny joke: ${joke}` : '';
+        }
+
+        async fetchNewsUpdate() {
+            const visibleHeadlines = Array.from(document.querySelectorAll('#tech-news-list .news-title'));
+            if (visibleHeadlines.length) {
+                const headline = visibleHeadlines[Math.floor(this.random() * visibleHeadlines.length)];
+                return `From the news panel: ${this.cleanExternalText(headline.textContent, 155)}`;
+            }
+            const ids = await this.fetchWithTimeout('https://hacker-news.firebaseio.com/v0/topstories.json', 5200);
+            if (!Array.isArray(ids) || !ids.length) return '';
+            const id = ids[Math.floor(this.random() * Math.min(ids.length, 12))];
+            const story = await this.fetchWithTimeout(`https://hacker-news.firebaseio.com/v0/item/${id}.json`, 5200);
+            const title = this.cleanExternalText(story && story.title, 155);
+            return title ? `A current Hacker News headline: ${title}` : '';
+        }
+
+        async fetchSportsUpdate() {
+            const widgetUpdate = this.readSportsWidget();
+            if (widgetUpdate) return widgetUpdate;
+            const today = new Date();
+            const date = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            const data = await this.fetchWithTimeout(`https://www.thesportsdb.com/api/v1/json/123/eventsday.php?d=${date}&s=Soccer`, 5200);
+            const events = data && Array.isArray(data.events) ? data.events : [];
+            if (!events.length) return '';
+            const event = events[Math.floor(this.random() * Math.min(events.length, 8))];
+            const home = this.cleanExternalText(event.strHomeTeam, 42);
+            const away = this.cleanExternalText(event.strAwayTeam, 42);
+            const status = this.cleanExternalText(event.strStatus || event.strTime, 35);
+            const hasScore = event.intHomeScore !== null && event.intHomeScore !== '' && event.intAwayScore !== null && event.intAwayScore !== '';
+            if (!home || !away) return this.cleanExternalText(event.strEvent, 170);
+            return hasScore
+                ? `Football update: ${home} ${event.intHomeScore}, ${away} ${event.intAwayScore}. ${status}`.trim()
+                : `Football fixture: ${home} against ${away}. ${status}`.trim();
+        }
+
+        async requestLiveSnippet() {
+            const types = [];
+            if (this.settings.funContent) types.push('quote', 'joke');
+            if (this.settings.liveUpdates) types.push('news', 'sports');
+            if (!types.length) return;
+
+            const type = types[Math.floor(this.random() * types.length)];
+            const token = ++this.liveRequestToken;
+            this.nextLiveContentAt = performance.now() + lerp(4 * 60 * 1000, 9 * 60 * 1000, this.random());
+            const cached = this.memory.liveCache && this.memory.liveCache[type];
+            if (cached && Date.now() - cached.savedAt < 20 * 60 * 1000 && !this.memory.recentLines.includes(cached.text) && this.random() < .45) {
+                if (this.phase === 'perform' && this.action === 'broadcast') this.speak('broadcast', cached.text);
+                return;
+            }
+
+            try {
+                let text = '';
+                if (type === 'quote') text = await this.fetchQuote();
+                else if (type === 'joke') text = await this.fetchJoke();
+                else if (type === 'news') text = await this.fetchNewsUpdate();
+                else if (type === 'sports') text = await this.fetchSportsUpdate();
+                if (!text || token !== this.liveRequestToken) return;
+                this.memory.liveCache = this.memory.liveCache || {};
+                this.memory.liveCache[type] = { text, savedAt: Date.now() };
+                this.rememberSoon();
+                if (this.phase === 'perform' && this.action === 'broadcast') this.speak('broadcast', text);
+            } catch (_) {
+                if (token === this.liveRequestToken && this.phase === 'perform' && this.action === 'broadcast') {
+                    this.speak('broadcast', 'The outside feed is being shy, so here is a local update: you are doing better than an empty tab.');
+                }
+            }
         }
 
         speak(category, exactText) {
@@ -1130,6 +1637,21 @@
                 const unused = candidates.filter(item => !this.memory.recentLines.includes(item));
                 const pool = unused.length ? unused : candidates;
                 line = pool[Math.floor(this.random() * pool.length)];
+                const mixers = this.dialogue.mixers;
+                const fragments = this.dialogue.fragments;
+                const fragmentPool = fragments && (fragments[category] || fragments.general);
+                if (mixers && fragmentPool && this.random() < .64) {
+                    for (let attempt = 0; attempt < 5; attempt += 1) {
+                        const opener = mixers.openers[Math.floor(this.random() * mixers.openers.length)];
+                        const fragment = fragmentPool[Math.floor(this.random() * fragmentPool.length)];
+                        const ending = this.random() < .72 ? mixers.endings[Math.floor(this.random() * mixers.endings.length)] : '';
+                        const mixed = `${opener} ${fragment}${ending ? ` ${ending}` : ''}`.replace(/\s+/g, ' ').trim();
+                        if (!this.memory.recentLines.includes(mixed)) {
+                            line = mixed;
+                            break;
+                        }
+                    }
+                }
             }
             this.bubble.textContent = line;
             this.bubble.classList.remove('hidden');
@@ -1178,10 +1700,12 @@
             this.action = 'idle';
             this.testQueue = [];
             this.setRocketVisible(false);
-            this.umbrella.visible = false;
+            this.hideActivityProps();
             this.resetPieceTransforms();
             this.dragState = null;
             this.throwState = null;
+            this.zoomState = null;
+            this.character.visible = true;
             if (this.hitTarget) this.hitTarget.classList.remove('is-dragging');
             this.screenPosition = { ...this.getAnchors().home.point };
             this.bubble.classList.add('hidden');
@@ -1191,7 +1715,7 @@
         updateDiagnostics() {
             if (this.settings.debug === 'final' || !this.renderer) return;
             const info = this.renderer.info.render;
-            this.diagnostics.textContent = `Pip / ${this.phase}:${this.action} · ${this.qualityMode} · calls ${info.calls} · triangles ${info.triangles}`;
+            this.diagnostics.textContent = `Pip / ${this.phase}:${this.action} · ${this.qualityMode} · seed ${this.randomSeed} · calls ${info.calls} · triangles ${info.triangles}`;
         }
 
         animate(now) {
@@ -1211,6 +1735,7 @@
             if (!this.reducedMotion) {
                 if (this.phase === 'dragging') this.updateDraggedPose(dt);
                 else if (this.phase === 'thrown' || this.phase === 'recovering') this.updateThrownPose(dt, now);
+                else if (this.phase === 'zooming') this.updateZoom(now);
                 else if (this.phase === 'travel' || this.phase === 'return') this.updateTravel(now);
                 else if (this.phase === 'perform') this.updatePerformance(now);
                 else if (this.phase === 'breaking' || this.phase === 'rebuilding') this.updateBreak(dt, now);

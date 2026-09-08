@@ -34,6 +34,7 @@
 
 ## ⚙️ Advanced Features
 *   **Multi-Engine Search:** Toggle instantly between Google, DuckDuckGo, Bing, Brave, and Ecosia.
+*   **Pip, the 3D Browser Companion:** A draggable, rocket-powered character that roams between page elements, sits on widgets, juggles, dances, scans shortcuts, retrieves off-screen objects, reacts to weather, and occasionally shares cached quotes, safe jokes, headlines, or sports updates.
 *   **Chrome Sync Support:** Your shortcuts and settings follow you to any computer where you're logged into Chrome.
 *   **Notification Center:** A unified place for extension updates and system alerts.
 *   **Data Portability:** Export your entire configuration to a JSON file or import a backup in seconds.

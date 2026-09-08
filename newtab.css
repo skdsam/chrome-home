@@ -1192,8 +1192,26 @@ input[type="text"] {
 }
 
 .spotify-controls { display: flex; align-items: center; gap: 2px; }
-.spotify-controls .widget-close { width: 24px; height: 24px; padding: 0; border-radius: 6px; color: #9da8b8; font-size: 1rem; font-weight: 400; }
-.spotify-controls .widget-close:hover { color: #fff; background: rgba(255,92,112,.22); }
+.spotify-controls .widget-close {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border-radius: 6px;
+    color: #9da8b8;
+    font-size: 1.15rem;
+    line-height: 1;
+    font-weight: 400;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    cursor: pointer;
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+.spotify-controls .widget-close:hover {
+    color: #fff;
+    background: rgba(255, 92, 112, 0.25);
+}
 
 .spotify-content {
     padding: 0;

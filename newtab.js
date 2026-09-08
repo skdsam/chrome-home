@@ -4725,4 +4725,60 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
     }
     restoreWidgetWidths();
 
+    // --- Direct Widget Close Buttons ---
+    const widgetCloseHandlers = {
+        'spotify-widget': () => {
+            spotifyState.isOpen = false;
+            applySpotifyState();
+            saveSpotifyState();
+        },
+        'football-widget': () => {
+            footballState.isOpen = false;
+            applyFootballState();
+            saveFootballState();
+        },
+        'todo-widget': () => {
+            todoState.isOpen = false;
+            applyTodoState();
+            saveTodoState();
+        },
+        'notes-widget': () => {
+            notesState.isOpen = false;
+            applyNotesState();
+            notesSave();
+        },
+        'tech-news-widget': () => {
+            techNewsState.isOpen = false;
+            applyTechNewsState();
+            saveTechNewsState();
+        },
+        'github-repos-widget': () => {
+            githubReposState.isOpen = false;
+            applyGithubReposState();
+            saveGithubReposState();
+        },
+        'blender-dev-widget': () => {
+            blenderDevState.isOpen = false;
+            applyBlenderDevState();
+            saveBlenderDevState();
+        },
+        'movies-widget': () => {
+            moviesState.isOpen = false;
+            applyMoviesState();
+            saveMoviesState();
+        }
+    };
+
+    Object.entries(widgetCloseHandlers).forEach(([wId, closeFn]) => {
+        const wEl = document.getElementById(wId);
+        const closeBtn = wEl?.querySelector('.widget-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                closeFn();
+            });
+        }
+    });
+
 });

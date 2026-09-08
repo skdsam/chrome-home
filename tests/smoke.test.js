@@ -9,6 +9,9 @@ const avatarDialogue = JSON.parse(fs.readFileSync('avatar-dialogue.json', 'utf8'
 
 assert.equal(manifest.manifest_version, 3);
 assert(manifest.permissions.includes('bookmarks'));
+assert(manifest.host_permissions.includes('https://v2.jokeapi.dev/*'), 'Safe joke requests need an explicit host permission');
+assert(manifest.host_permissions.includes('https://dummyjson.com/*'), 'Random quote requests need an explicit host permission');
+assert(manifest.host_permissions.includes('https://www.thesportsdb.com/*'), 'Public sports updates need an explicit host permission');
 assert(html.includes('id="wet-glass-canvas"'));
 assert(html.includes('id="command-overlay"'));
 assert(html.includes('control-group-dashboard'));
@@ -39,4 +42,9 @@ assert(avatar.includes("this.phase = 'thrown'"), 'Dragging Pip must preserve rel
 assert(avatar.includes('collisionSurfaces()'), 'Ragdoll drops must collide with page surfaces');
 assert(avatar.includes('beginWave()'), 'Clicking Pip must trigger a wave');
 assert(Array.isArray(avatarDialogue.rocket) && avatarDialogue.rocket.length > 1, 'Rocket dialogue must ship as editable data');
+assert(avatarDialogue.mixers.openers.length >= 10 && avatarDialogue.mixers.endings.length >= 10, 'Pip needs combinatorial dialogue variety');
+assert(avatar.includes('chooseRestDestination'), 'Pip must roam instead of always returning to one corner');
+assert(avatar.includes('beginZoom()') && avatar.includes("this.action === 'juggle'"), 'Pip needs varied autonomous activities');
+assert(avatar.includes("this.actionStage === 'leaving'"), 'Pip must be able to leave the viewport and return with an item');
+assert(avatar.includes('requestLiveSnippet()'), 'Pip must support occasional quote, joke, news, and sports speech');
 console.log('Chrome Home smoke tests passed');

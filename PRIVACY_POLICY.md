@@ -1,6 +1,6 @@
 # Privacy Policy for Chrome Home
 
-**Effective Date: January 17, 2026**
+**Effective Date: September 8, 2026**
 
 This Privacy Policy describes how **Chrome Home** ("we," "us," or "our") collects, uses, and shares information when you install and use our Chrome Extension. We are committed to protecting your privacy and handling your data transparently.
 
@@ -12,6 +12,7 @@ We collect and process the following information to provide the core features of
 *   **Geolocation (Geolocation Permission):** We request your location purely to provide accurate local weather data. This is only fetched when the weather widget is active.
 *   **Top Sites (TopSites Permission):** We use this to populate the default shortcuts on your new tab page for a better initial experience.
 *   **Storage (Storage Permission):** We use Chrome Sync storage to keep your shortcuts and settings consistent across your devices.
+*   **Avatar Preferences:** The optional 3D companion stores its settings, action counts, recently used dialogue, and a short cache of public feed snippets locally. This information is not sent with feed requests.
 
 ## 2. How We Use Your Data
 
@@ -30,6 +31,8 @@ Our extension interacts with the following third-party services:
 *   **OpenWeatherMap/Weather APIs:** For weather information.
 *   **Unsplash:** For background images (if selected).
 *   **AI Providers (Gemini, ChatGPT, etc.):** Only if you choose to interact with them via the sidebar.
+*   **DummyJSON and JokeAPI:** For optional random quotes and family-safe jokes spoken by the avatar. Requests contain no browsing history, location, or personal settings.
+*   **Hacker News and TheSportsDB:** For optional public headlines, fixtures, and score updates. The avatar reuses visible widget data where possible and otherwise makes a direct public-feed request without attaching personal information.
 
 ## 5. Security
 

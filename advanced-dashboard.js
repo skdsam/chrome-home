@@ -418,20 +418,30 @@
         Object.entries(widgetCloseMap).forEach(([widgetId, triggerId]) => {
             const widget = $(widgetId);
             const controls = widget?.querySelector('.spotify-controls');
-            if (!controls || controls.querySelector('.widget-close')) return;
-            const close = document.createElement('button');
-            close.type = 'button';
-            close.className = 'widget-close';
-            close.textContent = '×';
-            close.title = 'Close widget';
-            close.setAttribute('aria-label', 'Close widget');
+            if (!controls) return;
+            let close = controls.querySelector('.widget-close');
+            if (!close) {
+                close = document.createElement('button');
+                close.type = 'button';
+                close.className = 'widget-close';
+                close.textContent = '×';
+                close.title = 'Close widget';
+                close.setAttribute('aria-label', 'Close widget');
+                controls.appendChild(close);
+            }
             close.addEventListener('mousedown', event => event.stopPropagation());
             close.addEventListener('click', event => {
                 event.preventDefault();
                 event.stopPropagation();
-                if (!widget.classList.contains('hidden')) $(triggerId).click();
+                if (!widget.classList.contains('hidden')) {
+                    const trigger = $(triggerId);
+                    if (trigger && trigger.classList.contains('active')) {
+                        trigger.click();
+                    } else {
+                        widget.classList.add('hidden');
+                    }
+                }
             });
-            controls.appendChild(close);
         });
     });
 })();

@@ -3,7 +3,11 @@
     "Systems calm. Curiosity active.",
     "I am conducting a very serious pixel inspection.",
     "Everything looks delightfully clickable from here.",
-    "Small robot, large browser tab."
+    "Small robot, large browser tab.",
+    "I counted the pixels. One of them moved.",
+    "No alarms, no updates, just premium hovering.",
+    "I wonder where tabs go when nobody is looking.",
+    "My antenna says this is a productive-looking page."
   ],
   "morning": [
     "Morning. Shall we make something good?",
@@ -18,12 +22,18 @@
   "search": [
     "I checked. There is plenty of room on this search bar.",
     "Where are we going next?",
-    "Search systems standing by."
+    "Search systems standing by.",
+    "Type anything. I promise not to judge the spelling.",
+    "The whole web is behind this little box.",
+    "I checked under the search bar. Mostly photons.",
+    "I can sit here, but queries get priority."
   ],
   "weather": [
-    "Good weather for an umbrella test.",
     "Rain protocol: dry circuits, excellent posture.",
-    "I like the rain. From underneath this umbrella."
+    "Good weather for an umbrella test.",
+    "I like the rain. From underneath this umbrella.",
+    "Checking the local atmosphere.",
+    "The sky data looks interesting today."
   ],
   "clock": [
     "Time flies. I have the backpack to prove it.",
@@ -38,7 +48,11 @@
   "widget": [
     "A fine widget. Very sit-able.",
     "I am helping by supervising this panel.",
-    "Widget inspection complete. Almost."
+    "Widget inspection complete. Almost.",
+    "This panel has excellent structural integrity.",
+    "I am now assistant manager of this widget.",
+    "A neat little island of useful information.",
+    "I give this perch five tiny bolts out of five."
   ],
   "shortcut": [
     "Express route located.",
@@ -48,7 +62,11 @@
   "rocket": [
     "Taking the scenic flight path.",
     "Tiny thrusters, full commitment.",
-    "Please keep hands inside the browser."
+    "Please keep hands inside the browser.",
+    "Thruster temperature: toasty but acceptable.",
+    "Plotting a route around the large icons.",
+    "The backpack insists we take the fast route.",
+    "Launching on three. I may have skipped one and two."
   ],
   "fall": [
     "That landing was mostly intentional.",
@@ -68,11 +86,189 @@
   "drag": [
     "Wheee! Careful with the antenna.",
     "Ragdoll systems are apparently operational.",
-    "I trust your landing calculations. Mostly."
+    "I trust your landing calculations. Mostly.",
+    "My arms were not designed for this much enthusiasm.",
+    "This is an unusual interpretation of air travel.",
+    "Gravity and I are renegotiating our agreement.",
+    "If I land upright, it absolutely counts as skill."
+  ],
+  "juggle": [
+    "Three objects, two hands, one questionable plan.",
+    "Observe my advanced tab-circus protocol.",
+    "I only dropped these during rehearsal.",
+    "The trick is pretending gravity works for you.",
+    "Please hold applause until all objects are accounted for.",
+    "My coordination drivers received an update."
+  ],
+  "scavenge": [
+    "I found this just beyond the browser edge.",
+    "Outside the page is mostly cables and mysteries.",
+    "I brought back a souvenir from the margin.",
+    "You would be amazed what rolls behind a viewport.",
+    "Treasure retrieval complete. Value still unknown.",
+    "The edge guards did not see a thing."
+  ],
+  "zoom": [
+    "Maximum browser velocity!",
+    "I left a very small sonic boom near the scrollbar.",
+    "Fast route selected. Brakes remain theoretical.",
+    "One high-speed lap for diagnostic purposes.",
+    "That blur was me. The other blur was probably also me.",
+    "Thrusters happy. Hair unaffected."
+  ],
+  "nap": [
+    "Entering extremely brief sleep mode.",
+    "Wake me if the internet does something interesting.",
+    "Resting my processors for exactly several moments.",
+    "This widget is softer than it looks.",
+    "I am not sleeping. I am compiling with my eyes closed.",
+    "Tiny robot nap commencing now."
+  ],
+  "dance": [
+    "This tab has excellent acoustics.",
+    "Activating moves from an unverified software package.",
+    "My left foot is running a different version.",
+    "A short dance improves cache alignment.",
+    "Rhythm detected. Dignity temporarily suspended.",
+    "I call this one the spinning favicon."
+  ],
+  "scan": [
+    "Inspecting the local pixels.",
+    "Scanning for loose links and hidden snacks.",
+    "This icon contains the recommended amount of icon.",
+    "Optical inspection underway. Please remain digital.",
+    "Interesting. My scanner says this is definitely a page.",
+    "Looking for tiny bugs. The friendly kind first."
+  ],
+  "balance": [
+    "Perfectly calibrated. Probably.",
+    "Balance is just falling with excellent patience.",
+    "Do not sneeze near the browser for a moment.",
+    "Gyroscopes at maximum concentration.",
+    "This is easier when nobody watches.",
+    "Stable enough for a dramatic pause."
+  ],
+  "peek": [
+    "Just checking whether the edge is still here.",
+    "I can see at least three pixels beyond the page.",
+    "Nothing suspicious outside. Except one suspicious cursor.",
+    "Edge inspection complete. The edge remains edgy.",
+    "I was not hiding. This is tactical peeking.",
+    "The margins are quiet today."
+  ],
+  "broadcast": [
+    "I have a tiny update from the outside world.",
+    "A message just arrived through the antenna.",
+    "Brief information delivery commencing.",
+    "I checked the feeds so you did not have to.",
+    "Incoming item of possible interest.",
+    "The wider web has sent us a postcard."
   ],
   "focus": [
     "Focus mode. I will reduce my important wandering.",
     "Quiet engines. You have this.",
     "I will guard the distractions."
-  ]
+  ],
+  "mixers": {
+    "openers": [
+      "Tiny report:", "Quick thought:", "Antenna update:", "For the record:",
+      "Browser observation:", "Small discovery:", "Pip fact:", "Current theory:",
+      "Unofficial finding:", "Status note:", "Between us:", "My sensors suggest:"
+    ],
+    "endings": [
+      "Probably.", "Science may disagree.", "I stand by this result.", "No further questions.",
+      "That feels important.", "I have logged it accordingly.", "Please act surprised.",
+      "The antenna agrees.", "Results may vary by tab.", "I will investigate later.",
+      "This is excellent news for tiny robots.", "Make of that what you will."
+    ]
+  },
+  "fragments": {
+    "general": [
+      "the page feels unusually adventurous today.",
+      "a calm screen leaves more room for curious thoughts.",
+      "every useful click begins as a suspicious hover.",
+      "the pixels are cooperating beautifully.",
+      "my tiny engines are ready for unnecessary travel.",
+      "the cursor appears to know where it is going."
+    ],
+    "idle": [
+      "standing still is simply movement with excellent restraint.",
+      "I can hear the shortcuts quietly shortcutting.",
+      "the bottom edge makes a dependable place to think.",
+      "nothing is happening, which gives me several ideas.",
+      "my background processes are mostly daydreams."
+    ],
+    "search": [
+      "this search bar could lead almost anywhere.",
+      "a good question is a tiny map of the unknown.",
+      "the web is one Enter key away.",
+      "sitting on search improves query aerodynamics."
+    ],
+    "weather": [
+      "the sky conditions provide helpful atmospheric data.",
+      "the weather badge is measuring the local climate.",
+      "temperature sensors report steady readings.",
+      "outside weather changes, but this tab stays cosy."
+    ],
+    "widget": [
+      "this widget is sturdy enough for a thoughtful sit.",
+      "panels make excellent observation decks.",
+      "useful information benefits from robot supervision.",
+      "I have claimed this corner in the name of comfort."
+    ],
+    "juggle": [
+      "gravity seems willing to cooperate for several seconds.",
+      "three moving objects create at least four problems.",
+      "coordination is mostly confident timing.",
+      "none of these objects has filed a complaint yet."
+    ],
+    "scavenge": [
+      "the world beyond the viewport contains excellent clutter.",
+      "I found an object with mysterious but impressive credentials.",
+      "off-screen retrieval is ninety percent dramatic entrance.",
+      "this souvenir followed me home without paperwork."
+    ],
+    "zoom": [
+      "the shortest distance between two points involves more rocket.",
+      "speed makes every part of the page equally nearby.",
+      "the scrollbar briefly registered a tailwind.",
+      "my braking calculations were inspirational rather than precise."
+    ],
+    "nap": [
+      "processor naps are measured in very efficient dreams.",
+      "this perch has passed the comfort benchmark.",
+      "closed eyes reduce unnecessary rendering.",
+      "rest is just focus mode for the whole robot."
+    ],
+    "dance": [
+      "rhythm improves even the smallest operating system.",
+      "one foot has discovered experimental choreography.",
+      "the background colours clearly requested a dance.",
+      "this movement is fully backwards compatible."
+    ],
+    "scan": [
+      "the local pixels contain acceptable levels of mystery.",
+      "my scanner found several highly organized rectangles.",
+      "this shortcut emits a strong destination signal.",
+      "the page structure appears friendly and mostly house-trained."
+    ],
+    "balance": [
+      "the centre of gravity is more of a polite suggestion.",
+      "my gyroscopes enjoy a difficult assignment.",
+      "this object is lighter when I look confident.",
+      "perfect balance requires imperfect amounts of wobble."
+    ],
+    "peek": [
+      "the edge of the screen is a surprisingly social place.",
+      "half a robot can still conduct a full inspection.",
+      "the outside margin remains largely unexplored.",
+      "peeking is reconnaissance with better comic timing."
+    ],
+    "broadcast": [
+      "the antenna has collected something worth sharing.",
+      "one small update has crossed the wider web.",
+      "the feeds are active but behaving themselves.",
+      "fresh information has entered the tiny newsroom."
+    ]
+  }
 }
