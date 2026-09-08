@@ -560,6 +560,39 @@ body { font-size: calc(16px * var(--ui-scale)); }
     pointer-events: none;
 }
 
+.avatar-hit-target {
+    position: fixed;
+    z-index: 1101;
+    width: 66px;
+    height: 82px;
+    padding: 0;
+    border: 0;
+    border-radius: 45% 45% 34% 34%;
+    background: transparent;
+    outline: none;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+.avatar-hit-target:hover::after,
+.avatar-hit-target:focus-visible::after {
+    content: "";
+    position: absolute;
+    inset: 8px 10px 5px;
+    border: 1px solid rgba(111, 241, 255, .28);
+    border-radius: 46%;
+    box-shadow: 0 0 20px rgba(80, 227, 255, .15);
+}
+
+.avatar-hit-target:focus-visible {
+    box-shadow: 0 0 0 3px rgba(105, 238, 255, .35);
+}
+
+.avatar-hit-target.is-dragging { cursor: grabbing; }
+.avatar-hit-target.is-disabled { pointer-events: none; }
+
 .avatar-speech {
     position: fixed;
     z-index: 1102;

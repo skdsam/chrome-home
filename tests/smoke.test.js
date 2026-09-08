@@ -28,11 +28,15 @@ assert(!html.includes('workspace-profile'), 'Workspace profiles must remain remo
 assert(html.includes('id="tab-appearance"'), 'Appearance controls belong in Settings');
 assert(!html.includes('fonts.googleapis.com'), 'Extension pages must not load remote fonts');
 assert(html.includes('id="avatar-canvas"'), 'The 3D companion needs its own non-interactive canvas');
+assert(html.includes('id="avatar-hit-target"'), 'The avatar needs a bounded interaction target without blocking the page');
 assert(html.includes('id="avatar-test-sequence"'), 'The temporary avatar test sequence must remain available during review');
 assert(html.includes('avatar.js'), 'The avatar controller must load after the page systems');
 assert(avatar.includes('RocketBackpackModule'), 'The avatar must include its rocket backpack');
 assert(avatar.includes("this.phase = 'rebuilding'"), 'The avatar must support magnetic rebuilding');
 assert(avatar.includes('getAnchors()'), 'Avatar actions must resolve live DOM anchors');
 assert(avatar.includes('prefers-reduced-motion'), 'Avatar movement must respect reduced motion');
+assert(avatar.includes("this.phase = 'thrown'"), 'Dragging Pip must preserve release velocity as a ragdoll throw');
+assert(avatar.includes('collisionSurfaces()'), 'Ragdoll drops must collide with page surfaces');
+assert(avatar.includes('beginWave()'), 'Clicking Pip must trigger a wave');
 assert(Array.isArray(avatarDialogue.rocket) && avatarDialogue.rocket.length > 1, 'Rocket dialogue must ship as editable data');
 console.log('Chrome Home smoke tests passed');

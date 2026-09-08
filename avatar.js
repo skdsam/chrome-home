@@ -25,6 +25,8 @@
         rocket: ['Tiny thrusters, full commitment.'],
         fall: ['That landing was mostly intentional.'],
         rebuild: ['All parts accounted for.'],
+        wave: ['Hello there!'],
+        drag: ['Wheee! Careful with the antenna.'],
         focus: ['Quiet engines. You have this.']
     };
 
@@ -41,7 +43,8 @@
         ai: 5400,
         widget: 6600,
         shortcut: 5000,
-        break: 5200
+        break: 5200,
+        wave: 2400
     };
 
     const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -91,6 +94,7 @@
         constructor() {
             this.stage = document.getElementById('avatar-stage');
             this.canvas = document.getElementById('avatar-canvas');
+            this.hitTarget = document.getElementById('avatar-hit-target');
             this.bubble = document.getElementById('avatar-speech');
             this.anchorDebug = document.getElementById('avatar-anchor-debug');
             this.diagnostics = document.getElementById('avatar-diagnostics');
@@ -113,6 +117,9 @@
             this.lastRender = 0;
             this.clockEffectShown = false;
             this.breakState = null;
+            this.dragState = null;
+            this.throwState = null;
+            this.jointVelocity = { head: 0, torso: 0, leftArm: 0, rightArm: 0, leftLeg: 0, rightLeg: 0 };
             this.running = true;
             this.reducedMotion = false;
             this.materials = [];
@@ -418,16 +425,250 @@
                 this.speak('focus');
                 this.nextActionAt = performance.now() + 90000;
             });
+
+            if (this.hitTarget) {
+                this.hitTarget.addEventListener('pointerdown', event => this.beginDrag(event));
+                this.hitTarget.addEventListener('pointermove', event => this.dragPointerMove(event));
+                this.hitTarget.addEventListener('pointerup', event => this.endDrag(event));
+                this.hitTarget.addEventListener('pointercancel', event => this.endDrag(event));
+                this.hitTarget.addEventListener('click', event => {
+                    event.preventDefault();
+                    if (this.suppressAvatarClick) {
+                        this.suppressAvatarClick = false;
+                        return;
+                    }
+                    this.beginWave();
+                });
+            }
+        }
+
+        beginDrag(event) {
+            if (!this.settings.enabled || this.phase === 'breaking' || this.phase === 'rebuilding') return;
+            event.preventDefault();
+            this.hitTarget.setPointerCapture(event.pointerId);
+            this.suppressAvatarClick = false;
+            this.testQueue = [];
+            this.flight = null;
+            this.throwState = null;
+            this.setRocketVisible(false);
+            this.umbrella.visible = false;
+            this.character.scale.setScalar(this.settings.scale / 100);
+            this.character.userData.bob = 0;
+            this.phase = 'dragging';
+            this.action = 'drag';
+            this.phaseStarted = performance.now();
+            this.dragState = {
+                pointerId: event.pointerId,
+                startX: event.clientX,
+                startY: event.clientY,
+                grabOffsetX: event.clientX - this.screenPosition.x,
+                grabOffsetY: event.clientY - this.screenPosition.y,
+                lastX: event.clientX,
+                lastY: event.clientY,
+                lastTime: performance.now(),
+                velocityX: 0,
+                velocityY: 0,
+                moved: false
+            };
+            this.hitTarget.classList.add('is-dragging');
+            this.bubble.classList.add('hidden');
+        }
+
+        dragPointerMove(event) {
+            const drag = this.dragState;
+            if (!drag || drag.pointerId !== event.pointerId || this.phase !== 'dragging') return;
+            event.preventDefault();
+            const now = performance.now();
+            const dt = clamp((now - drag.lastTime) / 1000, .001, .05);
+            const instantX = (event.clientX - drag.lastX) / dt;
+            const instantY = (event.clientY - drag.lastY) / dt;
+            const response = 1 - Math.exp(-18 * dt);
+            drag.velocityX = lerp(drag.velocityX, instantX, response);
+            drag.velocityY = lerp(drag.velocityY, instantY, response);
+            drag.lastX = event.clientX;
+            drag.lastY = event.clientY;
+            drag.lastTime = now;
+            if (Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > 6) drag.moved = true;
+            this.screenPosition.x = clamp(event.clientX - drag.grabOffsetX, 38, this.viewport.width - 38);
+            this.screenPosition.y = clamp(event.clientY - drag.grabOffsetY, 72, this.viewport.height - 12);
+        }
+
+        endDrag(event) {
+            const drag = this.dragState;
+            if (!drag || drag.pointerId !== event.pointerId) return;
+            event.preventDefault();
+            try { this.hitTarget.releasePointerCapture(event.pointerId); } catch (_) { /* Capture may already be gone. */ }
+            this.hitTarget.classList.remove('is-dragging');
+            this.dragState = null;
+
+            if (!drag.moved) {
+                this.phase = 'idle';
+                this.action = 'idle';
+                this.character.rotation.z = 0;
+                this.scheduleNext();
+                return;
+            }
+
+            this.suppressAvatarClick = event.type !== 'pointercancel';
+            if (this.suppressAvatarClick) {
+                setTimeout(() => { this.suppressAvatarClick = false; }, 0);
+            }
+            if (this.reducedMotion) {
+                this.phase = 'idle';
+                this.action = 'idle';
+                this.character.rotation.z = 0;
+                this.scheduleNext();
+                return;
+            }
+
+            this.phase = 'thrown';
+            this.action = 'ragdoll';
+            this.phaseStarted = performance.now();
+            this.throwState = {
+                velocityX: clamp(drag.velocityX, -1350, 1350),
+                velocityY: clamp(drag.velocityY + 45, -1150, 1250),
+                angularVelocity: clamp(drag.velocityX / 520, -4.2, 4.2),
+                bounces: 0,
+                settledSurface: null
+            };
+            this.speak('drag');
+        }
+
+        beginWave() {
+            if (!this.settings.enabled || this.phase === 'breaking' || this.phase === 'rebuilding') return;
+            this.testQueue = [];
+            this.flight = null;
+            this.throwState = null;
+            this.dragState = null;
+            this.setRocketVisible(false);
+            this.umbrella.visible = false;
+            this.character.scale.setScalar(this.settings.scale / 100);
+            this.character.rotation.z = 0;
+            this.phase = 'perform';
+            this.action = 'wave';
+            this.phaseStarted = performance.now();
+            this.rememberAction('wave');
+            this.speak('wave');
+        }
+
+        springRotation(object, target, key, stiffness, damping, dt) {
+            let velocity = this.jointVelocity[key] || 0;
+            velocity += ((target - object.rotation.z) * stiffness - velocity * damping) * dt;
+            object.rotation.z += velocity * dt;
+            this.jointVelocity[key] = velocity;
+        }
+
+        updateDraggedPose(dt) {
+            if (!this.dragState) return;
+            const vx = clamp(this.dragState.velocityX / 800, -1, 1);
+            const vy = clamp(this.dragState.velocityY / 800, -1, 1);
+            this.springRotation(this.head, -vx * .38, 'head', 34, 7.5, dt);
+            this.springRotation(this.torso, -vx * .18, 'torso', 28, 7, dt);
+            this.springRotation(this.leftArm, -.45 - vx * .72 - vy * .2, 'leftArm', 24, 5.5, dt);
+            this.springRotation(this.rightArm, .45 - vx * .72 + vy * .2, 'rightArm', 24, 5.5, dt);
+            this.springRotation(this.leftLeg, .2 + vx * .5 - vy * .24, 'leftLeg', 20, 4.8, dt);
+            this.springRotation(this.rightLeg, -.2 + vx * .5 + vy * .24, 'rightLeg', 20, 4.8, dt);
+            this.character.rotation.z = lerp(this.character.rotation.z, -vx * .2, 1 - Math.exp(-10 * dt));
+        }
+
+        collisionSurfaces() {
+            const surfaces = [{ y: this.viewport.height - 16, left: 0, right: this.viewport.width, name: 'floor' }];
+            const selectors = ['.search-bar', '.spotify-widget:not(.hidden)', '#weather-display', '.shortcut-card'];
+            document.querySelectorAll(selectors.join(',')).forEach(element => {
+                const rect = element.getBoundingClientRect();
+                if (rect.width < 45 || rect.height < 12 || rect.top < 60 || rect.top > this.viewport.height - 25) return;
+                surfaces.push({
+                    y: rect.top + 3,
+                    left: rect.left + Math.min(16, rect.width * .18),
+                    right: rect.right - Math.min(16, rect.width * .18),
+                    name: element.id || element.className.split(' ')[0]
+                });
+            });
+            return surfaces.sort((a, b) => a.y - b.y);
+        }
+
+        updateThrownPose(dt, now) {
+            const state = this.throwState;
+            if (!state) return;
+
+            if (this.phase === 'recovering') {
+                const response = 1 - Math.exp(-8 * dt);
+                this.character.rotation.z = lerp(this.character.rotation.z, 0, response);
+                this.springRotation(this.head, 0, 'head', 42, 10, dt);
+                this.springRotation(this.torso, 0, 'torso', 42, 10, dt);
+                this.springRotation(this.leftArm, -.12, 'leftArm', 36, 9, dt);
+                this.springRotation(this.rightArm, .12, 'rightArm', 36, 9, dt);
+                this.springRotation(this.leftLeg, .02, 'leftLeg', 36, 9, dt);
+                this.springRotation(this.rightLeg, -.02, 'rightLeg', 36, 9, dt);
+                if (now - this.phaseStarted > 900) {
+                    this.phase = 'idle';
+                    this.action = 'idle';
+                    this.throwState = null;
+                    Object.keys(this.jointVelocity).forEach(key => { this.jointVelocity[key] = 0; });
+                    this.character.rotation.z = 0;
+                    this.scheduleNext();
+                }
+                return;
+            }
+
+            const previousY = this.screenPosition.y;
+            state.velocityY += 1180 * dt;
+            state.velocityX *= Math.exp(-.12 * dt);
+            this.screenPosition.x += state.velocityX * dt;
+            this.screenPosition.y += state.velocityY * dt;
+            this.character.rotation.z += state.angularVelocity * dt;
+            state.angularVelocity *= Math.exp(-.3 * dt);
+
+            if (this.screenPosition.x < 38 || this.screenPosition.x > this.viewport.width - 38) {
+                this.screenPosition.x = clamp(this.screenPosition.x, 38, this.viewport.width - 38);
+                state.velocityX *= -.46;
+                state.angularVelocity *= -.72;
+            }
+
+            if (state.velocityY > 0) {
+                const surface = this.collisionSurfaces().find(item =>
+                    this.screenPosition.x >= item.left && this.screenPosition.x <= item.right &&
+                    previousY <= item.y && this.screenPosition.y >= item.y
+                );
+                if (surface) {
+                    this.screenPosition.y = surface.y;
+                    state.velocityY = -Math.abs(state.velocityY) * .34;
+                    state.velocityX *= .7;
+                    state.angularVelocity *= .68;
+                    state.bounces += 1;
+                    state.settledSurface = surface.name;
+                }
+            }
+
+            const motionX = clamp(state.velocityX / 700, -1.2, 1.2);
+            const motionY = clamp(state.velocityY / 700, -1.2, 1.2);
+            this.springRotation(this.head, -motionX * .55, 'head', 8, 1.8, dt);
+            this.springRotation(this.torso, -motionX * .2, 'torso', 7, 1.6, dt);
+            this.springRotation(this.leftArm, -1.15 - motionY * .25, 'leftArm', 6, 1.25, dt);
+            this.springRotation(this.rightArm, 1.15 + motionY * .25, 'rightArm', 6, 1.25, dt);
+            this.springRotation(this.leftLeg, .55 + motionX * .3, 'leftLeg', 5, 1.1, dt);
+            this.springRotation(this.rightLeg, -.55 + motionX * .3, 'rightLeg', 5, 1.1, dt);
+
+            const settled = state.settledSurface && Math.abs(state.velocityY) < 90 && Math.abs(state.velocityX) < 75;
+            if (settled || now - this.phaseStarted > 4800) {
+                state.velocityX = 0;
+                state.velocityY = 0;
+                state.angularVelocity = 0;
+                this.phase = 'recovering';
+                this.phaseStarted = now;
+            }
         }
 
         applySettings() {
             if (!this.settings.enabled) {
                 this.stage.classList.add('hidden');
+                if (this.hitTarget) this.hitTarget.classList.add('hidden');
                 this.bubble.classList.add('hidden');
                 this.diagnostics.classList.add('hidden');
                 return;
             }
             this.stage.classList.remove('hidden');
+            if (this.hitTarget) this.hitTarget.classList.remove('hidden');
             const scaleOutput = document.getElementById('avatar-scale-output');
             if (scaleOutput) scaleOutput.textContent = `${this.settings.scale}%`;
             this.character.scale.setScalar(this.settings.scale / 100);
@@ -662,6 +903,12 @@
 
         finishAction() {
             this.umbrella.visible = false;
+            if (this.action === 'wave') {
+                this.phase = 'idle';
+                this.action = 'idle';
+                this.scheduleNext();
+                return;
+            }
             if (this.testQueue.length) {
                 const next = this.testQueue.shift();
                 setTimeout(() => this.beginAction(next, true), 280);
@@ -787,6 +1034,11 @@
 
         applyPose(now, dt) {
             if (this.phase === 'breaking' || this.phase === 'rebuilding') return;
+            if (this.phase === 'dragging' || this.phase === 'thrown' || this.phase === 'recovering') {
+                this.umbrella.visible = false;
+                this.updateEyes(now);
+                return;
+            }
             const time = now / 1000;
             const isFlying = this.phase === 'travel' || this.phase === 'return';
             const action = this.phase === 'perform' ? this.action : 'idle';
@@ -820,6 +1072,10 @@
                 rightArm = .32;
             } else if (action === 'shortcut') {
                 rightArm = .72 + Math.sin(time * 6) * .55;
+            } else if (action === 'wave') {
+                rightArm = 1.15 + (this.reducedMotion ? .35 : Math.sin(time * 7.5) * .62);
+                leftArm = -.2;
+                this.head.rotation.z = lerp(this.head.rotation.z, -.1, .12);
             }
             this.leftArm.rotation.z = lerp(this.leftArm.rotation.z, leftArm, .12);
             this.rightArm.rotation.z = lerp(this.rightArm.rotation.z, rightArm, .12);
@@ -847,9 +1103,23 @@
         updateCharacterTransform() {
             const world = this.screenToWorld(this.screenPosition);
             this.character.position.set(world.x, world.y + (this.character.userData.bob || 0), 0);
-            const flying = this.phase === 'travel' || this.phase === 'return';
-            this.shadow.visible = !flying && this.phase !== 'breaking';
+            const airborne = this.phase === 'travel' || this.phase === 'return' || this.phase === 'dragging' || this.phase === 'thrown';
+            this.shadow.visible = !airborne && this.phase !== 'breaking';
             this.shadow.material.opacity = this.phase === 'rebuilding' ? .14 : .28;
+            this.updateHitTarget();
+        }
+
+        updateHitTarget() {
+            if (!this.hitTarget) return;
+            const scale = Math.max(.25, this.character.scale.x || this.settings.scale / 100);
+            const width = 66 * scale;
+            const height = 82 * scale;
+            this.hitTarget.style.width = `${width}px`;
+            this.hitTarget.style.height = `${height}px`;
+            this.hitTarget.style.left = `${this.screenPosition.x - width / 2}px`;
+            this.hitTarget.style.top = `${this.screenPosition.y - height + 7 * scale}px`;
+            const disabled = this.phase === 'breaking' || this.phase === 'rebuilding' || scale < .35;
+            this.hitTarget.classList.toggle('is-disabled', disabled);
         }
 
         speak(category, exactText) {
@@ -910,6 +1180,9 @@
             this.setRocketVisible(false);
             this.umbrella.visible = false;
             this.resetPieceTransforms();
+            this.dragState = null;
+            this.throwState = null;
+            if (this.hitTarget) this.hitTarget.classList.remove('is-dragging');
             this.screenPosition = { ...this.getAnchors().home.point };
             this.bubble.classList.add('hidden');
             this.scheduleNext();
@@ -936,13 +1209,19 @@
             this.lastRender = now;
 
             if (!this.reducedMotion) {
-                if (this.phase === 'travel' || this.phase === 'return') this.updateTravel(now);
+                if (this.phase === 'dragging') this.updateDraggedPose(dt);
+                else if (this.phase === 'thrown' || this.phase === 'recovering') this.updateThrownPose(dt, now);
+                else if (this.phase === 'travel' || this.phase === 'return') this.updateTravel(now);
                 else if (this.phase === 'perform') this.updatePerformance(now);
                 else if (this.phase === 'breaking' || this.phase === 'rebuilding') this.updateBreak(dt, now);
                 else if (this.phase === 'idle' && now >= this.nextActionAt && !document.querySelector('.modal-overlay:not(.hidden)')) {
                     const actions = this.eligibleActions();
                     this.beginAction(actions[Math.floor(this.random() * actions.length)]);
                 }
+            } else if (this.phase === 'dragging') {
+                this.updateDraggedPose(dt);
+            } else if (this.phase === 'perform' && this.action === 'wave') {
+                this.updatePerformance(now);
             }
 
             this.applyPose(now, dt);
