@@ -31,6 +31,14 @@
         <canvas id="aurora-canvas" aria-hidden="true"></canvas>
     </div>
 
+    <!-- Screen-space 3D companion. The canvas never captures clicks, so the page stays fully usable. -->
+    <div id="avatar-stage" class="avatar-stage" aria-hidden="true">
+        <canvas id="avatar-canvas"></canvas>
+        <div id="avatar-anchor-debug" class="avatar-anchor-debug hidden"></div>
+    </div>
+    <div id="avatar-speech" class="avatar-speech hidden" role="status" aria-live="polite"></div>
+    <div id="avatar-diagnostics" class="avatar-diagnostics hidden" aria-live="polite"></div>
+
     <section id="daily-focus" class="daily-focus" aria-label="Daily focus">
         <div id="dashboard-clock" class="dashboard-clock">--:--</div>
         <div id="dashboard-date" class="dashboard-date"></div>
@@ -593,6 +601,7 @@
             <div class="settings-tabs">
                 <div class="tab-item active" data-tab="tab-general">General</div>
                 <div class="tab-item" data-tab="tab-appearance">Appearance</div>
+                <div class="tab-item" data-tab="tab-avatar">Avatar</div>
                 <div class="tab-item" data-tab="tab-background">Background</div>
                 <div class="tab-item" data-tab="tab-sidebar">Sidebar</div>
                 <div class="tab-item" data-tab="tab-data">Data</div>
@@ -647,6 +656,62 @@
                     <div class="settings-group">
                         <button id="reset-layout" type="button" class="btn-secondary" style="width:100%;">Reset widget layout</button>
                     </div>
+                </div>
+
+                <!-- Tab: Avatar -->
+                <div id="tab-avatar" class="tab-content">
+                    <div class="avatar-setting-row settings-group">
+                        <div>
+                            <label for="avatar-enabled">3D companion</label>
+                            <p>Let Pip explore and react to this page.</p>
+                        </div>
+                        <label class="switch"><input id="avatar-enabled" type="checkbox" checked><span class="slider round"></span></label>
+                    </div>
+                    <div class="settings-group">
+                        <label for="avatar-activity">Activity</label>
+                        <select id="avatar-activity" class="football-select avatar-select">
+                            <option value="quiet">Quiet</option>
+                            <option value="normal" selected>Normal</option>
+                            <option value="lively">Lively</option>
+                        </select>
+                    </div>
+                    <div class="settings-group">
+                        <label for="avatar-scale">Avatar size</label>
+                        <div class="avatar-range-row"><input id="avatar-scale" type="range" min="80" max="130" value="100"><output id="avatar-scale-output">100%</output></div>
+                    </div>
+                    <div class="avatar-setting-row settings-group">
+                        <div><label for="avatar-speech-enabled">Speech bubbles</label><p>Short contextual comments, with repeat protection.</p></div>
+                        <label class="switch"><input id="avatar-speech-enabled" type="checkbox" checked><span class="slider round"></span></label>
+                    </div>
+                    <div class="avatar-setting-row settings-group">
+                        <div><label for="avatar-weather-enabled">Weather reactions</label><p>Includes the umbrella when rain is active.</p></div>
+                        <label class="switch"><input id="avatar-weather-enabled" type="checkbox" checked><span class="slider round"></span></label>
+                    </div>
+                    <div class="avatar-setting-row settings-group">
+                        <div><label for="avatar-break-enabled">Rare mishaps</label><p>Occasional harmless fall-apart and magnetic rebuild.</p></div>
+                        <label class="switch"><input id="avatar-break-enabled" type="checkbox" checked><span class="slider round"></span></label>
+                    </div>
+                    <div class="settings-group">
+                        <label for="avatar-quality">Render quality</label>
+                        <select id="avatar-quality" class="football-select avatar-select">
+                            <option value="auto" selected>Auto</option>
+                            <option value="high">High</option>
+                            <option value="low">Battery saver</option>
+                        </select>
+                    </div>
+                    <div class="settings-group">
+                        <label for="avatar-debug-mode">Review view</label>
+                        <select id="avatar-debug-mode" class="football-select avatar-select">
+                            <option value="final" selected>Final render</option>
+                            <option value="anchors">Page anchors</option>
+                            <option value="wireframe">Wireframe</option>
+                        </select>
+                    </div>
+                    <div class="avatar-settings-actions settings-group">
+                        <button id="avatar-test-sequence" type="button" class="btn-primary">Test avatar sequence</button>
+                        <button id="avatar-reset-memory" type="button" class="btn-secondary">Reset memory</button>
+                    </div>
+                    <p class="avatar-settings-note">The test button is temporary and can be removed once the movement and personality feel right.</p>
                 </div>
 
                 <!-- Tab: Background -->
@@ -813,6 +878,7 @@
     <script src="cursor-trail.js"></script>
     <script src="newtab.js"></script>
     <script src="advanced-dashboard.js"></script>
+    <script src="avatar.js"></script>
 </body>
 
 </html>

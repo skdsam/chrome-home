@@ -1,0 +1,68 @@
+{
+  "idle": [
+    "Systems calm. Curiosity active.",
+    "I am conducting a very serious pixel inspection.",
+    "Everything looks delightfully clickable from here.",
+    "Small robot, large browser tab."
+  ],
+  "morning": [
+    "Morning. Shall we make something good?",
+    "Fresh tab, fresh start.",
+    "Good morning. I warmed up the tiny engines."
+  ],
+  "night": [
+    "Late shift? I brought the quiet thrusters.",
+    "The screen is peaceful at this hour.",
+    "Remember to land for the night eventually."
+  ],
+  "search": [
+    "I checked. There is plenty of room on this search bar.",
+    "Where are we going next?",
+    "Search systems standing by."
+  ],
+  "weather": [
+    "Good weather for an umbrella test.",
+    "Rain protocol: dry circuits, excellent posture.",
+    "I like the rain. From underneath this umbrella."
+  ],
+  "clock": [
+    "Time flies. I have the backpack to prove it.",
+    "That minute appears to be in working order.",
+    "A tiny adjustment to the space-time display."
+  ],
+  "ai": [
+    "The big brains are over here.",
+    "Need a second pair of silicon eyes?",
+    "I found the clever corner."
+  ],
+  "widget": [
+    "A fine widget. Very sit-able.",
+    "I am helping by supervising this panel.",
+    "Widget inspection complete. Almost."
+  ],
+  "shortcut": [
+    "Express route located.",
+    "So many doors, all one click away.",
+    "This shortcut has passed inspection."
+  ],
+  "rocket": [
+    "Taking the scenic flight path.",
+    "Tiny thrusters, full commitment.",
+    "Please keep hands inside the browser."
+  ],
+  "fall": [
+    "That landing was mostly intentional.",
+    "I appear to have exceeded my recommended number of pieces.",
+    "Nothing a magnetic reboot cannot fix."
+  ],
+  "rebuild": [
+    "All parts accounted for.",
+    "Reassembly complete. Dignity loading.",
+    "Much better. Let us never mention that again."
+  ],
+  "focus": [
+    "Focus mode. I will reduce my important wandering.",
+    "Quiet engines. You have this.",
+    "I will guard the distractions."
+  ]
+}

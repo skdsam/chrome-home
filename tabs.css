@@ -4,10 +4,14 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     margin: -10px -30px 10px -30px; /* Use negative margins to span full width */
     padding: 0 30px;
+    overflow-x: auto;
+    scrollbar-width: none;
 }
 
+.settings-tabs::-webkit-scrollbar { display: none; }
+
 .tab-item {
-    padding: 12px 15px;
+    padding: 12px 11px;
     font-size: 0.9rem;
     font-weight: 500;
     color: #888;
