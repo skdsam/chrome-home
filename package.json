@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "description": "Chrome Home Extension Packager",
   "scripts": {
+    "check": "node --check newtab.js && node --check advanced-dashboard.js && node --check weather.js && node --check storage.js && node --check notifications.js",
+    "test": "node tests/smoke.test.js",
     "zip": "powershell Compress-Archive -Path manifest.json, *.html, *.js, *.css, icons, icon.png -DestinationPath chrome-home.zip -Force"
   }
 }

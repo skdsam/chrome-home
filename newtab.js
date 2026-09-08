@@ -1193,8 +1193,12 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
 
     shortcutForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const url = document.getElementById('shortcut-url').value;
-        const name = document.getElementById('shortcut-name').value;
+        const url = safeHttpUrl(document.getElementById('shortcut-url').value);
+        const name = document.getElementById('shortcut-name').value.trim();
+        if (!url) {
+            await window.customAlert('Invalid URL', 'Only http:// and https:// links can be saved.');
+            return;
+        }
 
         if (editingId) {
             await updateShortcut(editingId, url, name);
@@ -1381,7 +1385,7 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
 
                 item.innerHTML = `
                     <img src="${iconUrl}" width="16" height="16" style="border-radius: 4px;">
-                    <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${site.title}</span>
+                    <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(site.title)}</span>
                 `;
 
                 topSitesList.appendChild(item);
@@ -1406,13 +1410,18 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
     addMySiteBtn.addEventListener('click', async () => {
         const url = await window.customPrompt('Add Site', 'Enter the website URL:');
         if (!url) return;
+        const normalizedUrl = safeHttpUrl(url.includes('://') ? url : `https://${url}`);
+        if (!normalizedUrl) {
+            await window.customAlert('Invalid URL', 'Only http:// and https:// links can be saved.');
+            return;
+        }
         const name = await window.customPrompt('Site Name', 'Enter a name for this site:');
         if (!name) return;
 
         const mySites = await getMySites();
         mySites.push({
             id: Date.now(),
-            url: url.startsWith('http') ? url : `https://${url}`,
+            url: normalizedUrl,
             title: name
         });
         await window.storageManager.set({
@@ -1479,7 +1488,7 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
                     <circle cx="15" cy="19" r="1.5" fill="rgba(255,255,255,0.4)"/>
                 </svg>
                 <img src="${iconUrl}" width="16" height="16" style="border-radius: 4px;">
-                <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${site.title}</span>
+                <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${escapeHtml(site.title)}</span>
             `;
 
             const delBtn = document.createElement('button');
@@ -1689,8 +1698,8 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
             card.dataset.id = shortcut.id;
 
             card.innerHTML = `
-                <img src="${shortcut.icon}" alt="${shortcut.title}" class="shortcut-icon" onerror="this.src='icon-placeholder.png'">
-                <div class="shortcut-title">${shortcut.title}</div>
+                <img src="${escapeHtml(safeHttpUrl(shortcut.icon) || 'icon.png')}" alt="${escapeHtml(shortcut.title)}" class="shortcut-icon">
+                <div class="shortcut-title">${escapeHtml(shortcut.title)}</div>
                 <div class="actions">
                     <button class="edit-btn" data-id="${shortcut.id}">✎</button>
                     <button class="delete-btn" data-id="${shortcut.id}">×</button>
@@ -3275,7 +3284,7 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
 
     function renderNews(items) {
         if (!techNewsList) return;
-        techNewsList.innerHTML = items.map(i => `<a href="${i.url}" target="_blank" class="news-item"><div class="news-title">${i.title}</div><div class="news-meta"><span class="news-score">▲ ${i.score}</span><span class="news-source">${i.source}</span><span class="news-time">${i.time}</span></div></a>`).join('');
+        techNewsList.innerHTML = items.map(i => `<a href="${escapeHtml(safeHttpUrl(i.url) || '#')}" target="_blank" rel="noopener noreferrer" class="news-item"><div class="news-title">${escapeHtml(i.title)}</div><div class="news-meta"><span class="news-score">▲ ${escapeHtml(i.score)}</span><span class="news-source">${escapeHtml(i.source)}</span><span class="news-time">${escapeHtml(i.time)}</span></div></a>`).join('');
     }
 
     if (techNewsBtn) techNewsBtn.addEventListener('click', (e) => {
@@ -3605,6 +3614,15 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
+    }
+
+    function safeHttpUrl(value) {
+        try {
+            const parsed = new URL(String(value).trim());
+            return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.href : null;
+        } catch (_) {
+            return null;
+        }
     }
 
     if (githubReposBtn) githubReposBtn.addEventListener('click', (e) => {

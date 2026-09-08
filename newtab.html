@@ -9,12 +9,7 @@
     <link rel="stylesheet" href="ai-sidebar.css">
     <link rel="stylesheet" href="tabs.css">
     <!-- Google Fonts for premium look -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="icon" type="image/png" href="icon.png">
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@300;400;500;700&display=swap"
-        rel="stylesheet">
 </head>
 
 <body>
@@ -32,7 +27,21 @@
         <!-- Overlay for Rain/Snow/Clouds -->
         <div id="weather-effects" class="weather-overlay"></div>
         <div id="bg-overlay" class="bg-overlay"></div>
+        <canvas id="wet-glass-canvas" aria-hidden="true"></canvas>
+        <canvas id="aurora-canvas" aria-hidden="true"></canvas>
     </div>
+
+    <section id="daily-focus" class="daily-focus" aria-label="Daily focus">
+        <div id="dashboard-clock" class="dashboard-clock">--:--</div>
+        <div id="dashboard-date" class="dashboard-date"></div>
+        <input id="daily-intention" maxlength="90" aria-label="Daily intention" placeholder="What is your focus today?">
+        <div class="focus-actions">
+            <button id="focus-mode-btn" type="button">Focus mode</button>
+            <button id="pomodoro-btn" type="button" aria-live="polite">25:00</button>
+        </div>
+    </section>
+
+    <div id="rain-diagnostics" class="rain-diagnostics hidden" aria-live="polite"></div>
 
     <!-- Header Controls (Top Right) -->
     <div class="header-controls">
@@ -43,7 +52,9 @@
             <span id="weather-temp" style="font-size: 0.9rem;"></span>
         </div>
 
-
+        <div class="control-group control-group-add" aria-label="Add controls">
+            <span class="control-group-name" aria-hidden="true"><span class="control-group-symbol">+</span></span>
+            <div class="control-group-actions">
         <!-- Add Shortcut Button -->
         <div id="add-shortcut-btn" class="control-btn" title="Add Shortcut">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
@@ -63,7 +74,12 @@
                 </path>
             </svg>
         </div>
+            </div>
+        </div>
 
+        <div class="control-group control-group-dashboard" aria-label="Dashboard controls">
+            <span class="control-group-name" aria-hidden="true"><span class="control-group-symbol">▦</span></span>
+            <div class="control-group-actions">
         <!-- Top Sites Trigger -->
         <div id="top-sites-btn" class="control-btn" title="Top Sites">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
@@ -185,6 +201,15 @@
         </div>
 
 
+        <button id="command-palette-btn" class="control-btn" type="button" title="Command palette (Ctrl+K)" aria-label="Command palette">⌘</button>
+            </div>
+        </div>
+
+        <div class="control-group control-group-settings" aria-label="Settings controls">
+            <span class="control-group-name" aria-hidden="true"><span class="control-group-symbol">⚙</span></span>
+            <div class="control-group-actions">
+        <!-- TEMPORARY QA CONTROL: remove this button after the wet-glass effect is approved. -->
+        <button id="rain-test-btn" class="control-btn rain-test-control" type="button" title="Test rain" aria-label="Test rain">☂</button>
         <!-- Settings Button -->
         <div id="settings-btn" class="control-btn" title="Settings">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
@@ -194,6 +219,8 @@
                     d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
                 </path>
             </svg>
+        </div>
+    </div>
         </div>
     </div>
 
@@ -549,6 +576,14 @@
         </div>
     </div>
 
+    <div id="command-overlay" class="command-overlay hidden" role="dialog" aria-modal="true" aria-label="Command palette">
+        <div class="command-palette">
+            <input id="command-input" type="text" autocomplete="off" placeholder="Search sites, history, actions, or type /timer 20…" aria-label="Command">
+            <div id="command-results" class="command-results" role="listbox"></div>
+            <div class="command-hint">↑↓ select · Enter open · Esc close</div>
+        </div>
+    </div>
+
     <!-- Settings Modal -->
     <div id="settings-modal-overlay" class="modal-overlay hidden">
         <div class="modal">
@@ -557,6 +592,7 @@
             <!-- Tabs Header -->
             <div class="settings-tabs">
                 <div class="tab-item active" data-tab="tab-general">General</div>
+                <div class="tab-item" data-tab="tab-appearance">Appearance</div>
                 <div class="tab-item" data-tab="tab-background">Background</div>
                 <div class="tab-item" data-tab="tab-sidebar">Sidebar</div>
                 <div class="tab-item" data-tab="tab-data">Data</div>
@@ -585,6 +621,31 @@
                             <input type="checkbox" id="cursor-trail-toggle" checked>
                             <span class="slider round"></span>
                         </label>
+                    </div>
+                </div>
+
+                <div id="tab-appearance" class="tab-content">
+                    <div class="settings-group">
+                        <label for="display-density">Display density</label>
+                        <select id="display-density" class="football-select" style="width:100%; margin-top:5px;">
+                            <option value="comfortable">Comfortable</option>
+                            <option value="compact">Compact</option>
+                        </select>
+                    </div>
+                    <div class="settings-group">
+                        <label for="font-scale">Text size</label>
+                        <input id="font-scale" type="range" min="90" max="130" value="100" style="width:100%;">
+                    </div>
+                    <div class="settings-group">
+                        <label for="contrast-strength">Contrast</label>
+                        <input id="contrast-strength" type="range" min="20" max="75" value="38" style="width:100%;">
+                    </div>
+                    <div class="settings-group" style="display:flex; justify-content:space-between; align-items:center;">
+                        <label for="reduce-motion" style="margin-bottom:0;">Reduce motion</label>
+                        <label class="switch"><input id="reduce-motion" type="checkbox"><span class="slider round"></span></label>
+                    </div>
+                    <div class="settings-group">
+                        <button id="reset-layout" type="button" class="btn-secondary" style="width:100%;">Reset widget layout</button>
                     </div>
                 </div>
 
@@ -751,6 +812,7 @@
     <script src="gradient-bg.js"></script>
     <script src="cursor-trail.js"></script>
     <script src="newtab.js"></script>
+    <script src="advanced-dashboard.js"></script>
 </body>
 
 </html>

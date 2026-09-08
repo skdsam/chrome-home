@@ -11,7 +11,9 @@
     "scripting",
     "geolocation",
     "topSites",
-    "history"
+    "history",
+    "bookmarks",
+    "tabs"
   ],
   "host_permissions": [
     "https://api.github.com/*",
@@ -26,7 +28,17 @@
     "https://www.amazon.com/*",
     "https://www.disneyplus.com/*",
     "https://tv.apple.com/*",
-    "https://www.paramountplus.com/*"
+    "https://www.paramountplus.com/*",
+    "https://api.open-meteo.com/*",
+    "https://geocoding-api.open-meteo.com/*",
+    "https://api.bigdatacloud.net/*",
+    "https://site.api.espn.com/*",
+    "https://hacker-news.firebaseio.com/*",
+    "https://dev.to/*",
+    "https://loremflickr.com/*",
+    "https://api.allorigins.win/*",
+    "https://api.themoviedb.org/*",
+    "https://image.tmdb.org/*"
   ],
   "chrome_url_overrides": {
     "newtab": "newtab.html"
