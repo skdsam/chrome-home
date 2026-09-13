@@ -126,7 +126,6 @@ class WeatherManager {
         } else if (code >= 51 && code <= 67) {
             baseState = 'rain';
             icon = '🌧️';
-            if (bgType === 'weather') this.createRain(effects);
         } else if (code >= 71 && code <= 86) {
             baseState = 'snow';
             icon = '❄️';
@@ -134,7 +133,6 @@ class WeatherManager {
         } else if (code >= 95) {
             baseState = 'rain'; // Storm
             icon = '⚡';
-            if (bgType === 'weather') this.createRain(effects);
         } else {
             baseState = 'clouds';
             icon = '🌫️';
@@ -153,18 +151,6 @@ class WeatherManager {
             tempEl.textContent = `${locationName}, ${temp}°C`;
         } else {
             tempEl.textContent = `${temp}°C`;
-        }
-    }
-
-    createRain(container) {
-        const count = 100;
-        for (let i = 0; i < count; i++) {
-            const drop = document.createElement('div');
-            drop.className = 'rain-drop';
-            drop.style.left = Math.random() * 100 + 'vw';
-            drop.style.animationDuration = (0.5 + Math.random() * 0.5) + 's';
-            drop.style.animationDelay = Math.random() * 2 + 's';
-            container.appendChild(drop);
         }
     }
 
