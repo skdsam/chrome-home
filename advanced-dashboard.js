@@ -355,7 +355,6 @@
         tick(); setInterval(tick, 1000);
         $('daily-intention').value = settings.dailyIntention || '';
         $('daily-intention').addEventListener('input', e => setStore({ dailyIntention: e.target.value }));
-        $('focus-mode-btn').addEventListener('click', () => { document.body.classList.toggle('focus-mode'); $('focus-mode-btn').textContent = document.body.classList.contains('focus-mode') ? 'Exit focus' : 'Focus mode'; });
 
         let timerSeconds = 1500, timerHandle = null;
         const paintTimer = () => $('pomodoro-btn').textContent = `${String(Math.floor(timerSeconds / 60)).padStart(2,'0')}:${String(timerSeconds % 60).padStart(2,'0')}`;
@@ -374,7 +373,6 @@
 
         const overlay=$('command-overlay'), input=$('command-input'), results=$('command-results'); let commands=[], selected=0;
         const actions=[
-            {title:'Toggle focus mode',meta:'Action',run:()=>$('focus-mode-btn').click()},
             {title:'Test realistic rain',meta:'Action',run:()=>$('rain-test-btn').click()},
             {title:'Reset widget layout',meta:'Action',run:()=>$('reset-layout').click()}
         ];

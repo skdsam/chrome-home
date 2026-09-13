@@ -1,8 +1,46 @@
 /* global chrome */
 (function () {
     'use strict';
+    let additionQueue = Promise.resolve();
+    function saveAddition(operation) {
+        const pending = additionQueue.then(operation);
+        additionQueue = pending.catch(() => {});
+        return pending;
+    }
+
+    function parseAddition(text) {
+        const command = String(text || '').trim().replace(/^(?:hey\s+)?(?:pip[,:]?\s+)?(?:(?:can\s+you|could\s+you|please)\s+)*/i, '')
+            .replace(/\s+please[?.!]*$/i, '').trim();
+        const add = command.match(/^(?:add|create|save|make|new|take|write|put)\s+([\s\S]+)$/i);
+        if (!add) return null;
+        let body = add[1].trim();
+        const target = '(?:(?:my|our|the)\\s+)?(to[ -]?do(?:\\s+list)?|tasks?|quick\\s*notes?|notes?|short\\s*cuts?|my\\s+sites|sites?)';
+        let kind, content;
+        const suffix = body.match(new RegExp('^([\\s\\S]+?)\\s+(?:to|in|into|as)\\s+(?:a\\s+)?' + target + '(?:\\s+widget)?[.!?]?$', 'i'));
+        const prefix = body.match(new RegExp('^(?:(?:to|in|into)\\s+)?(?:a\\s+)?' + target + '(?:\\s+widget)?(?:\\s*[:\\-]\\s*|\\s+)([\\s\\S]+)$', 'i'));
+        if (prefix && /note|task|to[ -]?do/i.test(prefix[1])) { kind = prefix[1]; content = prefix[2]; }
+        else if (suffix) { content = suffix[1]; kind = suffix[2]; }
+        else if (prefix) { kind = prefix[1]; content = prefix[2]; }
+        else if (/^add\s+/i.test(command) && !/^(?:a\s+)?(?:shortcut|short\s+cut|site|note|task|todo)\b/i.test(body)) {
+            kind = 'todo'; content = body;
+        } else return null;
+        content = content.trim().replace(/^[:\-]\s*/, '').replace(/^(?:called|named)\s+/i, '').replace(/^(["'])([\s\S]*)\1$/, '$2');
+        if (/site|short\s*cut/i.test(kind)) {
+            const action = /site/i.test(kind) ? 'site_add' : 'shortcut_add';
+            const tokens = content.split(/\s+/);
+            const urls = tokens.filter(token => /^(?:[a-z][a-z\d+.-]*:\/\/|www\.|[a-z\d-]+(?:\.[a-z\d-]+)+(?::\d+)?(?:[/?#]|$)|javascript:|data:)/i.test(token));
+            if (urls.length > 1) return { type: 'widget', action: 'addition_help', message: 'Please add one website at a time, with its name and URL.' };
+            const url = urls[0] || '';
+            const title = (url ? content.replace(url, '') : content).trim().replace(/^(?:for\s+|called\s+|named\s+)/i, '')
+                .replace(/\s+(?:at|url|using|for)\s*[:\-]?$/i, '').replace(/^[:\-]\s*/, '').trim().replace(/^(["'])(.*)\1$/, '$2');
+            return { type: 'widget', action, title, url };
+        }
+        return { type: 'widget', action: /note/i.test(kind) ? 'notes_add' : 'todo_add', text: content };
+    }
 
     function parseRequest(text) {
+        const addition = parseAddition(text);
+        if (addition) return addition;
         const raw = String(text || '').trim();
         const cleanText = raw.replace(/^(?:hey\s+)?(?:pip[,:]?\s+)?(?:can\s+you\s+|could\s+you\s+|please\s+)?/i, '')
                              .replace(/[?.!]+$/, '')
@@ -26,17 +64,8 @@
         }
         if (/\b(plan|planning|focus|prioriti[sz]e)\b/i.test(cleanText)) return { type: 'plan' };
 
-        const addTaskMatch = cleanText.match(/\b(?:add\s+task|add\s+todo|create\s+task|new\s+task)\s+(.+)$/i);
-        if (addTaskMatch && addTaskMatch[1]) {
-            return { type: 'widget', action: 'todo_add', text: addTaskMatch[1].trim() };
-        }
         if (/\b(?:clear|remove|delete)\s+completed\s+(?:tasks?|todos?)\b/i.test(cleanText)) {
             return { type: 'widget', action: 'todo_clear_completed' };
-        }
-
-        const addNoteMatch = cleanText.match(/\b(?:add\s+note|take\s+(?:a\s+)?note|write\s+note)\s*[:\-]?\s*(.+)$/i);
-        if (addNoteMatch && addNoteMatch[1]) {
-            return { type: 'widget', action: 'notes_add', text: addNoteMatch[1].trim() };
         }
 
         // Desktop widget controls - State & Arrangement
@@ -77,6 +106,16 @@
         const mgr = window.chromeHomeWidgets;
         if (!mgr) return { mood: 'curious', text: 'Widget controller is not available right now.' };
 
+        if (request.action === 'addition_help') return { mood: 'curious', text: request.message };
+        if (request.action === 'shortcut_add' || request.action === 'site_add') {
+            const destination = request.action === 'site_add' ? 'My Sites' : 'shortcuts';
+            if (!request.url) return { mood: 'curious', text: `What URL should I save${request.title ? ` for “${request.title}”` : ''} to ${destination}?`, followUp: request };
+            const method = request.action === 'site_add' ? 'addSite' : 'addShortcut';
+            if (!mgr[method]) return { mood: 'curious', text: `${destination} is not ready yet.` };
+            const result = await saveAddition(() => mgr[method](request.url, request.title));
+            return { mood: 'nod', text: result.duplicate ? `“${result.title}” is already in ${destination}.` : `Added “${result.title}” to ${destination}!` };
+        }
+
         if (request.action === 'spotify_play') {
             if (!mgr.playSpotify) return { mood: 'curious', text: 'Spotify controller is not ready.' };
             const res = await mgr.playSpotify(request.query);
@@ -91,7 +130,8 @@
         }
         if (request.action === 'todo_add') {
             if (!mgr.addTodo) return { mood: 'curious', text: 'Tasks manager is not ready.' };
-            const res = mgr.addTodo(request.text);
+            const res = await saveAddition(() => mgr.addTodo(request.text));
+            if (!res) return { mood: 'curious', text: 'What should I add to your to-do list?' };
             window.pageCompanion?.targetWidget?.('todo-widget');
             return {
                 mood: 'nod',
@@ -108,7 +148,8 @@
         }
         if (request.action === 'notes_add') {
             if (!mgr.addNote) return { mood: 'curious', text: 'Notes manager is not ready.' };
-            const res = mgr.addNote(request.text);
+            const res = await saveAddition(() => mgr.addNote(request.text));
+            if (!res) return { mood: 'curious', text: 'What should I add to Quick Notes?' };
             window.pageCompanion?.targetWidget?.('notes-widget');
             return {
                 mood: 'nod',
@@ -201,13 +242,18 @@
         container.append(sec);
     }
 
-    if (typeof module !== 'undefined') module.exports = { parseRequest, parseExpression, renderSources, handleWidgetRequest };
+    if (typeof module !== 'undefined') module.exports = { parseRequest, parseAddition, parseExpression, renderSources, handleWidgetRequest };
     if (typeof document === 'undefined') return;
 
     const dialog = document.getElementById('ask-pip');
     const input = document.getElementById('ask-pip-input');
     const answer = document.getElementById('ask-pip-answer');
     let requestId = 0;
+    let pendingSite = null;
+    let composeMode = 'chat';
+    const composeButtons = dialog.querySelectorAll('[data-pip-compose]');
+    const composeLabel = document.getElementById('pip-compose-label');
+    const composeSubmit = document.getElementById('pip-compose-submit');
     let awaitingFocus = false;
     const localAI = window.PipLocalAI ? new window.PipLocalAI() : null;
     const webSearch = window.PipWebSearch ? new window.PipWebSearch() : null;
@@ -259,6 +305,30 @@
         mood('listening');
         stopButton?.classList?.add('hidden');
     }
+    function setComposeMode(mode, focus = true) {
+        composeMode = ['todo', 'note'].includes(mode) ? mode : 'chat';
+        requestId += 1;
+        statusVersion += 1;
+        pendingSite = null;
+        awaitingFocus = false;
+        stopAI();
+        cancelAmbient();
+        composeButtons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.pipCompose === composeMode)));
+        const labels = {
+            chat: ['Ask a question, add a task or note, or save a website.', 'Try: add buy milk', 'Ask'],
+            todo: ['Type a task and press Enter to add it to your to-do list.', 'What do you need to do?', 'Add task'],
+            note: ['Type a note and press Enter to add it to Quick Notes.', 'What would you like to note?', 'Add note']
+        };
+        const [label, placeholder, submit] = labels[composeMode];
+        if (composeLabel) composeLabel.textContent = label;
+        input.placeholder = placeholder;
+        if (composeSubmit) composeSubmit.textContent = submit;
+        if (focus) {
+            setStatus(composeMode === 'chat' ? 'Ready to chat.' : 'Saves directly to your widget. No command wording needed.');
+            input.focus();
+        }
+    }
+    composeButtons.forEach(button => button.addEventListener('click', () => setComposeMode(button.dataset.pipCompose)));
     async function checkAI() {
         const version = ++statusVersion;
         if (!aiToggle?.checked) {
@@ -302,6 +372,8 @@
     dialog.addEventListener('keydown', event => { if (event.key === 'Escape') dialog.close(); });
     document.getElementById('ask-pip-close').addEventListener('click', () => dialog.close());
     dialog.addEventListener('close', () => {
+        setComposeMode('chat', false);
+        pendingSite = null;
         requestId += 1;
         statusVersion += 1;
         stopAI();
@@ -311,6 +383,7 @@
     });
     dialog.querySelectorAll('[data-pip-prompt]').forEach(button => {
         button.addEventListener('click', () => {
+            setComposeMode('chat');
             input.value = button.dataset.pipPrompt;
             document.getElementById('ask-pip-form').requestSubmit();
         });
@@ -348,7 +421,12 @@
         statusVersion += 1;
         stopAI();
         cancelAmbient();
-        const request = parseRequest(text);
+        const submittedMode = composeMode;
+        const request = composeMode !== 'chat'
+            ? { type: 'widget', action: composeMode === 'todo' ? 'todo_add' : 'notes_add', text }
+            : pendingSite && /^(?:https?:\/\/|www\.|[a-z\d-]+\.[a-z]{2,})\S*$/i.test(text)
+                ? { ...pendingSite, url: text } : parseRequest(text);
+        pendingSite = null;
         input.value = '';
         if (request.type === 'widget') {
             awaitingFocus = false;
@@ -357,11 +435,18 @@
                 mood('thinking');
                 setStatus('Searching Spotify for requested music...');
             }
-            const res = await handleWidgetRequest(request);
+            let res;
+            try { res = await handleWidgetRequest(request); }
+            catch (error) { res = { mood: 'curious', failed: true, text: `I couldn't save that change: ${error.message || 'please try again.'}` }; }
             if (token !== requestId || !dialog.open) return;
+            pendingSite = res.followUp || null;
+            if (submittedMode !== 'chat' && composeMode === submittedMode) {
+                if (res.failed && !input.value) input.value = text;
+                input.focus();
+            }
             answer.textContent = res.text;
             mood(res.mood);
-            setStatus('Pip adjusted your desktop widgets.');
+            setStatus(res.followUp ? 'Waiting for the website address.' : res.failed ? 'The change could not be saved.' : 'Pip handled your widget request.');
             return;
         }
         const useWeb = Boolean(webSearchToggle?.checked && webSearch && request.type !== 'bookmarks');

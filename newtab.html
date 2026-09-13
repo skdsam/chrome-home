@@ -44,7 +44,6 @@
         <div id="dashboard-date" class="dashboard-date"></div>
         <input id="daily-intention" maxlength="90" aria-label="Daily intention" placeholder="What is your focus today?">
         <div class="focus-actions">
-            <button id="focus-mode-btn" type="button">Focus mode</button>
             <button id="pomodoro-btn" type="button" aria-live="polite">25:00</button>
         </div>
     </section>
@@ -979,7 +978,12 @@
         <p id="pip-ai-status" class="ask-pip-hint" role="status" aria-live="polite">Local AI is off. Widget control, web lookup, bookmark search, and simple planning are available.</p>
         <button id="pip-ai-stop" type="button" class="hidden">Stop</button>
         <div class="ask-pip-examples"><button type="button" data-pip-prompt="Open my tasks">Open tasks</button><button type="button" data-pip-prompt="Tidy up my screen">Tidy screen</button><button type="button" data-pip-prompt="Find my design bookmarks">Find design bookmarks</button><button type="button" data-pip-prompt="Help me plan today">Plan today</button><button type="button" data-pip-prompt="What is the James Webb Space Telescope?">Search the web</button></div>
-        <form id="ask-pip-form"><label class="ask-pip-hint" for="ask-pip-input">What can I help with?</label><div class="ask-pip-compose"><input id="ask-pip-input" maxlength="500" placeholder="Ask me anything..." autocomplete="off" required><button type="submit">Ask</button></div></form>
+        <div class="pip-compose-modes" role="group" aria-label="Choose what to do with your text">
+            <button type="button" data-pip-compose="chat" aria-pressed="true" aria-controls="ask-pip-input">Chat</button>
+            <button type="button" data-pip-compose="todo" aria-pressed="false" aria-controls="ask-pip-input">Add to-do</button>
+            <button type="button" data-pip-compose="note" aria-pressed="false" aria-controls="ask-pip-input">Add quick note</button>
+        </div>
+        <form id="ask-pip-form"><label id="pip-compose-label" class="ask-pip-hint" for="ask-pip-input">Ask a question, add a task or note, or save a website.</label><div class="ask-pip-compose"><input id="ask-pip-input" maxlength="500" placeholder="Try: add buy milk" autocomplete="off" required><button id="pip-compose-submit" type="submit">Ask</button></div></form>
         <div id="ask-pip-answer" class="ask-pip-answer" role="status" aria-live="polite" aria-atomic="true"></div>
     </dialog>
     <script src="pip-web-search.js"></script>

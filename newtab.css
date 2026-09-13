@@ -271,7 +271,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
 .command-result.active, .command-result:hover { background: rgba(124,77,255,.2); }
 .command-hint { padding: 9px 18px; color: #7f899b; border-top: 1px solid rgba(255,255,255,.08); font-size: .72rem; }
 
-body.focus-mode .header-controls, body.focus-mode .shortcuts-grid, body.focus-mode .spotify-widget, body.focus-mode .ai-sidebar { opacity: 0; pointer-events: none; }
 body.compact .shortcut-card { transform: scale(.9); margin: -4px; }
 body { font-size: calc(16px * var(--ui-scale)); }
 
@@ -2652,6 +2651,9 @@ input:checked + .slider:before {
 .ask-pip button { padding: 8px 12px; border: 1px solid var(--glass-border); border-radius: 10px; background: var(--glass-bg); color: var(--text-color); cursor: pointer; }
 .ask-pip-hint { display: block; font-size: 12px; line-height: 1.6; opacity: .75; margin: 10px 0; }
 .ask-pip-examples { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0; font-size: 12px; }
+.pip-compose-modes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; font-size: 12px; }
+.pip-compose-modes button[aria-pressed="true"] { background: var(--accent-color); border-color: var(--accent-color); color: white; }
+.pip-compose-modes button:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 3px; }
 .ask-pip-compose input { min-width: 0; flex: 1; padding: 11px; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 10px; color: var(--text-color); }
 .ask-pip-compose button { background: var(--accent-color); color: white; }
 .ask-pip-answer { font-size: 13px; line-height: 1.65; margin-top: 16px; overflow-wrap: anywhere; }

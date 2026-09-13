@@ -37,8 +37,7 @@
         scan: ['Inspecting the local pixels.'],
         balance: ['Perfectly calibrated. Probably.'],
         peek: ['Just checking whether the edge is still here.'],
-        broadcast: ['I have a tiny update from the outside world.'],
-        focus: ['Quiet engines. You have this.']
+        broadcast: ['I have a tiny update from the outside world.']
     };
 
     const ACTIVITY_DELAYS = {
@@ -536,11 +535,6 @@
             document.getElementById('search-input')?.addEventListener('focus', () => this.queueReaction('search'));
             document.getElementById('weather-display')?.addEventListener('mouseenter', () => this.queueReaction('weather'));
             document.getElementById('rain-test-btn')?.addEventListener('click', () => this.queueReaction('weather', true));
-            document.getElementById('focus-mode-btn')?.addEventListener('click', () => {
-                if (!this.settings.enabled) return;
-                this.speak('focus');
-                this.nextActionAt = performance.now() + 90000;
-            });
 
             if (this.hitTarget) {
                 this.hitTarget.addEventListener('pointerdown', event => this.beginDrag(event));

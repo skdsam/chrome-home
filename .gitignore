@@ -82,3 +82,4 @@ screenshots/upgrade-preview.png
 tests/*
 !tests/spotify.test.js
 !tests/spotify-server.test.js
+!tests/pip-additions.test.js

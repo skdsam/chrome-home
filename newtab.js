@@ -3022,7 +3022,7 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
     });
 
     function saveTodoState() {
-        window.storageManager.set({
+        return window.storageManager.set({
             todoState
         });
     }
@@ -3277,7 +3277,7 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
         return notesState.notes.find(n => n.id === notesState.activeNoteId) || null;
     }
     function notesSave() {
-        window.storageManager.set({ notesState });
+        return window.storageManager.set({ notesState });
     }
     function notesDebouncedSave() {
         clearTimeout(notesSaveTimer);
@@ -5182,6 +5182,31 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
         return null;
     }
 
+    let pipSiteQueue = Promise.resolve();
+    function addPipSite(destination, value, name) {
+        const operation = pipSiteQueue.then(async () => {
+            const raw = String(value || '').trim();
+            const url = safeHttpUrl(/^[a-z][a-z\d+.-]*:/i.test(raw) ? raw : `https://${raw}`);
+            if (!url || /\s/.test(raw) || new URL(url).username || new URL(url).password) {
+                throw new Error('Use a valid http:// or https:// website address.');
+            }
+            const title = String(name || '').trim() || new URL(url).hostname;
+            const result = await window.storageManager.get(destination);
+            const entries = Array.isArray(result[destination]) ? result[destination] : [];
+            const duplicate = entries.find(entry => safeHttpUrl(entry.url) === url);
+            if (!duplicate) {
+                const entry = { id: Math.max(Date.now(), ...entries.map(item => Number(item.id) + 1 || 0)), title, url };
+                if (destination === 'shortcuts') entry.icon = `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=64`;
+                await window.storageManager.set({ [destination]: [...entries, entry] });
+            }
+            if (destination === 'shortcuts') await renderShortcuts();
+            else { await renderMySites(); mySitesPanel.classList.remove('hidden'); }
+            return { success: true, duplicate: !!duplicate, title: duplicate?.title || title, url };
+        });
+        pipSiteQueue = operation.catch(() => {});
+        return operation;
+    }
+
     window.chromeHomeWidgets = {
         open(name) {
             const w = resolveWidget(name);
@@ -5262,11 +5287,14 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
         },
         resolveWidget,
         playSpotify,
-        addTodo(text) {
+        addShortcut(url, title) { return addPipSite('shortcuts', url, title); },
+        addSite(url, title) { return addPipSite('mySites', url, title); },
+        async addTodo(text) {
             const trimmed = String(text || '').trim();
             if (!trimmed) return null;
+            const previous = structuredClone(todoState);
             const newTodo = {
-                id: Date.now(),
+                id: Math.max(Date.now(), ...todoState.list.map(item => Number(item.id) + 1 || 0)),
                 text: trimmed,
                 completed: false
             };
@@ -5277,8 +5305,9 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
                 bringToFront(todoWidget);
                 todoState.zIndex = maxZIndex;
             }
+            try { await saveTodoState(); }
+            catch (error) { todoState = previous; applyTodoState(); renderTodos(); throw error; }
             applyTodoState();
-            saveTodoState();
             renderTodos();
             return { success: true, text: newTodo.text, id: 'todo-widget' };
         },
@@ -5290,9 +5319,10 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
             renderTodos();
             return removed;
         },
-        addNote(text) {
+        async addNote(text) {
             const trimmed = String(text || '').trim();
             if (!trimmed) return null;
+            const previous = structuredClone(notesState);
             if (!notesState.notes || notesState.notes.length === 0) {
                 const blank = notesMake();
                 blank.title = 'Note 1';
@@ -5304,7 +5334,7 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
                 active = notesState.notes[0];
                 notesState.activeNoteId = active.id;
             }
-            const cleanSnippet = trimmed.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const cleanSnippet = escapeHtml(trimmed).replace(/\r?\n/g, '<br>');
             if (active.content && active.content.trim()) {
                 active.content += `<br>• ${cleanSnippet}`;
             } else {
@@ -5317,10 +5347,12 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
                 bringToFront(notesWidget);
                 notesState.zIndex = maxZIndex;
             }
+            clearTimeout(notesSaveTimer);
+            try { await notesSave(); }
+            catch (error) { notesState = previous; applyNotesState(); notesRenderTabs(); notesRenderEditor(); throw error; }
             applyNotesState();
             notesRenderTabs();
             notesRenderEditor();
-            notesSave();
             return { success: true, text: trimmed, id: 'notes-widget' };
         }
     };

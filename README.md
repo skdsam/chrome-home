@@ -70,6 +70,15 @@ Run the matching, request-ordering, auth and helper regression tests with `node 
 
 ### Ask Pip with local AI
 
+Pip can save items directly, with or without Local AI enabled:
+
+- `add buy milk` or `add buy milk to my todo list`
+- `add quick note Meeting at 3pm` or `add Meeting at 3pm to quick notes`
+- `add shortcut GitHub https://github.com`
+- `add Example https://example.com to my sites`
+
+Tasks and notes open their widgets; notes append to the active note. Website commands accept full HTTP(S) URLs or domains and avoid duplicate URLs within each collection. If you give a site name without its URL, Pip asks for the address and accepts it in your next message. Additions are saved before Pip confirms success, and remain available after reloading.
+
 Click Pip and enable **Local AI ? Gemini Nano**, then submit a question. Chrome checks device support and may download its on-device model on the first request; progress appears in Ask Pip. No API key or separate model server is needed. If unavailable, bookmark search and basic planning remain usable.
 
 Pip sends questions and the current daily focus to Chrome's local Prompt API. Bookmark searches run directly against Chrome bookmarks. AI output is text only and cannot execute actions. Up to three recent AI exchanges are kept in memory for follow-up questions and cleared when the dialog closes or Local AI changes. Model sessions are released after replies; Stop, closing the dialog, or leaving the page cancels active work. The local AI preference is saved on this device.

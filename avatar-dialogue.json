@@ -164,11 +164,6 @@
     "Incoming item of possible interest.",
     "The wider web has sent us a postcard."
   ],
-  "focus": [
-    "Focus mode. I will reduce my important wandering.",
-    "Quiet engines. You have this.",
-    "I will guard the distractions."
-  ],
   "mixers": {
     "openers": [
       "Tiny report:", "Quick thought:", "Antenna update:", "For the record:",
@@ -237,8 +232,7 @@
     "nap": [
       "processor naps are measured in very efficient dreams.",
       "this perch has passed the comfort benchmark.",
-      "closed eyes reduce unnecessary rendering.",
-      "rest is just focus mode for the whole robot."
+      "closed eyes reduce unnecessary rendering."
     ],
     "dance": [
       "rhythm improves even the smallest operating system.",
