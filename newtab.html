@@ -36,7 +36,7 @@
         <canvas id="avatar-canvas"></canvas>
         <div id="avatar-anchor-debug" class="avatar-anchor-debug hidden"></div>
     </div>
-    <button id="avatar-hit-target" class="avatar-hit-target hidden" type="button" aria-label="Drag Pip, or click to make Pip wave" title="Drag Pip · Click to wave"></button>
+    <button id="avatar-hit-target" class="avatar-hit-target hidden" type="button" aria-label="Drag Pip, or click to ask Pip" title="Drag Pip · Click to ask Pip"></button>
     <div id="avatar-diagnostics" class="avatar-diagnostics hidden" aria-live="polite"></div>
 
     <section id="daily-focus" class="daily-focus" aria-label="Daily focus">
@@ -53,6 +53,7 @@
 
     <!-- Header Controls (Top Right) -->
     <div class="header-controls">
+        <button id="pip-quick-toggle" class="control-btn" type="button" aria-pressed="true" title="Turn Pip off">Pip on</button>
         <!-- Weather Info -->
         <div id="weather-display" class="control-btn"
             style="width: auto; padding: 0 15px; border-radius: 20px; gap: 8px;">
@@ -888,6 +889,21 @@
     <script src="cursor-trail.js"></script>
     <script src="newtab.js"></script>
     <script src="advanced-dashboard.js"></script>
+    <dialog id="ask-pip" class="ask-pip" aria-labelledby="ask-pip-title">
+        <div id="pip-chat-perch" class="pip-chat-perch" aria-hidden="true"><span id="pip-chat-mood">Listening</span></div>
+        <div class="ask-pip-heading"><h2 id="ask-pip-title">Ask Pip</h2><button id="ask-pip-close" type="button" aria-label="Close Ask Pip">&times;</button></div>
+        <p class="ask-pip-hint">Your little helper for bookmarks and daily planning. Requests stay on this device.</p>
+        <label class="ask-pip-hint"><input id="pip-local-ai" type="checkbox"> Local AI &middot; Gemini Nano</label>
+        <p class="ask-pip-hint">Optional download managed by Chrome. Replies run on your device. The first request may download the model.</p>
+        <label class="ask-pip-hint"><input id="pip-ai-chatter" type="checkbox" checked> Occasional AI comments while Pip explores</label>
+        <p id="pip-ai-status" class="ask-pip-hint" role="status" aria-live="polite">Local AI is off. Bookmark search and simple planning are available.</p>
+        <button id="pip-ai-stop" type="button" class="hidden">Stop</button>
+        <div class="ask-pip-examples"><button type="button" data-pip-prompt="Find my design bookmarks">Find design bookmarks</button><button type="button" data-pip-prompt="Help me plan today">Plan today</button></div>
+        <form id="ask-pip-form"><label class="ask-pip-hint" for="ask-pip-input">What can I help with?</label><div class="ask-pip-compose"><input id="ask-pip-input" maxlength="500" placeholder="Ask me anything..." autocomplete="off" required><button type="submit">Ask</button></div></form>
+        <div id="ask-pip-answer" class="ask-pip-answer" role="status" aria-live="polite" aria-atomic="true"></div>
+    </dialog>
+    <script src="pip-local-ai.js"></script>
+    <script src="ask-pip.js"></script>
     <script src="avatar.js"></script>
 </body>
 

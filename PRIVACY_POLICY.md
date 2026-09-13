@@ -48,3 +48,10 @@ You have full control over your data. You can:
 ## 7. Contact
 
 If you have questions about this policy, please contact us via our GitHub repository or support email.
+
+
+### Optional local AI (Ask Pip)
+
+When you enable Local AI and submit a request, Chrome may download Gemini Nano. Questions, the current daily focus, and a short in-memory conversation are processed through Chrome's on-device Prompt API, not sent to a hosted chat service by this extension. Closing Ask Pip clears its AI conversation history. The Local AI preference is stored locally. Chrome manages model downloads and model storage. Bookmark lookup remains local and does not send the bookmark library to the model.
+
+When Local AI and occasional AI comments are both enabled, Pip may also generate brief local comments while the page is visible and he is idle. These use the daily focus and a short in-memory history; they require the model to be already available. You can disable comments in Ask Pip or disable Pip with the top-right control.

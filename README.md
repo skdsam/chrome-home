@@ -54,3 +54,17 @@
 
 ---
 *Created with ❤️ for a better browsing experience.*
+
+
+### Ask Pip with local AI
+
+Click Pip and enable **Local AI ? Gemini Nano**, then submit a question. Chrome checks device support and may download its on-device model on the first request; progress appears in Ask Pip. No API key or separate model server is needed. If unavailable, bookmark search and basic planning remain usable.
+
+Pip sends questions and the current daily focus to Chrome's local Prompt API. Bookmark searches run directly against Chrome bookmarks. AI output is text only and cannot execute actions. Up to three recent AI exchanges are kept in memory for follow-up questions and cleared when the dialog closes or Local AI changes. Model sessions are released after replies; Stop, closing the dialog, or leaving the page cancels active work. The local AI preference is saved on this device.
+
+Requirements and model availability are managed by Chrome: https://developer.chrome.com/docs/ai/get-started . Unsupported browsers and devices do not download a model through Pip. To verify on a supported Chrome installation, open Ask Pip, enable Local AI, submit a question, check download/thinking status and a local reply, then test Stop and closing during a request.
+
+
+Pip sits beside the non-modal Ask Pip card (above it on narrow screens). Gemini Nano can select a wave, nod, dance or curious pose; thinking has its own animation. When Local AI and occasional comments are enabled, Pip can generate a short comment roughly every 4?7 minutes while idle, using daily focus as context. Autonomous comments only use an already available model and never initiate a download. They pause while chatting or the page is hidden. Turn comments off in Ask Pip.
+
+The top-right Pip button waves goodbye and sends Pip offscreen before saving the disabled preference. Click again to bring him back. Reduced motion uses a short stationary goodbye instead of flight.

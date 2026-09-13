@@ -505,6 +505,7 @@
             const scaleOutput = document.getElementById('avatar-scale-output');
             if (scaleOutput) scaleOutput.textContent = `${this.settings.scale}%`;
 
+            document.getElementById('pip-quick-toggle')?.addEventListener('click', () => this.togglePip());
             document.getElementById('avatar-test-sequence')?.addEventListener('click', () => this.runTestSequence());
             document.getElementById('avatar-reset-memory')?.addEventListener('click', () => {
                 this.memory = { actionCounts: {}, recentLines: [], discovered: [], visits: 1 };
@@ -553,11 +554,13 @@
                         return;
                     }
                     this.beginWave();
+                    window.askPip?.open();
                 });
             }
         }
 
         beginDrag(event) {
+            if (this.conversation || this.departure) return;
             if (!this.settings.enabled || this.phase === 'breaking' || this.phase === 'rebuilding') return;
             event.preventDefault();
             this.hitTarget.setPointerCapture(event.pointerId);
@@ -782,9 +785,138 @@
             }
         }
 
+        syncQuickToggle() {
+            const button = document.getElementById('pip-quick-toggle');
+            if (button) {
+                button.textContent = this.departure ? 'Bye, Pip!' : this.settings.enabled ? 'Pip on' : 'Pip off';
+                button.setAttribute('aria-pressed', String(this.settings.enabled && !this.departure));
+                button.title = this.settings.enabled && !this.departure ? 'Say goodbye and turn Pip off' : 'Bring Pip back';
+            }
+            const setting = document.getElementById('avatar-enabled');
+            if (setting) setting.checked = this.settings.enabled;
+        }
+
+        togglePip() {
+            if (!this.character) return;
+            if (this.departure || !this.settings.enabled) {
+                clearTimeout(this.departureTimer);
+                this.departure = null;
+                this.settings.enabled = true;
+                this.goHomeImmediately();
+                this.applySettings();
+                storageSet({ avatarSettings: this.settings });
+                this.setChatMood('wave');
+                this.speak('wave', 'Back for another little adventure!');
+                return;
+            }
+            window.askPip?.close();
+            this.endConversation();
+            this.resetPieceTransforms();
+            this.hideActivityProps();
+            this.setRocketVisible(false);
+            this.character.visible = true;
+            this.phase = 'departing';
+            this.testQueue = [];
+            this.departure = { start: performance.now(), x: this.screenPosition.x, y: this.screenPosition.y };
+            this.setChatMood('wave');
+            this.speak('wave', 'Bye for now! Tap Pip off when you want me back.');
+            this.syncQuickToggle();
+            this.departureTimer = setTimeout(() => {
+                this.departure = null;
+                this.settings.enabled = false;
+                storageSet({ avatarSettings: this.settings });
+                this.applySettings();
+            }, this.reducedMotion ? 1600 : 3200);
+        }
+
+        startConversation() {
+            if (!this.character || !this.settings.enabled || this.departure) return;
+            this.resetPieceTransforms();
+            this.hideActivityProps();
+            this.setRocketVisible(false);
+            this.character.visible = true;
+            this.character.rotation.set(0, 0, 0);
+            this.phase = 'conversation';
+            this.conversation = true;
+            this.testQueue = [];
+            this.setChatMood('listening');
+            this.bubble.classList.add('hidden');
+        }
+
+        endConversation() {
+            if (!this.conversation) return;
+            this.conversation = false;
+            this.phase = 'idle';
+            this.setChatMood('wave');
+            this.scheduleNext();
+        }
+
+        setChatMood(mood) {
+            if (!['listening', 'thinking', 'wave', 'nod', 'dance', 'curious'].includes(mood)) return;
+            this.chatMood = mood;
+            this.chatMoodUntil = performance.now() + 5000;
+            const label = document.getElementById('pip-chat-mood');
+            if (label) label.textContent = ({ listening: 'All ears', thinking: 'Thinking...', wave: 'Hello there', nod: 'Here you go', dance: 'Happy little circuits', curious: 'Let me see...' })[mood];
+        }
+
+        updateCompanionPresence(now, dt) {
+            if (this.conversation) {
+                const rect = document.getElementById('pip-chat-perch')?.getBoundingClientRect();
+                if (rect) {
+                    const blend = this.reducedMotion ? 1 : 1 - Math.exp(-9 * dt);
+                    this.screenPosition.x = lerp(this.screenPosition.x, rect.left + rect.width / 2, blend);
+                    const card = document.getElementById('ask-pip').getBoundingClientRect();
+                    const perchY = clamp(rect.bottom - 28, card.top + 105, card.bottom - 28);
+                    this.screenPosition.y = lerp(this.screenPosition.y, perchY, blend);
+                    this.character.scale.setScalar(Math.min(1.05, this.settings.scale / 100));
+                }
+            }
+            if (this.departure) {
+                const t = clamp((now - this.departure.start - 1500) / 1500, 0, 1);
+                if (!this.reducedMotion) {
+                    this.screenPosition.x = lerp(this.departure.x, this.viewport.width + 120, easeInOutCubic(t));
+                    this.screenPosition.y = this.departure.y - Math.sin(t * Math.PI / 2) * 110;
+                    this.setRocketVisible(t > 0);
+                    this.character.rotation.z = -t * .35;
+                }
+            }
+            if (!this.chatMood || (!this.conversation && !this.departure && now > this.chatMoodUntil)) {
+                this.head.rotation.x = 0;
+                return;
+            }
+            if (this.conversation && now > this.chatMoodUntil && !['listening', 'thinking'].includes(this.chatMood)) this.setChatMood('listening');
+            const t = this.reducedMotion ? 0 : now / 1000;
+            const mood = this.chatMood;
+            if (this.conversation) {
+                this.character.rotation.set(0, 0, 0);
+                this.leftLeg.rotation.z = .02;
+                this.rightLeg.rotation.z = -.02;
+            }
+            if (mood === 'thinking' || mood === 'curious') {
+                this.head.rotation.z = -.18 + Math.sin(t * 2) * .05;
+                this.rightArm.rotation.z = 1.8;
+                this.antenna.rotation.z = Math.sin(t * 5) * .2;
+                this.leftEye.scale.y = this.rightEye.scale.y = .85 + Math.sin(t * 3) * .12;
+            } else if (mood === 'wave' || this.departure) {
+                this.rightArm.rotation.z = 1.3 + Math.sin(t * 8) * .45;
+            } else if (mood === 'dance') {
+                this.leftArm.rotation.z = -1 + Math.sin(t * 6) * .4;
+                this.rightArm.rotation.z = 1 + Math.cos(t * 6) * .4;
+                this.torso.rotation.z = Math.sin(t * 6) * .13;
+            } else if (mood === 'nod') {
+                this.head.rotation.x = Math.sin(t * 5) * .15;
+                this.rightArm.rotation.z = .65;
+            }
+            if (mood !== 'nod') this.head.rotation.x = 0;
+        }
+
         applySettings() {
+            this.syncQuickToggle();
             if (!this.settings.speech) this.bubble.classList.add('hidden');
             if (!this.settings.enabled) {
+                clearTimeout(this.departureTimer);
+                this.departure = null;
+                window.askPip?.close();
                 this.stage.classList.add('hidden');
                 if (this.hitTarget) this.hitTarget.classList.add('hidden');
                 this.bubble.classList.add('hidden');
@@ -1013,6 +1145,7 @@
         }
 
         beginAction(action, force) {
+            if (this.conversation || this.departure || !this.settings.enabled) return;
             const anchors = this.getAnchors();
             let anchor = anchors[action];
             if (action === 'break') anchor = anchors.home;
@@ -1523,7 +1656,7 @@
             this.hitTarget.style.height = `${height}px`;
             this.hitTarget.style.left = `${this.screenPosition.x - width / 2}px`;
             this.hitTarget.style.top = `${this.screenPosition.y - height + 7 * scale}px`;
-            const disabled = !this.character.visible || this.phase === 'breaking' || this.phase === 'rebuilding' || this.phase === 'zooming' || scale < .35;
+            const disabled = this.conversation || this.departure || !this.character.visible || this.phase === 'breaking' || this.phase === 'rebuilding' || this.phase === 'zooming' || scale < .35;
             this.hitTarget.classList.toggle('is-disabled', disabled);
         }
 
@@ -1762,7 +1895,7 @@
                 else if (this.phase === 'travel' || this.phase === 'return') this.updateTravel(now);
                 else if (this.phase === 'perform') this.updatePerformance(now);
                 else if (this.phase === 'breaking' || this.phase === 'rebuilding') this.updateBreak(dt, now);
-                else if (this.phase === 'idle' && now >= this.nextActionAt && !document.querySelector('.modal-overlay:not(.hidden)')) {
+                else if (this.phase === 'idle' && now >= this.nextActionAt && !document.querySelector('.modal-overlay:not(.hidden), #ask-pip[open]')) {
                     const actions = this.eligibleActions();
                     this.beginAction(actions[Math.floor(this.random() * actions.length)]);
                 }
@@ -1773,6 +1906,7 @@
             }
 
             this.applyPose(now, dt);
+            this.updateCompanionPresence(now, dt);
             this.updateCharacterTransform();
             this.updateSpeechPosition();
             if (this.speechUntil && now > this.speechUntil) {
