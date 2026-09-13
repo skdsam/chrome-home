@@ -22,47 +22,125 @@
     'use strict';
 
     /* ------------------------------------------------------------------ */
-    /*  OFFLINE GENRE → PLAYLIST MAP                                       */
+    /*  OFFLINE GENRE → PLAYLIST MAP (Verified working Spotify playlists) */
     /* ------------------------------------------------------------------ */
     const SPOTIFY_GENRES = {
+        // UK Garage & Bassline
+        'uk garage': { title: 'UK Garage Classics', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX0RJRF55W5lt?utm_source=generator' },
+        'ukgarage': { title: 'UK Garage Classics', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX0RJRF55W5lt?utm_source=generator' },
+        'garage': { title: 'UK Garage Classics', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX0RJRF55W5lt?utm_source=generator' },
+        'ukg': { title: 'UK Garage Classics', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX0RJRF55W5lt?utm_source=generator' },
+        '2step': { title: 'UK Garage Classics', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX0RJRF55W5lt?utm_source=generator' },
+        'speed garage': { title: 'UK Garage Classics', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX0RJRF55W5lt?utm_source=generator' },
+        'bassline': { title: 'UK Garage Classics', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX0RJRF55W5lt?utm_source=generator' },
+
+        // House & Deep House
+        'house': { title: 'Housewerk', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXa8NOEUWPn9W?utm_source=generator' },
+        'deep house': { title: 'Deep House Relax', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX2TRYkJECvfC?utm_source=generator' },
+        'deephouse': { title: 'Deep House Relax', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX2TRYkJECvfC?utm_source=generator' },
+        'tech house': { title: 'Housewerk', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXa8NOEUWPn9W?utm_source=generator' },
+        'electro house': { title: 'Housewerk', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXa8NOEUWPn9W?utm_source=generator' },
+
+        // Techno
+        'techno': { title: 'TECHNO BUNKER', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX6J5NfMJS675?utm_source=generator' },
+        'hard techno': { title: 'TECHNO BUNKER', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX6J5NfMJS675?utm_source=generator' },
+        'melodic techno': { title: 'TECHNO BUNKER', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX6J5NfMJS675?utm_source=generator' },
+
+        // Afrobeats
+        'afrobeats': { title: 'African Heat', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWYkaDif7Ztbp?utm_source=generator' },
+        'afrobeat': { title: 'African Heat', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWYkaDif7Ztbp?utm_source=generator' },
+        'amapiano': { title: 'African Heat', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWYkaDif7Ztbp?utm_source=generator' },
+        'african': { title: 'African Heat', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWYkaDif7Ztbp?utm_source=generator' },
+        'afro': { title: 'African Heat', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWYkaDif7Ztbp?utm_source=generator' },
+
+        // Synthwave & Retrowave
+        'synthwave': { title: 'Retrowave // Outrun', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXdLEN7aqioXM?utm_source=generator' },
+        'retrowave': { title: 'Retrowave // Outrun', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXdLEN7aqioXM?utm_source=generator' },
+        'outrun': { title: 'Retrowave // Outrun', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXdLEN7aqioXM?utm_source=generator' },
+
+        // Focus & Study
+        'focus': { title: 'Deep Focus', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWZeKCadgRdKQ?utm_source=generator' },
+        'deep focus': { title: 'Deep Focus', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWZeKCadgRdKQ?utm_source=generator' },
+        'coding': { title: 'Deep Focus', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWZeKCadgRdKQ?utm_source=generator' },
+        'work': { title: 'Deep Focus', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWZeKCadgRdKQ?utm_source=generator' },
+        'study': { title: 'Deep Focus', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWZeKCadgRdKQ?utm_source=generator' },
+        'lofi': { title: 'chill lofi study beats', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX8Uebhn9wzrS?utm_source=generator' },
+        'lo fi': { title: 'chill lofi study beats', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX8Uebhn9wzrS?utm_source=generator' },
+        'study beats': { title: 'chill lofi study beats', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX8Uebhn9wzrS?utm_source=generator' },
+
+        // Mood & Vibes
+        'calm': { title: 'calm vibes', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX1s9knjP51Oa?utm_source=generator' },
+        'calm vibes': { title: 'calm vibes', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX1s9knjP51Oa?utm_source=generator' },
+        'mood booster': { title: 'Mood Booster', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX3rxVfibe1L0?utm_source=generator' },
+        'mood': { title: 'Mood Booster', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX3rxVfibe1L0?utm_source=generator' },
+        'happy': { title: 'Mood Booster', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX3rxVfibe1L0?utm_source=generator' },
+        'feel good': { title: 'Mood Booster', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX3rxVfibe1L0?utm_source=generator' },
+        'chill': { title: 'Chill Hits', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4WYpdgoIcn6?utm_source=generator' },
+        'relax': { title: 'Chill Hits', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4WYpdgoIcn6?utm_source=generator' },
+
+        // Era / Decade Hits
+        '90s': { title: 'All Out 90s', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXbTxeAdrVG2l?utm_source=generator' },
+        'all out 90s': { title: 'All Out 90s', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXbTxeAdrVG2l?utm_source=generator' },
+        '80s': { title: 'All Out 80s', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4UtSsGT1Sbe?utm_source=generator' },
+        'all out 80s': { title: 'All Out 80s', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4UtSsGT1Sbe?utm_source=generator' },
+        '00s': { title: '00s Rock Anthems', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX3oM43CtKnRV?utm_source=generator' },
+        '2000s': { title: '00s Rock Anthems', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX3oM43CtKnRV?utm_source=generator' },
+        '70s': { title: 'All Out 70s', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWTJ7xPn4vNaz?utm_source=generator' },
+        'all out 70s': { title: 'All Out 70s', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWTJ7xPn4vNaz?utm_source=generator' },
+
+        // Rock & Metal
+        'rock': { title: 'Rock Classics', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWXRqgorJj26U?utm_source=generator' },
+        'classic rock': { title: 'Rock Classics', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWXRqgorJj26U?utm_source=generator' },
+        'classicrock': { title: 'Rock Classics', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWXRqgorJj26U?utm_source=generator' },
+        '80s rock': { title: '80s Rock Anthems', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX1spT6G94GFC?utm_source=generator' },
+        'metal': { title: 'Heavy Metal', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX9qNs32fujYe?utm_source=generator' },
+        'heavy metal': { title: 'Heavy Metal', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX9qNs32fujYe?utm_source=generator' },
+        'kickass metal': { title: 'Heavy Metal', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX9qNs32fujYe?utm_source=generator' },
+
+        // Hip-hop & Rap
         'rap': { title: 'RapCaviar', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX0XUsuxWHRQd?utm_source=generator' },
         'hiphop': { title: 'RapCaviar', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX0XUsuxWHRQd?utm_source=generator' },
         'hip hop': { title: 'RapCaviar', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX0XUsuxWHRQd?utm_source=generator' },
-        'lofi': { title: 'Lofi Beats', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXdLEN7aqioXM?utm_source=generator' },
-        'lo fi': { title: 'Lofi Beats', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXdLEN7aqioXM?utm_source=generator' },
-        'study': { title: 'Lofi Beats', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXdLEN7aqioXM?utm_source=generator' },
-        'chill': { title: 'Chill Hits', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4WYpdgoIcn6?utm_source=generator' },
-        'relax': { title: 'Chill Hits', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4WYpdgoIcn6?utm_source=generator' },
-        'rock': { title: 'Rock Classics', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWXRqgorJj26U?utm_source=generator' },
-        'classicrock': { title: 'Rock Classics', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWXRqgorJj26U?utm_source=generator' },
+        'trap': { title: 'RapCaviar', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX0XUsuxWHRQd?utm_source=generator' },
+        'drill': { title: 'RapCaviar', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX0XUsuxWHRQd?utm_source=generator' },
+        'grime': { title: 'RapCaviar', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX0XUsuxWHRQd?utm_source=generator' },
+
+        // Hits & Pop
         'pop': { title: "Today's Top Hits", url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M?utm_source=generator' },
-        'hits': { title: "Today's Top Hits", url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M?utm_source=generator' },
+        'hits': { title: 'Mega Hit Mix', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXbYM3nMM0oPk?utm_source=generator' },
+        'top hits': { title: "Today's Top Hits", url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M?utm_source=generator' },
         'tophits': { title: "Today's Top Hits", url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M?utm_source=generator' },
-        'jazz': { title: 'Jazz Classics', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXbITWG1ZJKYt?utm_source=generator' },
-        'classical': { title: 'Classical Essentials', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWWEJlAGA9gs0?utm_source=generator' },
-        'workout': { title: 'Beast Mode', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX76t638V648v?utm_source=generator' },
-        'gym': { title: 'Beast Mode', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX76t638V648v?utm_source=generator' },
-        'gaming': { title: 'Top Gaming Tracks', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWTyiBJ6yEqeu?utm_source=generator' },
+        'viral': { title: 'Viral Hits', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX2L0iB23Enbq?utm_source=generator' },
+        'tiktok': { title: 'Viral Hits', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX2L0iB23Enbq?utm_source=generator' },
+
+        // Electronic & Dance
         'dance': { title: 'mint', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4dyzvuaRJ0n?utm_source=generator' },
         'edm': { title: 'mint', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4dyzvuaRJ0n?utm_source=generator' },
         'electronic': { title: 'mint', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4dyzvuaRJ0n?utm_source=generator' },
+        'club': { title: 'mint', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4dyzvuaRJ0n?utm_source=generator' },
+
+        // Other Essentials
+        'jazz': { title: 'Jazz Classics', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXbITWG1ZJKYt?utm_source=generator' },
+        'classical': { title: 'Classical Essentials', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWWEJlAGA9gs0?utm_source=generator' },
         'piano': { title: 'Peaceful Piano', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4sWSpwq3LiO?utm_source=generator' },
         'sleep': { title: 'Peaceful Piano', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4sWSpwq3LiO?utm_source=generator' },
-        'metal': { title: 'Kickass Metal', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX9qNs32fujYe?utm_source=generator' },
-        'country': { title: 'Hot Country', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX1lVhptIYRda?utm_source=generator' },
+        'workout': { title: 'Beast Mode', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX76t638V648v?utm_source=generator' },
+        'gym': { title: 'Beast Mode', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX76t638V648v?utm_source=generator' },
+        'gaming': { title: 'Top Gaming Tracks', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWTyiBJ6yEqeu?utm_source=generator' },
+        'soul': { title: '70s Soul Classics', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWULEW2RfoSCi?utm_source=generator' },
         'rnb': { title: 'Are & Be', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4SBhb3fqAp5?utm_source=generator' },
         'r&b': { title: 'Are & Be', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4SBhb3fqAp5?utm_source=generator' },
-        'indie': { title: 'Ultimate Indie', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX2Nc3B70tvx0?utm_source=generator' },
-        'alt': { title: 'Ultimate Indie', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX2Nc3B70tvx0?utm_source=generator' },
+        'latin': { title: 'Viva Latino', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX10zKzsJ2jva?utm_source=generator' },
+        'kpop': { title: 'K-Pop ON!', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX9tPFwDMOaN1?utm_source=generator' },
+        'country': { title: 'Hot Country', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX1lVhptIYRda?utm_source=generator' },
+        'ambient': { title: 'Ambient Relaxation', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX3Ogo9pFvBkY?utm_source=generator' },
+        'indie': { title: "Indie's Top 50", url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX2Nc3B70tvx0?utm_source=generator' },
+        'alt': { title: "Indie's Top 50", url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX2Nc3B70tvx0?utm_source=generator' },
         'blues': { title: 'Blues Classics', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXd9rSDgaGda4?utm_source=generator' },
-        'soul': { title: 'Soul Lounge', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX24SZvttG2X8?utm_source=generator' },
         'reggae': { title: 'Reggae Classics', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXbSyd5txkwh7?utm_source=generator' },
         'punk': { title: 'Punk Essentials', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX3LDIBRoaRyQ?utm_source=generator' },
         'funk': { title: 'Funk Classics', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWWvh2cfrxXML?utm_source=generator' },
-        'latin': { title: 'Viva Latino', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX10zKzsJ2jva?utm_source=generator' },
-        'kpop': { title: 'K-Pop ON!', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX9tPFwDMOaN1?utm_source=generator' },
         'disco': { title: 'Disco Fever', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX1lVhptIYRda?utm_source=generator' },
-        'ambient': { title: 'Ambient Relaxation', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX3Ogo9pFvBkY?utm_source=generator' },
         'acoustic': { title: 'Acoustic Hits', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX504r9869VvY?utm_source=generator' }
     };
 
@@ -529,7 +607,7 @@
         }
 
         // 0. LIVE Spotify API search (when connected — 100% accurate for any artist/song)
-        if (window.SpotifyAuth) {
+        if (typeof window !== 'undefined' && window.SpotifyAuth) {
             try {
                 const apiResult = await window.SpotifyAuth.search(raw);
                 if (apiResult?.id) {
@@ -558,10 +636,23 @@
         const normalized = normalizeText(raw);
         const squashed = normalized.replace(/\s+/g, '');
 
-        // 2. Offline genre keyword match
+        // 2. Offline genre keyword exact match
         if (SPOTIFY_GENRES[normalized] || SPOTIFY_GENRES[squashed]) {
             const g = SPOTIFY_GENRES[normalized] || SPOTIFY_GENRES[squashed];
             return { title: g.title, embedUrl: g.url };
+        }
+
+        // 2b. Check if query is a genre phrase (e.g. "uk garage mix", "uk garage playlist", "play uk garage")
+        // Sorted by length descending so specific genres match before short generic ones
+        const genreKeysByLength = Object.keys(SPOTIFY_GENRES).sort((a, b) => b.length - a.length);
+        const isKnownArtistExact = !!(SPOTIFY_ARTISTS[normalized] || SPOTIFY_ALIASES[normalized] || SPOTIFY_ARTISTS[squashed]);
+        if (!isKnownArtistExact) {
+            for (const k of genreKeysByLength) {
+                if (k.length >= 3 && new RegExp(`(^|\\b)${k}(\\b|$)`, 'i').test(normalized)) {
+                    const g = SPOTIFY_GENRES[k];
+                    return { title: g.title, embedUrl: g.url };
+                }
+            }
         }
 
         // 3. Offline track catalog
@@ -635,26 +726,26 @@
             }
             // Genre hint from iTunes
             const itGenre = normalizeText(itunes.genre || '');
-            for (const [gKey, gObj] of Object.entries(SPOTIFY_GENRES)) {
+            for (const gKey of genreKeysByLength) {
                 if (gKey.length >= 3 && (itGenre.includes(gKey) || gKey.includes(itGenre))) {
                     return {
-                        title: `${gObj.title} (${itunes.artistName} — ${itunes.trackName})`,
-                        embedUrl: gObj.url
+                        title: `${SPOTIFY_GENRES[gKey].title} (${itunes.artistName} — ${itunes.trackName})`,
+                        embedUrl: SPOTIFY_GENRES[gKey].url
                     };
                 }
             }
         }
 
         // 10. Word-boundary genre fallback
-        for (const [k, v] of Object.entries(SPOTIFY_GENRES)) {
+        for (const k of genreKeysByLength) {
             if (new RegExp(`\\b${k}\\b`, 'i').test(raw)) {
-                return { title: `${v.title} (${raw})`, embedUrl: v.url };
+                return { title: `${SPOTIFY_GENRES[k].title} (${raw})`, embedUrl: SPOTIFY_GENRES[k].url };
             }
         }
 
         // 11. Last resort
         return {
-            title: `Top Hits (for "${raw}")`,
+            title: `Top Hits (matching "${raw}")`,
             embedUrl: SPOTIFY_GENRES['pop'].url
         };
     }

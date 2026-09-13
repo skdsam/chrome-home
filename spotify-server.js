@@ -350,9 +350,9 @@ const server = http.createServer(async (req, res) => {
         }
 
         try {
-            const types = query.type || 'artist,track';
+            const types = query.type || 'artist,track,playlist';
             const result = await spotifyAPIRequest(
-                `/v1/search?${new URLSearchParams({ q, type: types, limit: 3 })}`
+                `/v1/search?${new URLSearchParams({ q, type: types, limit: 5 })}`
             );
             json(res, result.status, result.body);
         } catch (err) {
@@ -388,8 +388,16 @@ const server = http.createServer(async (req, res) => {
         };
 
         const authUrl = 'https://accounts.spotify.com/authorize?' + new URLSearchParams(authParams);
-        openBrowser(authUrl);
-        json(res, 200, { message: 'Opening Spotify login in your browser…' });
+
+        if (query.json === '1' || (req.headers.accept && req.headers.accept.includes('application/json'))) {
+            openBrowser(authUrl);
+            json(res, 200, { authUrl, message: 'Opening Spotify login in your browser…' });
+            return;
+        }
+
+        // Direct browser navigation -> 302 redirect directly to Spotify login page
+        res.writeHead(302, { Location: authUrl });
+        res.end();
         return;
     }
 

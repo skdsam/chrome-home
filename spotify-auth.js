@@ -74,20 +74,20 @@
     }
 
     /**
-     * Open Spotify login — opens the auth page in the browser.
+     * Open Spotify login — opens the auth page directly in the browser tab.
      * The local server handles the OAuth callback automatically.
      */
     async function connect() {
+        const loginUrl = `${SERVER}/login`;
         try {
-            const resp = await serverFetch('/login');
-            if (resp.ok) return { success: true };
-            const data = await resp.json().catch(() => ({}));
-            throw new Error(data.error || 'Server error — is spotify-server.js running?');
-        } catch (err) {
-            if (err.name === 'AbortError' || err.message.includes('fetch')) {
-                throw new Error('Local helper server is not running. Double-click start-spotify.bat first.');
+            if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.create) {
+                chrome.tabs.create({ url: loginUrl });
+            } else if (typeof window !== 'undefined') {
+                window.open(loginUrl, '_blank');
             }
-            throw err;
+            return { success: true };
+        } catch (err) {
+            return { success: false, error: err.message };
         }
     }
 
@@ -108,10 +108,10 @@
     }
 
     /**
-     * Search for an artist or track.
+     * Search for an artist, track, or playlist.
      * Returns { type, id, title } or null.
      */
-    async function search(query, types = 'artist,track') {
+    async function search(query, types = 'artist,track,playlist') {
         try {
             const resp = await serverFetch(
                 `/search?${new URLSearchParams({ q: query, type: types })}`
@@ -120,9 +120,23 @@
             if (!resp.ok) return null;
             const data = await resp.json();
 
-            const looksLikeTrack = /\bby\b|'|"/.test(query.toLowerCase());
+            const qLower = String(query || '').toLowerCase().trim();
+            const looksLikeTrack = /\b(by|song|track|play)\b|'|"/.test(qLower);
+            const looksLikePlaylist = /\b(playlist|mix|classics|session|vibes|party|garage|ukg|hits|anthems|workout|chill|dance|edm|dnb|techno|house|rap|hiphop|rock|pop)\b/.test(qLower);
+
             const artists = data.artists?.items || [];
             const tracks = data.tracks?.items || [];
+            const playlists = data.playlists?.items || [];
+
+            // If query explicitly hints at playlist or genre, check playlists first
+            if (looksLikePlaylist && playlists.length > 0) {
+                const exactArtist = artists.find(a => a.name.toLowerCase() === qLower);
+                if (exactArtist && !qLower.includes('playlist') && !qLower.includes('mix')) {
+                    return { type: 'artist', id: exactArtist.id, title: exactArtist.name };
+                }
+                const p = playlists[0];
+                return { type: 'playlist', id: p.id, title: p.name };
+            }
 
             if (looksLikeTrack && tracks.length > 0) {
                 const t = tracks[0];
@@ -131,6 +145,10 @@
             if (artists.length > 0) {
                 const a = artists[0];
                 return { type: 'artist', id: a.id, title: a.name };
+            }
+            if (playlists.length > 0) {
+                const p = playlists[0];
+                return { type: 'playlist', id: p.id, title: p.name };
             }
             if (tracks.length > 0) {
                 const t = tracks[0];
