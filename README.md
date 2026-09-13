@@ -10,14 +10,15 @@
 - **Natural addition commands:** Pip can add tasks, append quick notes, create shortcuts, and save links to My Sites. Missing website addresses prompt a follow-up; duplicate URLs are detected within each collection.
 - **Spotify matching corrected:** artist names and playlist intent are preserved. Ambiguous names and playlists offer choices with creator information. Failed searches keep the current music instead of substituting an unrelated playlist.
 - **Spotify favourites and personal playlists:** save selections by Spotify ID, search the signed-in playlist library, and open exact Spotify links or URIs. Older searches cannot overwrite newer selections.
-- **Focus Mode removed:** its button, command-menu action, page-hiding styles, and Pip reactions have been removed. The clock, daily intention field, and 25-minute timer remain.
+- **Focus controls removed:** Focus Mode, the daily intention input, and the 25-minute timer have been removed. The clock and date remain.
+- **Pip planning removed:** the Plan today menu button and dedicated planning flow are no longer included.
 
 ## Homepage at a glance
 
 | Area | What you can do |
 | --- | --- |
 | Search | Search with Google, DuckDuckGo, Bing, Brave, or Ecosia. |
-| Clock and daily intention | See the time and date, set a daily intention, and use the 25-minute timer. |
+| Clock and date | See the current time and date. |
 | Shortcuts | Add, edit, remove, and reorder website cards; add cards through Pip. |
 | My Sites | Keep a separate collection of named links; add them through the panel or Pip. |
 | Top Sites | Access frequently visited websites. |
@@ -129,20 +130,20 @@ Pip can save items directly, with or without Local AI enabled:
 
 Tasks and notes open their widgets; notes append to the active note. Website commands accept full HTTP(S) URLs or domains and avoid duplicate URLs within each collection. If you give a site name without its URL, Pip asks for the address and accepts it in your next message. Additions are saved before Pip confirms success, and remain available after reloading.
 
-Other Chat commands include `open my tasks`, `close sports`, `minimize notes`, `clear completed tasks`, `tidy screen`, `find my design bookmarks`, and `help me plan today`.
+Other Chat commands include `open my tasks`, `close sports`, `minimize notes`, `clear completed tasks`, `tidy screen`, and `find my design bookmarks`.
 
 ### Optional local AI and web lookup
 
-Enable **Local AI · Gemini Nano**, then submit a question. Chrome checks device support and may download its on-device model on the first request; progress appears in Ask Pip. No API key or separate model server is needed for local AI. Direct widget additions, bookmark search, and basic planning remain usable without it.
+Enable **Local AI · Gemini Nano**, then submit a question. Chrome checks device support and may download its on-device model on the first request; progress appears in Ask Pip. No API key or separate model server is needed for local AI. Direct widget additions and bookmark search remain usable without it.
 
 **Web lookup · DuckDuckGo & Wikipedia** can search those services and show sources. Widget commands and quick-entry additions go directly to the widget handlers.
 
-Pip sends questions and the current daily intention to Chrome's local Prompt API. Bookmark searches run directly against Chrome bookmarks. Direct widget commands use dedicated handlers; generated AI text does not execute actions. Up to three recent AI exchanges are kept in memory for follow-up questions and cleared when the dialog closes or Local AI changes. Model sessions are released after replies; Stop, closing the dialog, or leaving the page cancels active AI work. The local AI preference is saved on this device.
+Pip sends questions to Chrome's local Prompt API. Bookmark searches run directly against Chrome bookmarks. Direct widget commands use dedicated handlers; generated AI text does not execute actions. Up to three recent AI exchanges are kept in memory for follow-up questions and cleared when the dialog closes or Local AI changes. Model sessions are released after replies; Stop, closing the dialog, or leaving the page cancels active AI work. The local AI preference is saved on this device.
 
 Requirements and model availability are managed by Chrome: https://developer.chrome.com/docs/ai/get-started . Unsupported browsers and devices do not download a model through Pip. To verify on a supported Chrome installation, open Ask Pip, enable Local AI, submit a question, check download/thinking status and a local reply, then test Stop and closing during a request.
 
 
-Pip sits beside the non-modal Ask Pip card (above it on narrow screens). Gemini Nano can select a wave, nod, dance or curious pose; thinking has its own animation. When Local AI and occasional comments are enabled, Pip can generate a short comment roughly every 4–7 minutes while idle, using the daily intention as context. Autonomous comments only use an already available model and never initiate a download. They pause while chatting or the page is hidden. Turn comments off in Ask Pip.
+Pip sits beside the non-modal Ask Pip card (above it on narrow screens). Gemini Nano can select a wave, nod, dance or curious pose; thinking has its own animation. When Local AI and occasional comments are enabled, Pip can generate a short comment roughly every 4–7 minutes while idle. Autonomous comments only use an already available model and never initiate a download. They pause while chatting or the page is hidden. Turn comments off in Ask Pip.
 
 The top-right Pip button waves goodbye and sends Pip offscreen before saving the disabled preference. Click again to bring him back. Reduced motion uses a short stationary goodbye instead of flight.
 

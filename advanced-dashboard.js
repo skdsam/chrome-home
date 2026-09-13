@@ -337,7 +337,7 @@
             clearTimeout(window.rainDiagTimer); window.rainDiagTimer = setTimeout(() => diag.classList.add('hidden'), 5500);
         });
 
-        const settings = (await getStore(['advancedSettings', 'dailyIntention']));
+        const settings = (await getStore(['advancedSettings']));
         const prefs = Object.assign({ scale: 100, contrast: 38, density: 'comfortable', reducedMotion: false }, settings.advancedSettings);
         const applyPrefs = () => {
             document.documentElement.style.setProperty('--ui-scale', prefs.scale / 100);
@@ -353,13 +353,6 @@
 
         const tick = () => { const now = new Date(); $('dashboard-clock').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); $('dashboard-date').textContent = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }); };
         tick(); setInterval(tick, 1000);
-        $('daily-intention').value = settings.dailyIntention || '';
-        $('daily-intention').addEventListener('input', e => setStore({ dailyIntention: e.target.value }));
-
-        let timerSeconds = 1500, timerHandle = null;
-        const paintTimer = () => $('pomodoro-btn').textContent = `${String(Math.floor(timerSeconds / 60)).padStart(2,'0')}:${String(timerSeconds % 60).padStart(2,'0')}`;
-        const toggleTimer = () => { if (timerHandle) { clearInterval(timerHandle); timerHandle = null; return; } timerHandle = setInterval(() => { timerSeconds--; paintTimer(); if (timerSeconds <= 0) { clearInterval(timerHandle); timerHandle = null; timerSeconds = 1500; new Notification('Chrome Home', { body: 'Focus session complete.' }); paintTimer(); } }, 1000); };
-        $('pomodoro-btn').addEventListener('click', toggleTimer);
 
         chrome.storage.local.remove('workspaceProfiles');
         chrome.storage.sync.remove('workspaceProfiles');
@@ -378,7 +371,7 @@
         ];
         const renderCommands=()=>{ results.replaceChildren(...commands.slice(0,12).map((cmd,i)=>{const b=document.createElement('button');b.type='button';b.className='command-result'+(i===selected?' active':'');const title=document.createElement('span');title.textContent=cmd.title;const meta=document.createElement('small');meta.textContent=cmd.meta||cmd.url||'';b.append(title,meta);b.onclick=()=>runCommand(cmd);return b;})); };
         const runCommand=cmd=>{ closePalette(); if(cmd.run)cmd.run(); else if(cmd.url)location.href=cmd.url; };
-        const loadCommands=async query=>{ const q=query.trim().toLowerCase(), store=await getStore(['shortcuts','mySites']); const local=[...(store.shortcuts||[]),...(store.mySites||[])].map(x=>({title:x.title||x.name,url:safeUrl(x.url),meta:'Saved site'})).filter(x=>x.url); const history=await new Promise(resolve=>chrome.history.search({text:q,maxResults:20,startTime:0},resolve)); const historyItems=history.map(x=>({title:x.title||x.url,url:safeUrl(x.url),meta:'History'})).filter(x=>x.url); commands=[...actions,...local,...historyItems].filter(x=>!q||`${x.title} ${x.meta}`.toLowerCase().includes(q)); if(q.startsWith('/timer ')){const mins=Math.max(1,Math.min(180,parseInt(q.slice(7),10)||25));commands.unshift({title:`Start a ${mins}-minute timer`,meta:'Quick action',run:()=>{timerSeconds=mins*60;paintTimer();if(!timerHandle)toggleTimer();}});} const bangs={yt:'https://www.youtube.com/results?search_query=',gh:'https://github.com/search?q=',maps:'https://www.google.com/maps/search/',ddg:'https://duckduckgo.com/?q='}; const parts=q.split(/\s+/); if(bangs[parts[0]]&&parts.length>1)commands.unshift({title:`Search ${parts[0]} for “${parts.slice(1).join(' ')}”`,meta:'Search bang',url:bangs[parts[0]]+encodeURIComponent(parts.slice(1).join(' '))}); if(q)commands.push({title:`Search the web for “${query.trim()}”`,meta:'Google',url:'https://www.google.com/search?q='+encodeURIComponent(query.trim())}); selected=0;renderCommands();};
+        const loadCommands=async query=>{ const q=query.trim().toLowerCase(), store=await getStore(['shortcuts','mySites']); const local=[...(store.shortcuts||[]),...(store.mySites||[])].map(x=>({title:x.title||x.name,url:safeUrl(x.url),meta:'Saved site'})).filter(x=>x.url); const history=await new Promise(resolve=>chrome.history.search({text:q,maxResults:20,startTime:0},resolve)); const historyItems=history.map(x=>({title:x.title||x.url,url:safeUrl(x.url),meta:'History'})).filter(x=>x.url); commands=[...actions,...local,...historyItems].filter(x=>!q||`${x.title} ${x.meta}`.toLowerCase().includes(q)); const bangs={yt:'https://www.youtube.com/results?search_query=',gh:'https://github.com/search?q=',maps:'https://www.google.com/maps/search/',ddg:'https://duckduckgo.com/?q='}; const parts=q.split(/\s+/); if(bangs[parts[0]]&&parts.length>1)commands.unshift({title:`Search ${parts[0]} for “${parts.slice(1).join(' ')}”`,meta:'Search bang',url:bangs[parts[0]]+encodeURIComponent(parts.slice(1).join(' '))}); if(q)commands.push({title:`Search the web for “${query.trim()}”`,meta:'Google',url:'https://www.google.com/search?q='+encodeURIComponent(query.trim())}); selected=0;renderCommands();};
         const loadAllCommands=async query=>{ await loadCommands(query); const q=query.trim().toLowerCase(); const [tabs,bookmarks]=await Promise.all([new Promise(resolve=>chrome.tabs.query({},resolve)),new Promise(resolve=>chrome.bookmarks.search(q||'http',resolve))]); const extras=[...tabs.map(item=>({title:item.title||item.url,url:safeUrl(item.url),meta:'Open tab'})),...bookmarks.map(item=>({title:item.title||item.url,url:safeUrl(item.url),meta:'Bookmark'}))].filter(item=>item.url&&(!q||`${item.title} ${item.meta}`.toLowerCase().includes(q))); commands.splice(Math.min(actions.length,commands.length),0,...extras); renderCommands(); };
         const openPalette=()=>{overlay.classList.remove('hidden');input.value='';loadAllCommands('');setTimeout(()=>input.focus(),0);};
         const closePalette=()=>overlay.classList.add('hidden');

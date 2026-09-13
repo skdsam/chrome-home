@@ -19,7 +19,7 @@ test('Pip preserves music intent, names and playlist words', () => {
         ['Can you play Red Hot Chili Peppers on Spotify?', 'Red Hot Chili Peppers'],
         ['play my playlist Summer', 'my playlist Summer']
     ]) assert.deepEqual(parseRequest(input), { type: 'widget', action: 'spotify_play', query });
-    assert.equal(parseRequest('help me plan today').type, 'plan');
+    assert.equal(parseRequest('help me plan today').type, 'unknown');
     assert.equal(parseRequest('add note play Queen').action, 'notes_add');
 });
 

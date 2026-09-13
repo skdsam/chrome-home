@@ -9,7 +9,7 @@ test('natural task requests keep their text and beat planning/bookmark keywords'
     }
     assert.equal(parseRequest('add plan tomorrow').text, 'plan tomorrow');
     assert.equal(parseRequest('add review bookmarks').action, 'todo_add');
-    assert.equal(parseRequest('create a plan for today').type, 'plan');
+    assert.equal(parseRequest('create a plan for today').type, 'unknown');
     assert.equal(parseRequest('how do I add a task?').type, 'unknown');
     assert.equal(parseRequest('how do I add task buy milk?').type, 'unknown');
 });

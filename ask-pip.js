@@ -46,7 +46,7 @@
                              .replace(/[?.!]+$/, '')
                              .trim();
 
-        // Route explicit play commands before planning/bookmark keywords in music titles.
+        // Route explicit play commands before bookmark keywords in music titles.
         const spotifyPlayMatch = cleanText.match(/^(?:please\s+)?(?:play|put\s*on|listen\s*to)\s+(.+)$/i);
         if (spotifyPlayMatch) {
             const query = spotifyPlayMatch[1].replace(/\s+please[?.!]*$/i, '')
@@ -62,7 +62,6 @@
                 .replace(/\b(find|search|show|look|for|up|my|me|the|all|please|can|you|could|bookmarks?|saved|sites?|links?)\b/g, ' ')
                 .replace(/[^\p{L}\p{N}\s.-]/gu, ' ').replace(/\s+/g, ' ').trim() };
         }
-        if (/\b(plan|planning|focus|prioriti[sz]e)\b/i.test(cleanText)) return { type: 'plan' };
 
         if (/\b(?:clear|remove|delete)\s+completed\s+(?:tasks?|todos?)\b/i.test(cleanText)) {
             return { type: 'widget', action: 'todo_clear_completed' };
@@ -254,7 +253,6 @@
     const composeButtons = dialog.querySelectorAll('[data-pip-compose]');
     const composeLabel = document.getElementById('pip-compose-label');
     const composeSubmit = document.getElementById('pip-compose-submit');
-    let awaitingFocus = false;
     const localAI = window.PipLocalAI ? new window.PipLocalAI() : null;
     const webSearch = window.PipWebSearch ? new window.PipWebSearch() : null;
     const aiToggle = document.getElementById('pip-local-ai');
@@ -290,7 +288,7 @@
         const version = ++ambientVersion;
         try {
             if (await ambientAI.availability() !== 'available' || version !== ambientVersion) return;
-            const response = await ambientAI.ask('Offer one fresh, friendly sentence to the person using this new tab. Mention the daily focus only if provided. No news claims. Under 24 words.', document.getElementById('daily-intention')?.value);
+            const response = await ambientAI.ask('Offer one fresh, friendly sentence to the person using this new tab. No news claims. Under 24 words.');
             if (version !== ambientVersion || dialog.open || document.hidden || !pip.settings.enabled || pip.departure || pip.phase !== 'idle') return;
             const expression = parseExpression(response);
             pip.speak('idle', expression.text.slice(0, 220));
@@ -310,7 +308,6 @@
         requestId += 1;
         statusVersion += 1;
         pendingSite = null;
-        awaitingFocus = false;
         stopAI();
         cancelAmbient();
         composeButtons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.pipCompose === composeMode)));
@@ -332,7 +329,7 @@
     async function checkAI() {
         const version = ++statusVersion;
         if (!aiToggle?.checked) {
-            setStatus('Local AI is off. Widget control, web lookup, bookmark search, and simple planning are available.');
+            setStatus('Local AI is off. Widget control, quick additions, web lookup, and bookmark search are available.');
             return;
         }
         setStatus('Checking Gemini Nano availability...');
@@ -349,7 +346,6 @@
             stopAI();
             if (localAI) localAI.history = [];
             cancelAmbient();
-            awaitingFocus = false;
             try { localStorage.setItem('pipLocalAI', String(aiToggle.checked)); } catch (_) { /* Optional preference. */ }
             checkAI();
         });
@@ -389,30 +385,6 @@
         });
     });
 
-    function showPlan(focus) {
-        answer.textContent = `Let’s make room for “${focus}”. Here’s a suggested plan:`;
-        const list = document.createElement('ol');
-        ['Pick one small, concrete outcome you can finish today.',
-            `Spend 25 minutes on the first step toward ${focus}.`,
-            'Take a five-minute break, then review what remains.'].forEach(text => {
-            const item = document.createElement('li');
-            item.textContent = text;
-            list.append(item);
-        });
-        answer.append(list);
-        const save = document.createElement('button');
-        save.type = 'button';
-        save.textContent = 'Use as today’s focus';
-        save.addEventListener('click', () => {
-            const intention = document.getElementById('daily-intention');
-            intention.value = focus.slice(0, intention.maxLength);
-            intention.dispatchEvent(new Event('input', { bubbles: true }));
-            save.textContent = 'Daily focus saved';
-            save.disabled = true;
-        });
-        answer.append(save);
-    }
-
     document.getElementById('ask-pip-form').addEventListener('submit', async event => {
         event.preventDefault();
         const text = input.value.trim();
@@ -429,7 +401,6 @@
         pendingSite = null;
         input.value = '';
         if (request.type === 'widget') {
-            awaitingFocus = false;
             if (request.action === 'spotify_play') {
                 answer.textContent = `Finding "${request.query}" on Spotify...`;
                 mood('thinking');
@@ -451,7 +422,6 @@
         }
         const useWeb = Boolean(webSearchToggle?.checked && webSearch && request.type !== 'bookmarks');
         if (aiToggle?.checked && localAI && request.type !== 'bookmarks') {
-            awaitingFocus = false;
             answer.textContent = useWeb ? 'Searching the web and preparing your reply...' : 'Preparing your local reply...';
             mood('thinking');
             stopButton?.classList?.remove('hidden');
@@ -465,7 +435,7 @@
                     webContext = searchResult.contextText;
                     sources = searchResult.sources;
                 }
-                const response = await localAI.ask(text, document.getElementById('daily-intention')?.value,
+                const response = await localAI.ask(text, '',
                     message => { if (token === requestId) setStatus(message); }, webContext);
                 if (token !== requestId || !dialog.open) return;
                 const expression = parseExpression(response);
@@ -481,22 +451,6 @@
                 setStatus('Gemini Nano could not complete this request. Using the basic helper; try again to retry local AI.');
                 stopButton?.classList?.add('hidden');
             }
-        }
-        if (awaitingFocus && request.type === 'unknown') {
-            awaitingFocus = false;
-            showPlan(text);
-            return;
-        }
-        awaitingFocus = false;
-        if (request.type === 'plan') {
-            const focus = document.getElementById('daily-intention')?.value.trim();
-            if (focus) showPlan(focus);
-            else {
-                awaitingFocus = true;
-                answer.textContent = 'What is the one thing you’d most like to get done today? Type it below and I’ll help break up your time.';
-                input.focus();
-            }
-            return;
         }
         if (request.type !== 'bookmarks') {
             if (useWeb) {
@@ -515,7 +469,7 @@
                     }
                 } catch (_) { /* fallback below */ }
             }
-            answer.textContent = 'I can control your widgets, search the web, find bookmarks, and make a simple daily plan. Try “open tasks”, “tidy screen”, or ask a question.';
+            answer.textContent = 'I can control your widgets, add tasks and notes, save websites, search the web, and find bookmarks. Try “open tasks”, “add buy milk”, or ask a question.';
             return;
         }
         answer.textContent = 'Looking through your bookmarks…';

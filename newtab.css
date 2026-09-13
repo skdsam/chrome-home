@@ -235,7 +235,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
 #aurora-canvas { z-index: -3; opacity: .62; mix-blend-mode: screen; }
 #wet-glass-canvas { z-index: -2; }
 
-.daily-focus {
+.clock-panel {
     position: fixed;
     left: 26px;
     top: 22px;
@@ -246,13 +246,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
 }
 .dashboard-clock { font-size: clamp(2rem, 4vw, 3.4rem); font-weight: 300; letter-spacing: -.05em; line-height: 1; }
 .dashboard-date { margin: 5px 0 11px; font-size: .8rem; opacity: .78; }
-#daily-intention {
-    width: 100%; color: #fff; border: 0; border-bottom: 1px solid rgba(255,255,255,.3);
-    background: transparent; padding: 7px 1px; outline: 0;
-}
-#daily-intention::placeholder { color: rgba(255,255,255,.62); }
-.focus-actions { display: flex; gap: 7px; margin-top: 9px; }
-.focus-actions button, .rain-test-btn, .command-palette-btn {
+.rain-test-btn, .command-palette-btn {
     color: #fff; background: rgba(15,19,29,.66); border: 1px solid rgba(255,255,255,.18);
     border-radius: 999px; padding: 7px 11px; cursor: pointer; backdrop-filter: blur(16px);
 }
@@ -275,7 +269,7 @@ body.compact .shortcut-card { transform: scale(.9); margin: -4px; }
 body { font-size: calc(16px * var(--ui-scale)); }
 
 @media (max-width: 760px), (max-height: 620px) {
-    .daily-focus { left: 16px; top: 14px; }
+    .clock-panel { left: 16px; top: 14px; }
     .dashboard-clock { font-size: 2rem; }
     .header-controls { top: 12px; right: 12px; }
     .container { transform: scale(.88); }
