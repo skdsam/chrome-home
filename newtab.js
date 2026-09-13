@@ -1884,22 +1884,40 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
     // Refresh auth panel state
     async function refreshSpotifyAuthUI() {
         if (!window.SpotifyAuth) return;
-        const connected = await window.SpotifyAuth.isConnected();
+
+        const serverRunning = await window.SpotifyAuth.isServerRunning?.() ?? false;
+        const connected = serverRunning && await window.SpotifyAuth.isConnected();
+
         if (connected) {
             spotifyAuthBtn.textContent = '✅ Spotify';
             spotifyAuthBtn.title = 'Spotify Connected — Click to manage';
             spotifyAuthBtn.style.color = '#1db954';
             if (spotifyAuthConnected) spotifyAuthConnected.classList.remove('hidden');
             if (spotifyAuthSetup) spotifyAuthSetup.classList.add('hidden');
-        } else {
+        } else if (serverRunning) {
+            // Server running but not logged in yet
             spotifyAuthBtn.textContent = '🔗 Connect';
-            spotifyAuthBtn.title = 'Connect Spotify Account';
+            spotifyAuthBtn.title = 'Log in to Spotify';
+            spotifyAuthBtn.style.color = '#f59e0b';
+            if (spotifyAuthConnected) spotifyAuthConnected.classList.add('hidden');
+            if (spotifyAuthSetup) spotifyAuthSetup.classList.remove('hidden');
+            // Hide the client ID input — not needed with server model
+            if (spotifyClientIdInput) {
+                spotifyClientIdInput.closest('.spotify-auth-input-row').style.display = 'none';
+            }
+            if (spotifyConnectBtn) spotifyConnectBtn.textContent = 'Open Spotify Login';
+        } else {
+            // Server not running
+            spotifyAuthBtn.textContent = '🔗 Connect';
+            spotifyAuthBtn.title = 'Start spotify-server.js to connect';
             spotifyAuthBtn.style.color = '';
             if (spotifyAuthConnected) spotifyAuthConnected.classList.add('hidden');
             if (spotifyAuthSetup) spotifyAuthSetup.classList.remove('hidden');
-            // Pre-fill saved client ID if any
-            const savedId = await window.SpotifyAuth.getClientId();
-            if (savedId && spotifyClientIdInput) spotifyClientIdInput.value = savedId;
+            if (spotifyConnectBtn) spotifyConnectBtn.textContent = 'Start Server First';
+            if (spotifyConnectBtn) spotifyConnectBtn.disabled = true;
+            if (spotifyClientIdInput) {
+                spotifyClientIdInput.closest('.spotify-auth-input-row').style.display = 'none';
+            }
         }
     }
 
@@ -1917,33 +1935,27 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
 
     // Connect button
     spotifyConnectBtn?.addEventListener('click', async () => {
-        const clientId = spotifyClientIdInput?.value?.trim();
-        if (!clientId) {
-            if (spotifyAuthError) {
-                spotifyAuthError.textContent = '⚠ Please paste your Client ID first.';
-                spotifyAuthError.classList.remove('hidden');
-            }
-            return;
-        }
         if (spotifyAuthError) spotifyAuthError.classList.add('hidden');
         spotifyConnectBtn.textContent = 'Connecting…';
         spotifyConnectBtn.disabled = true;
         try {
-            await window.SpotifyAuth.connect(clientId);
-            await refreshSpotifyAuthUI();
+            await window.SpotifyAuth.connect();
+            if (spotifyAuthError) spotifyAuthError.classList.add('hidden');
             if (spotifySearchStatus) {
-                spotifySearchStatus.textContent = '✅ Spotify connected — search now finds any artist or song!';
+                spotifySearchStatus.textContent = '🔗 Spotify login opened in browser — log in there, then come back.';
                 spotifySearchStatus.classList.remove('hidden');
             }
-            // Hide auth panel after success
-            setTimeout(() => spotifyAuthPanel?.classList.add('hidden'), 1500);
+            // Poll for connection after a few seconds
+            setTimeout(refreshSpotifyAuthUI, 4000);
+            setTimeout(refreshSpotifyAuthUI, 8000);
+            setTimeout(refreshSpotifyAuthUI, 15000);
         } catch (err) {
             if (spotifyAuthError) {
                 spotifyAuthError.textContent = `⚠ ${err.message}`;
                 spotifyAuthError.classList.remove('hidden');
             }
         } finally {
-            spotifyConnectBtn.textContent = 'Connect';
+            spotifyConnectBtn.textContent = 'Open Spotify Login';
             spotifyConnectBtn.disabled = false;
         }
     });

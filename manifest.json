@@ -17,6 +17,7 @@
     "identity"
   ],
   "host_permissions": [
+    "http://127.0.0.1:8888/*",
     "https://api.github.com/*",
     "https://blender.org/*",
     "https://www.blender.org/*",

@@ -365,21 +365,26 @@
                 <button id="spotify-disconnect-btn" class="spotify-auth-action-btn disconnect">Disconnect</button>
             </div>
             <div id="spotify-auth-setup">
-                <p class="spotify-auth-instructions"><strong>Step 1 — Copy your Redirect URI</strong> (paste this into Spotify dashboard):</p>
-                <div class="spotify-redirect-uri-box prominent">
-                    <code id="spotify-redirect-uri-display">http://127.0.0.1</code>
-                    <button type="button" id="spotify-copy-redirect" class="spotify-copy-btn" title="Copy Redirect URI">📋 Copy</button>
-                </div>
-                <p class="spotify-auth-instructions" style="margin-top:8px"><strong>Step 2 — Create your free Spotify app:</strong></p>
+                <p class="spotify-auth-instructions"><strong>How to connect Spotify</strong> — one-time setup:</p>
                 <ol class="spotify-auth-steps">
-                    <li>Go to <strong>developer.spotify.com/dashboard</strong> → <em>Create app</em></li>
-                    <li>Any name &amp; description. Paste the URI above into <strong>Redirect URIs</strong></li>
-                    <li>Set APIs to <strong>Web API</strong> → Save → copy your <strong>Client ID</strong></li>
+                    <li>
+                        In Spotify dashboard, add Redirect URI: <br>
+                        <div class="spotify-redirect-uri-box prominent" style="margin:4px 0 4px">
+                            <code id="spotify-redirect-uri-display">http://127.0.0.1:8888/callback</code>
+                            <button type="button" id="spotify-copy-redirect" class="spotify-copy-btn" title="Copy">📋 Copy</button>
+                        </div>
+                    </li>
+                    <li>Open a terminal in your Chrome Home folder and run:<br>
+                        <div class="spotify-redirect-uri-box" style="margin:4px 0 4px">
+                            <code style="color:#ddd">node spotify-server.js &lt;CLIENT_ID&gt; &lt;CLIENT_SECRET&gt;</code>
+                        </div>
+                    </li>
+                    <li>Come back here and click <strong>Open Spotify Login</strong></li>
                 </ol>
-                <p class="spotify-auth-instructions"><strong>Step 3 — Paste Client ID &amp; connect:</strong></p>
-                <div class="spotify-auth-input-row">
-                    <input type="text" id="spotify-client-id-input" placeholder="Paste Client ID here…" autocomplete="off" spellcheck="false">
-                    <button type="button" id="spotify-connect-btn" class="spotify-auth-action-btn connect">Connect</button>
+                <div id="spotify-server-status" class="spotify-auth-error" style="color:#f59e0b">⚠ Local server not running — see step 2 above</div>
+                <div class="spotify-auth-input-row" style="margin-top:8px">
+                    <input type="text" id="spotify-client-id-input" placeholder="" autocomplete="off" spellcheck="false" style="display:none">
+                    <button type="button" id="spotify-connect-btn" class="spotify-auth-action-btn connect" style="width:100%">Start Server First</button>
                 </div>
                 <div id="spotify-auth-error" class="spotify-auth-error hidden"></div>
             </div>
