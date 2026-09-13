@@ -16,7 +16,7 @@
     'use strict';
 
     const SERVER = 'http://127.0.0.1:8888';
-    const TIMEOUT_MS = 3000;
+    const TIMEOUT_MS = 4000;
 
     // Wrapper with timeout so the extension doesn't hang if server isn't running
     function serverFetch(path, opts = {}) {
@@ -27,8 +27,51 @@
     }
 
     /* ------------------------------------------------------------------ */
-    /*  Public API                                                          */
+    /*  Public API                                                        */
     /* ------------------------------------------------------------------ */
+
+    /**
+     * Get detailed status of local server
+     * Returns { running, configured, connected, is_user_auth, clientId, redirectUri }
+     */
+    async function getStatus() {
+        try {
+            const resp = await serverFetch('/status');
+            if (!resp.ok) return { running: false, configured: false, connected: false };
+            const data = await resp.json();
+            return {
+                running: true,
+                configured: !!data.configured,
+                connected: !!data.connected,
+                is_user_auth: !!data.is_user_auth,
+                clientId: data.clientId || '',
+                redirectUri: data.redirectUri || 'http://127.0.0.1:8888/callback'
+            };
+        } catch (_) {
+            return { running: false, configured: false, connected: false };
+        }
+    }
+
+    /**
+     * Save Client ID & Secret to the local server
+     */
+    async function saveCredentials(clientId, clientSecret) {
+        try {
+            const resp = await serverFetch('/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ clientId, clientSecret })
+            });
+            const data = await resp.json();
+            if (!resp.ok) throw new Error(data.error || 'Failed to save credentials');
+            return { success: true, data };
+        } catch (err) {
+            if (err.name === 'AbortError' || err.message.includes('fetch')) {
+                throw new Error('Local helper server is not running. Double-click start-spotify.bat first.');
+            }
+            throw err;
+        }
+    }
 
     /**
      * Open Spotify login — opens the auth page in the browser.
@@ -38,43 +81,30 @@
         try {
             const resp = await serverFetch('/login');
             if (resp.ok) return { success: true };
-            throw new Error('Server error — is spotify-server.js running?');
+            const data = await resp.json().catch(() => ({}));
+            throw new Error(data.error || 'Server error — is spotify-server.js running?');
         } catch (err) {
             if (err.name === 'AbortError' || err.message.includes('fetch')) {
-                throw new Error(
-                    'Could not reach the local server.\n\n' +
-                    'Open a terminal and run:\n' +
-                    'node spotify-server.js YOUR_CLIENT_ID YOUR_CLIENT_SECRET'
-                );
+                throw new Error('Local helper server is not running. Double-click start-spotify.bat first.');
             }
             throw err;
         }
     }
 
     /**
-     * Check if the local server is running AND authenticated.
+     * Check if the local server is running AND authenticated / active.
      */
     async function isConnected() {
-        try {
-            const resp = await serverFetch('/status');
-            if (!resp.ok) return false;
-            const data = await resp.json();
-            return data.connected === true;
-        } catch (_) {
-            return false;
-        }
+        const st = await getStatus();
+        return st.running && st.connected;
     }
 
     /**
-     * Check if the local server is reachable at all (even if not yet logged in).
+     * Check if the local server is reachable at all.
      */
     async function isServerRunning() {
-        try {
-            const resp = await serverFetch('/status');
-            return resp.ok;
-        } catch (_) {
-            return false;
-        }
+        const st = await getStatus();
+        return st.running;
     }
 
     /**
@@ -86,7 +116,7 @@
             const resp = await serverFetch(
                 `/search?${new URLSearchParams({ q: query, type: types })}`
             );
-            if (resp.status === 401) return null; // Not connected
+            if (resp.status === 401) return null; // Not connected or configured
             if (!resp.ok) return null;
             const data = await resp.json();
 
@@ -113,17 +143,27 @@
     }
 
     async function disconnect() {
-        // Nothing to clear — tokens are held by the server process
-        // Stopping the server (Ctrl+C) effectively disconnects
+        // Can be extended if needed
     }
 
     async function getClientId() {
-        return ''; // Managed by server, not stored in extension
+        const st = await getStatus();
+        return st.clientId || '';
     }
 
     function getRedirectUri() {
         return 'http://127.0.0.1:8888/callback';
     }
 
-    return { connect, disconnect, search, isConnected, isServerRunning, getClientId, getRedirectUri };
+    return {
+        getStatus,
+        saveCredentials,
+        connect,
+        disconnect,
+        search,
+        isConnected,
+        isServerRunning,
+        getClientId,
+        getRedirectUri
+    };
 });

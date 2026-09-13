@@ -361,31 +361,48 @@
         <!-- Auth Setup Panel (hidden by default) -->
         <div id="spotify-auth-panel" class="spotify-auth-panel hidden">
             <div id="spotify-auth-connected" class="hidden">
-                <div class="spotify-auth-status connected">✅ Connected to Spotify — search works for any artist or song.</div>
-                <button id="spotify-disconnect-btn" class="spotify-auth-action-btn disconnect">Disconnect</button>
+                <div class="spotify-auth-status connected" id="spotify-connected-status-text">✅ Spotify Active — Search works for any artist or song.</div>
+                <div style="display:flex;gap:6px;margin-top:8px;">
+                    <button type="button" id="spotify-connect-user-btn" class="spotify-auth-action-btn connect" style="flex:1;font-size:10px;padding:4px 8px;">Login to Account (Optional)</button>
+                    <button type="button" id="spotify-disconnect-btn" class="spotify-auth-action-btn disconnect" style="margin-top:0;font-size:10px;padding:4px 8px;">Change Setup</button>
+                </div>
             </div>
             <div id="spotify-auth-setup">
-                <p class="spotify-auth-instructions"><strong>How to connect Spotify</strong> — one-time setup:</p>
-                <ol class="spotify-auth-steps">
+                <div id="spotify-server-status-banner" style="margin-bottom:8px;padding:6px 8px;border-radius:6px;font-size:11px;background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);display:flex;align-items:center;justify-content:space-between;gap:6px;">
+                    <div id="spotify-server-status-text">Checking local helper…</div>
+                    <button type="button" id="spotify-server-refresh-btn" class="spotify-copy-btn" style="padding:2px 6px;font-size:10px;" title="Refresh Server Status">🔄 Check</button>
+                </div>
+
+                <div id="spotify-not-running-help" class="hidden" style="margin-bottom:10px;padding:8px 10px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:6px;font-size:11px;line-height:1.4;">
+                    <div style="font-weight:600;color:#f59e0b;margin-bottom:3px;">⚡ Helper Server Not Started</div>
+                    <div style="color:#ccc;">To search any artist or song, start the local helper:</div>
+                    <div style="margin-top:5px;display:flex;flex-direction:column;gap:3px;font-size:10.5px;">
+                        <div>• Double-click <strong style="color:#1db954">start-spotify.bat</strong> in Chrome Home folder</div>
+                        <div>• <em>Or</em> double-click <strong style="color:#1db954">install-autostart.bat</strong> to auto-start with Windows!</div>
+                    </div>
+                </div>
+
+                <p class="spotify-auth-instructions"><strong>One-time Setup:</strong></p>
+                <ol class="spotify-auth-steps" style="margin-left:14px;">
                     <li>
-                        In Spotify dashboard, add Redirect URI: <br>
-                        <div class="spotify-redirect-uri-box prominent" style="margin:4px 0 4px">
+                        In <a href="https://developer.spotify.com/dashboard" target="_blank" style="color:#1db954;text-decoration:underline;">Spotify Dashboard</a>, set Redirect URI:
+                        <div class="spotify-redirect-uri-box prominent" style="margin:4px 0 6px">
                             <code id="spotify-redirect-uri-display">http://127.0.0.1:8888/callback</code>
                             <button type="button" id="spotify-copy-redirect" class="spotify-copy-btn" title="Copy">📋 Copy</button>
                         </div>
                     </li>
-                    <li>Open a terminal in your Chrome Home folder and run:<br>
-                        <div class="spotify-redirect-uri-box" style="margin:4px 0 4px">
-                            <code style="color:#ddd">node spotify-server.js &lt;CLIENT_ID&gt; &lt;CLIENT_SECRET&gt;</code>
+                    <li>
+                        Paste credentials below (saved locally only, never online):
+                        <div style="margin-top:6px;display:flex;flex-direction:column;gap:6px;">
+                            <input type="text" id="spotify-client-id-input" placeholder="Spotify Client ID" autocomplete="off" spellcheck="false" style="background:rgba(255,255,255,0.08);border:1px solid var(--glass-border);border-radius:6px;padding:5px 8px;color:#fff;font-size:11px;font-family:monospace;outline:none;">
+                            <div style="display:flex;gap:4px;">
+                                <input type="password" id="spotify-client-secret-input" placeholder="Spotify Client Secret" autocomplete="off" spellcheck="false" style="flex:1;background:rgba(255,255,255,0.08);border:1px solid var(--glass-border);border-radius:6px;padding:5px 8px;color:#fff;font-size:11px;font-family:monospace;outline:none;">
+                                <button type="button" id="spotify-toggle-secret-btn" class="spotify-copy-btn" style="padding:3px 7px;" title="Show/Hide">👁</button>
+                            </div>
+                            <button type="button" id="spotify-save-credentials-btn" class="spotify-auth-action-btn connect" style="width:100%;margin-top:2px;">Save & Connect</button>
                         </div>
                     </li>
-                    <li>Come back here and click <strong>Open Spotify Login</strong></li>
                 </ol>
-                <div id="spotify-server-status" class="spotify-auth-error" style="color:#f59e0b">⚠ Local server not running — see step 2 above</div>
-                <div class="spotify-auth-input-row" style="margin-top:8px">
-                    <input type="text" id="spotify-client-id-input" placeholder="" autocomplete="off" spellcheck="false" style="display:none">
-                    <button type="button" id="spotify-connect-btn" class="spotify-auth-action-btn connect" style="width:100%">Start Server First</button>
-                </div>
                 <div id="spotify-auth-error" class="spotify-auth-error hidden"></div>
             </div>
         </div>

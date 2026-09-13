@@ -1237,6 +1237,11 @@ input[type="text"] {
     padding: 5px 8px;
     margin: 4px 0 8px;
 }
+.spotify-redirect-uri-box.prominent {
+    border: 1px solid rgba(29, 185, 84, 0.5);
+    background: rgba(29, 185, 84, 0.08);
+    padding: 8px 10px;
+}
 .spotify-redirect-uri-box code {
     flex: 1;
     font-family: monospace;
@@ -1245,13 +1250,21 @@ input[type="text"] {
     word-break: break-all;
     user-select: all;
 }
-.spotify-redirect-uri-box button {
-    background: none;
-    border: none;
+.spotify-redirect-uri-box button,
+.spotify-copy-btn {
+    background: rgba(29, 185, 84, 0.15);
+    border: 1px solid rgba(29, 185, 84, 0.4);
+    border-radius: 5px;
     cursor: pointer;
-    font-size: 13px;
-    padding: 0 2px;
+    font-size: 11px;
+    padding: 3px 8px;
+    color: #1db954;
     flex-shrink: 0;
+    transition: background 0.15s;
+}
+.spotify-redirect-uri-box button:hover,
+.spotify-copy-btn:hover {
+    background: rgba(29, 185, 84, 0.3);
 }
 .spotify-auth-input-row {
     display: flex;

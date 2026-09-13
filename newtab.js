@@ -1853,20 +1853,27 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
     const spotifyAuthPanel = document.getElementById('spotify-auth-panel');
     const spotifyAuthConnected = document.getElementById('spotify-auth-connected');
     const spotifyAuthSetup = document.getElementById('spotify-auth-setup');
-    const spotifyConnectBtn = document.getElementById('spotify-connect-btn');
+    const spotifyConnectedStatusText = document.getElementById('spotify-connected-status-text');
+    const spotifyConnectUserBtn = document.getElementById('spotify-connect-user-btn');
     const spotifyDisconnectBtn = document.getElementById('spotify-disconnect-btn');
+    const spotifyServerStatusText = document.getElementById('spotify-server-status-text');
+    const spotifyServerRefreshBtn = document.getElementById('spotify-server-refresh-btn');
+    const spotifyNotRunningHelp = document.getElementById('spotify-not-running-help');
     const spotifyClientIdInput = document.getElementById('spotify-client-id-input');
+    const spotifyClientSecretInput = document.getElementById('spotify-client-secret-input');
+    const spotifyToggleSecretBtn = document.getElementById('spotify-toggle-secret-btn');
+    const spotifySaveCredentialsBtn = document.getElementById('spotify-save-credentials-btn');
     const spotifyRedirectUriDisplay = document.getElementById('spotify-redirect-uri-display');
     const spotifyCopyRedirect = document.getElementById('spotify-copy-redirect');
     const spotifyAuthError = document.getElementById('spotify-auth-error');
 
-    // Populate redirect URI (only works in extension context)
+    // Populate redirect URI
     if (spotifyRedirectUriDisplay && window.SpotifyAuth) {
         try {
             const uri = window.SpotifyAuth.getRedirectUri();
             spotifyRedirectUriDisplay.textContent = uri;
         } catch (_) {
-            spotifyRedirectUriDisplay.textContent = 'Load extension to see URI';
+            spotifyRedirectUriDisplay.textContent = 'http://127.0.0.1:8888/callback';
         }
     }
 
@@ -1881,42 +1888,68 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
         }
     });
 
+    // Toggle client secret visibility
+    spotifyToggleSecretBtn?.addEventListener('click', () => {
+        if (!spotifyClientSecretInput) return;
+        const isPassword = spotifyClientSecretInput.type === 'password';
+        spotifyClientSecretInput.type = isPassword ? 'text' : 'password';
+        spotifyToggleSecretBtn.textContent = isPassword ? '🙈' : '👁';
+    });
+
     // Refresh auth panel state
     async function refreshSpotifyAuthUI() {
         if (!window.SpotifyAuth) return;
 
-        const serverRunning = await window.SpotifyAuth.isServerRunning?.() ?? false;
-        const connected = serverRunning && await window.SpotifyAuth.isConnected();
+        const status = await window.SpotifyAuth.getStatus?.() || { running: false, configured: false, connected: false };
 
-        if (connected) {
-            spotifyAuthBtn.textContent = '✅ Spotify';
-            spotifyAuthBtn.title = 'Spotify Connected — Click to manage';
-            spotifyAuthBtn.style.color = '#1db954';
-            if (spotifyAuthConnected) spotifyAuthConnected.classList.remove('hidden');
-            if (spotifyAuthSetup) spotifyAuthSetup.classList.add('hidden');
-        } else if (serverRunning) {
-            // Server running but not logged in yet
-            spotifyAuthBtn.textContent = '🔗 Connect';
-            spotifyAuthBtn.title = 'Log in to Spotify';
-            spotifyAuthBtn.style.color = '#f59e0b';
-            if (spotifyAuthConnected) spotifyAuthConnected.classList.add('hidden');
-            if (spotifyAuthSetup) spotifyAuthSetup.classList.remove('hidden');
-            // Hide the client ID input — not needed with server model
-            if (spotifyClientIdInput) {
-                spotifyClientIdInput.closest('.spotify-auth-input-row').style.display = 'none';
+        if (status.running) {
+            if (spotifyNotRunningHelp) spotifyNotRunningHelp.classList.add('hidden');
+            if (status.connected || status.configured) {
+                // Connected / Configured and active!
+                spotifyAuthBtn.textContent = '✅ Spotify';
+                spotifyAuthBtn.title = 'Spotify Active — Search works for any artist or song';
+                spotifyAuthBtn.style.color = '#1db954';
+                if (spotifyAuthConnected) spotifyAuthConnected.classList.remove('hidden');
+                if (spotifyAuthSetup) spotifyAuthSetup.classList.add('hidden');
+                if (spotifyConnectedStatusText) {
+                    spotifyConnectedStatusText.textContent = status.is_user_auth
+                        ? '✅ Spotify Account Connected — Search & personal library active.'
+                        : '✅ Spotify Search Active — Plays any artist or song!';
+                }
+                if (spotifyConnectUserBtn) {
+                    spotifyConnectUserBtn.textContent = status.is_user_auth
+                        ? 'Re-authenticate'
+                        : 'Login to Account (Optional)';
+                }
+            } else {
+                // Server running, but needs Client ID & Secret
+                spotifyAuthBtn.textContent = '🔗 Connect';
+                spotifyAuthBtn.title = 'Enter Spotify Credentials';
+                spotifyAuthBtn.style.color = '#f59e0b';
+                if (spotifyAuthConnected) spotifyAuthConnected.classList.add('hidden');
+                if (spotifyAuthSetup) spotifyAuthSetup.classList.remove('hidden');
+                if (spotifyServerStatusText) {
+                    spotifyServerStatusText.innerHTML = '<span style="color:#1db954">● Helper running</span> — enter credentials below';
+                }
+                if (spotifySaveCredentialsBtn) {
+                    spotifySaveCredentialsBtn.disabled = false;
+                    spotifySaveCredentialsBtn.textContent = 'Save & Connect';
+                }
             }
-            if (spotifyConnectBtn) spotifyConnectBtn.textContent = 'Open Spotify Login';
         } else {
             // Server not running
             spotifyAuthBtn.textContent = '🔗 Connect';
-            spotifyAuthBtn.title = 'Start spotify-server.js to connect';
+            spotifyAuthBtn.title = 'Start Spotify helper to search any song/artist';
             spotifyAuthBtn.style.color = '';
             if (spotifyAuthConnected) spotifyAuthConnected.classList.add('hidden');
             if (spotifyAuthSetup) spotifyAuthSetup.classList.remove('hidden');
-            if (spotifyConnectBtn) spotifyConnectBtn.textContent = 'Start Server First';
-            if (spotifyConnectBtn) spotifyConnectBtn.disabled = true;
-            if (spotifyClientIdInput) {
-                spotifyClientIdInput.closest('.spotify-auth-input-row').style.display = 'none';
+            if (spotifyNotRunningHelp) spotifyNotRunningHelp.classList.remove('hidden');
+            if (spotifyServerStatusText) {
+                spotifyServerStatusText.innerHTML = '<span style="color:#f59e0b">⚠ Helper not running</span>';
+            }
+            if (spotifySaveCredentialsBtn) {
+                spotifySaveCredentialsBtn.disabled = true;
+                spotifySaveCredentialsBtn.textContent = 'Start Helper First';
             }
         }
     }
@@ -1933,41 +1966,77 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
         }
     });
 
-    // Connect button
-    spotifyConnectBtn?.addEventListener('click', async () => {
+    // Save credentials button
+    spotifySaveCredentialsBtn?.addEventListener('click', async () => {
         if (spotifyAuthError) spotifyAuthError.classList.add('hidden');
-        spotifyConnectBtn.textContent = 'Connecting…';
-        spotifyConnectBtn.disabled = true;
+        const cid = spotifyClientIdInput?.value.trim();
+        const secret = spotifyClientSecretInput?.value.trim();
+
+        if (!cid || !secret) {
+            if (spotifyAuthError) {
+                spotifyAuthError.textContent = '⚠ Please enter both Client ID and Client Secret.';
+                spotifyAuthError.classList.remove('hidden');
+            }
+            return;
+        }
+
+        spotifySaveCredentialsBtn.textContent = 'Verifying with Spotify…';
+        spotifySaveCredentialsBtn.disabled = true;
+
         try {
-            await window.SpotifyAuth.connect();
-            if (spotifyAuthError) spotifyAuthError.classList.add('hidden');
+            await window.SpotifyAuth.saveCredentials(cid, secret);
             if (spotifySearchStatus) {
-                spotifySearchStatus.textContent = '🔗 Spotify login opened in browser — log in there, then come back.';
+                spotifySearchStatus.textContent = '✅ Spotify active! You can now search any artist or song.';
                 spotifySearchStatus.classList.remove('hidden');
             }
-            // Poll for connection after a few seconds
-            setTimeout(refreshSpotifyAuthUI, 4000);
-            setTimeout(refreshSpotifyAuthUI, 8000);
-            setTimeout(refreshSpotifyAuthUI, 15000);
+            await refreshSpotifyAuthUI();
         } catch (err) {
             if (spotifyAuthError) {
                 spotifyAuthError.textContent = `⚠ ${err.message}`;
                 spotifyAuthError.classList.remove('hidden');
             }
         } finally {
-            spotifyConnectBtn.textContent = 'Open Spotify Login';
-            spotifyConnectBtn.disabled = false;
+            spotifySaveCredentialsBtn.textContent = 'Save & Connect';
+            spotifySaveCredentialsBtn.disabled = false;
         }
     });
 
-    // Disconnect button
-    spotifyDisconnectBtn?.addEventListener('click', async () => {
-        await window.SpotifyAuth?.disconnect();
-        await refreshSpotifyAuthUI();
-        if (spotifySearchStatus) {
-            spotifySearchStatus.textContent = 'Disconnected from Spotify.';
-            spotifySearchStatus.classList.remove('hidden');
+    // Optional user account login button
+    spotifyConnectUserBtn?.addEventListener('click', async () => {
+        if (spotifyAuthError) spotifyAuthError.classList.add('hidden');
+        spotifyConnectUserBtn.textContent = 'Opening Login…';
+        spotifyConnectUserBtn.disabled = true;
+        try {
+            await window.SpotifyAuth.connect();
+            if (spotifySearchStatus) {
+                spotifySearchStatus.textContent = '🔗 Spotify login opened in browser — log in, then return here.';
+                spotifySearchStatus.classList.remove('hidden');
+            }
+            setTimeout(refreshSpotifyAuthUI, 4000);
+            setTimeout(refreshSpotifyAuthUI, 8000);
+        } catch (err) {
+            if (spotifyAuthError) {
+                spotifyAuthError.textContent = `⚠ ${err.message}`;
+                spotifyAuthError.classList.remove('hidden');
+            }
+        } finally {
+            spotifyConnectUserBtn.textContent = 'Login to Account (Optional)';
+            spotifyConnectUserBtn.disabled = false;
         }
+    });
+
+    // Disconnect / change setup button
+    spotifyDisconnectBtn?.addEventListener('click', () => {
+        if (spotifyAuthConnected) spotifyAuthConnected.classList.add('hidden');
+        if (spotifyAuthSetup) spotifyAuthSetup.classList.remove('hidden');
+        if (spotifyClientIdInput) spotifyClientIdInput.focus();
+    });
+
+    // Server refresh button
+    spotifyServerRefreshBtn?.addEventListener('click', async () => {
+        spotifyServerRefreshBtn.textContent = '⏳';
+        await refreshSpotifyAuthUI();
+        setTimeout(() => { spotifyServerRefreshBtn.textContent = '🔄 Check'; }, 500);
     });
 
     // Init auth UI on load

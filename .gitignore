@@ -29,6 +29,12 @@ api-keys.*
 # NOT in any file. These patterns are extra safety nets.
 spotify-token.*
 spotify-credentials.*
+.spotify-credentials.*
+.spotify-credentials.json
+spotify-credentials.local.json
+spotify-config.*
+.spotify-config.*
+.spotify-config.json
 spotify-config.local.*
 oauth-token.*
 *.token.json
