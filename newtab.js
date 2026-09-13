@@ -1970,24 +1970,33 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
     spotifySaveCredentialsBtn?.addEventListener('click', async () => {
         if (spotifyAuthError) spotifyAuthError.classList.add('hidden');
         const cid = spotifyClientIdInput?.value.trim();
-        const secret = spotifyClientSecretInput?.value.trim();
+        const secret = spotifyClientSecretInput?.value.trim() || '';
 
-        if (!cid || !secret) {
+        if (!cid) {
             if (spotifyAuthError) {
-                spotifyAuthError.textContent = '⚠ Please enter both Client ID and Client Secret.';
+                spotifyAuthError.textContent = '⚠ Please enter your Client ID.';
                 spotifyAuthError.classList.remove('hidden');
             }
             return;
         }
 
-        spotifySaveCredentialsBtn.textContent = 'Verifying with Spotify…';
+        spotifySaveCredentialsBtn.textContent = 'Saving…';
         spotifySaveCredentialsBtn.disabled = true;
 
         try {
-            await window.SpotifyAuth.saveCredentials(cid, secret);
-            if (spotifySearchStatus) {
-                spotifySearchStatus.textContent = '✅ Spotify active! You can now search any artist or song.';
-                spotifySearchStatus.classList.remove('hidden');
+            const res = await window.SpotifyAuth.saveCredentials(cid, secret);
+            if (secret) {
+                if (spotifySearchStatus) {
+                    spotifySearchStatus.textContent = '✅ Spotify active! You can now search any artist or song.';
+                    spotifySearchStatus.classList.remove('hidden');
+                }
+            } else {
+                // Client ID only (PKCE mode): trigger login to authenticate
+                if (spotifySearchStatus) {
+                    spotifySearchStatus.textContent = '🔗 Opening Spotify login…';
+                    spotifySearchStatus.classList.remove('hidden');
+                }
+                await window.SpotifyAuth.connect();
             }
             await refreshSpotifyAuthUI();
         } catch (err) {

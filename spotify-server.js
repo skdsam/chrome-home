@@ -2,22 +2,19 @@
  * Chrome Home — Spotify Local Auth & Search Server
  * Author: SkdSam
  *
- * A lightweight zero-dependency Node.js server that handles Spotify OAuth
- * and proxies search requests for the Chrome Home extension.
+ * Zero-dependency Node.js server that handles Spotify OAuth and search
+ * for the Chrome Home extension.
  *
- * Features:
- *   - Runs with ZERO arguments: `node spotify-server.js` or double-click `start-spotify.bat`
- *   - Auto-loads saved credentials from gitignored `spotify-credentials.local.json`
- *   - Allows entering Client ID & Secret directly from the Chrome Home widget or web browser
- *   - Uses Spotify Client Credentials so search works immediately without user login
- *   - Supports full user OAuth login via loopback redirect (http://127.0.0.1:8888/callback)
+ * Supports BOTH authentication modes:
+ *   1. Client ID only (PKCE Flow) — NO Client Secret needed!
+ *   2. Client ID + Client Secret (Client Credentials + Authorization Code)
  */
 
 const http = require('http');
 const https = require('https');
-const url = require('url');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { exec } = require('child_process');
 const os = require('os');
 
@@ -32,14 +29,14 @@ let clientSecret = process.argv[3] || process.env.SPOTIFY_CLIENT_SECRET || null;
 
 // Load persisted credentials if not passed in argv/env
 function loadSavedCredentials() {
-    if (clientId && clientSecret) return;
+    if (clientId) return;
     try {
         if (fs.existsSync(CONFIG_FILE)) {
             const raw = fs.readFileSync(CONFIG_FILE, 'utf8');
             const data = JSON.parse(raw);
-            if (data.clientId && data.clientSecret) {
+            if (data.clientId) {
                 clientId = data.clientId.trim();
-                clientSecret = data.clientSecret.trim();
+                clientSecret = (data.clientSecret || '').trim() || null;
                 console.log('🔑 Loaded saved Spotify credentials from spotify-credentials.local.json');
             }
         }
@@ -50,7 +47,7 @@ function loadSavedCredentials() {
 
 function saveCredentials(newId, newSecret) {
     clientId = String(newId || '').trim();
-    clientSecret = String(newSecret || '').trim();
+    clientSecret = String(newSecret || '').trim() || null;
     try {
         fs.writeFileSync(CONFIG_FILE, JSON.stringify({
             clientId,
@@ -67,7 +64,7 @@ function saveCredentials(newId, newSecret) {
 
 loadSavedCredentials();
 
-// ── Token State ─────────────────────────────────────────────────────────────
+// ── Token & PKCE State ──────────────────────────────────────────────────────
 let token = {
     access_token: null,
     refresh_token: null,
@@ -76,29 +73,45 @@ let token = {
 };
 
 let pendingState = null;
+let pendingVerifier = null;
 
 function generateState() {
-    return Math.random().toString(36).substring(2, 18);
+    return crypto.randomBytes(16).toString('hex');
+}
+
+function generateCodeVerifier() {
+    return crypto.randomBytes(32).toString('base64url');
+}
+
+function generateCodeChallenge(verifier) {
+    return crypto.createHash('sha256').update(verifier).digest('base64url');
 }
 
 // ── Spotify HTTP Request Helper ─────────────────────────────────────────────
 function spotifyAccountsRequest(requestPath, params) {
     return new Promise((resolve, reject) => {
-        if (!clientId || !clientSecret) {
-            return reject(new Error('Credentials not configured'));
+        if (!clientId) {
+            return reject(new Error('Client ID not configured'));
         }
-        const authHeader = 'Basic ' + Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-        const postData = new URLSearchParams(params).toString();
+        const postDataParams = { ...params };
+        const headers = {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        };
+
+        if (clientSecret) {
+            headers['Authorization'] = 'Basic ' + Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+        } else {
+            postDataParams.client_id = clientId;
+        }
+
+        const postData = new URLSearchParams(postDataParams).toString();
+        headers['Content-Length'] = Buffer.byteLength(postData);
 
         const options = {
             hostname: 'accounts.spotify.com',
             path: requestPath,
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Content-Length': Buffer.byteLength(postData),
-                'Authorization': authHeader
-            }
+            headers
         };
 
         const req = https.request(options, res => {
@@ -119,10 +132,11 @@ function spotifyAccountsRequest(requestPath, params) {
     });
 }
 
-// Refresh user access token
+// Refresh access token
 async function refreshAccessToken() {
     if (!token.refresh_token) {
-        return fetchClientCredentialsToken();
+        if (clientSecret) return fetchClientCredentialsToken();
+        throw new Error('Please log in again');
     }
     console.log('🔄 Refreshing Spotify access token...');
     const data = await spotifyAccountsRequest('/api/token', {
@@ -130,8 +144,8 @@ async function refreshAccessToken() {
         refresh_token: token.refresh_token
     });
     if (data.error) {
-        console.warn('⚠ Refresh failed, falling back to Client Credentials:', data.error);
-        return fetchClientCredentialsToken();
+        if (clientSecret) return fetchClientCredentialsToken();
+        throw new Error(data.error_description || data.error);
     }
     token.access_token = data.access_token;
     if (data.refresh_token) token.refresh_token = data.refresh_token;
@@ -141,7 +155,7 @@ async function refreshAccessToken() {
     return token.access_token;
 }
 
-// Fetch application token (Client Credentials — no user login required!)
+// Fetch application token (Client Credentials — requires clientSecret)
 async function fetchClientCredentialsToken() {
     if (!clientId || !clientSecret) return null;
     console.log('🔑 Requesting Spotify Client Credentials token...');
@@ -160,14 +174,17 @@ async function fetchClientCredentialsToken() {
 }
 
 async function getValidToken() {
-    if (!clientId || !clientSecret) return null;
+    if (!clientId) return null;
     if (token.access_token && Date.now() < token.expires_at - 60000) {
         return token.access_token;
     }
     if (token.refresh_token) {
         return refreshAccessToken();
     }
-    return fetchClientCredentialsToken();
+    if (clientSecret) {
+        return fetchClientCredentialsToken();
+    }
+    return null;
 }
 
 function spotifyAPIRequest(requestPath) {
@@ -224,7 +241,6 @@ function readBody(req) {
         req.on('end', () => {
             try { resolve(JSON.parse(body)); }
             catch (_) {
-                // Try query-string parse
                 try {
                     const parsed = Object.fromEntries(new URLSearchParams(body));
                     resolve(parsed);
@@ -245,9 +261,9 @@ function openBrowser(targetUrl) {
 
 // ── HTTP Request Handler ─────────────────────────────────────────────────────
 const server = http.createServer(async (req, res) => {
-    const parsed = url.parse(req.url, true);
-    const pathname = parsed.pathname;
-    const query = parsed.query;
+    const reqUrl = new URL(req.url, `http://${req.headers.host || '127.0.0.1:8888'}`);
+    const pathname = reqUrl.pathname;
+    const query = Object.fromEntries(reqUrl.searchParams);
 
     if (req.method === 'OPTIONS') {
         cors(res);
@@ -258,13 +274,14 @@ const server = http.createServer(async (req, res) => {
 
     // ── GET /status ──────────────────────────────────────────────────────────
     if (pathname === '/status') {
-        const configured = !!(clientId && clientSecret);
+        const configured = !!clientId;
         const connected = !!token.access_token;
         const maskedId = clientId ? (clientId.slice(0, 4) + '••••' + clientId.slice(-4)) : null;
         json(res, 200, {
             running: true,
             configured,
             connected,
+            has_secret: !!clientSecret,
             is_user_auth: token.is_user_auth,
             expires_at: token.expires_at,
             clientId: maskedId,
@@ -281,11 +298,11 @@ const server = http.createServer(async (req, res) => {
         if (req.method === 'POST') {
             const body = await readBody(req);
             newId = newId || body.clientId;
-            newSecret = newSecret || body.clientSecret;
+            newSecret = newSecret !== undefined ? newSecret : body.clientSecret;
         }
 
-        if (!newId || !newSecret) {
-            json(res, 400, { error: 'Both clientId and clientSecret are required.' });
+        if (!newId) {
+            json(res, 400, { error: 'Client ID is required.' });
             return;
         }
 
@@ -295,25 +312,27 @@ const server = http.createServer(async (req, res) => {
             return;
         }
 
-        // Test credentials immediately with client credentials token
-        try {
-            await fetchClientCredentialsToken();
-            if (req.method === 'GET' && !query.json) {
-                // If submitted via browser form redirect back home
-                res.writeHead(302, { Location: '/' });
-                res.end();
-                return;
+        // If secret provided, test client credentials token immediately
+        if (clientSecret) {
+            try {
+                await fetchClientCredentialsToken();
+            } catch (err) {
+                console.warn('Client credentials test warning:', err.message);
             }
-            json(res, 200, {
-                success: true,
-                message: 'Spotify credentials configured and verified!',
-                connected: true
-            });
-        } catch (err) {
-            json(res, 400, {
-                error: 'Spotify rejected these credentials: ' + err.message
-            });
         }
+
+        if (req.method === 'GET' && !query.json) {
+            res.writeHead(302, { Location: '/' });
+            res.end();
+            return;
+        }
+
+        json(res, 200, {
+            success: true,
+            message: clientSecret ? 'Spotify credentials saved & search active!' : 'Client ID saved! Click Connect to authenticate via PKCE.',
+            connected: !!token.access_token,
+            has_secret: !!clientSecret
+        });
         return;
     }
 
@@ -322,10 +341,10 @@ const server = http.createServer(async (req, res) => {
         const q = query.q;
         if (!q) { json(res, 400, { error: 'Missing ?q=' }); return; }
 
-        if (!clientId || !clientSecret) {
+        if (!clientId) {
             json(res, 401, {
                 error: 'not_configured',
-                message: 'Spotify credentials not set. Open http://127.0.0.1:8888 to enter them.'
+                message: 'Spotify Client ID not set. Open http://127.0.0.1:8888 to enter it.'
             });
             return;
         }
@@ -338,7 +357,7 @@ const server = http.createServer(async (req, res) => {
             json(res, result.status, result.body);
         } catch (err) {
             if (err.message === 'Not authenticated') {
-                json(res, 401, { error: 'not_connected', message: 'Could not obtain Spotify token.' });
+                json(res, 401, { error: 'not_connected', message: 'Click Connect on the widget to log into Spotify.' });
             } else {
                 json(res, 500, { error: err.message });
             }
@@ -348,19 +367,27 @@ const server = http.createServer(async (req, res) => {
 
     // ── GET /login ───────────────────────────────────────────────────────────
     if (pathname === '/login') {
-        if (!clientId || !clientSecret) {
-            json(res, 400, { error: 'Configure Client ID & Secret first at http://127.0.0.1:8888' });
+        if (!clientId) {
+            json(res, 400, { error: 'Configure Client ID first.' });
             return;
         }
+
         pendingState = generateState();
-        const authUrl = 'https://accounts.spotify.com/authorize?' + new URLSearchParams({
+        pendingVerifier = generateCodeVerifier();
+        const codeChallenge = generateCodeChallenge(pendingVerifier);
+
+        const authParams = {
             client_id: clientId,
             response_type: 'code',
             redirect_uri: REDIRECT_URI,
             scope: SCOPES,
             state: pendingState,
+            code_challenge_method: 'S256',
+            code_challenge: codeChallenge,
             show_dialog: 'false'
-        });
+        };
+
+        const authUrl = 'https://accounts.spotify.com/authorize?' + new URLSearchParams(authParams);
         openBrowser(authUrl);
         json(res, 200, { message: 'Opening Spotify login in your browser…' });
         return;
@@ -386,11 +413,14 @@ const server = http.createServer(async (req, res) => {
         }
 
         try {
-            const data = await spotifyAccountsRequest('/api/token', {
+            const tokenParams = {
                 grant_type: 'authorization_code',
                 code,
-                redirect_uri: REDIRECT_URI
-            });
+                redirect_uri: REDIRECT_URI,
+                code_verifier: pendingVerifier
+            };
+
+            const data = await spotifyAccountsRequest('/api/token', tokenParams);
 
             if (data.error) throw new Error(data.error_description || data.error);
 
@@ -399,6 +429,7 @@ const server = http.createServer(async (req, res) => {
             token.expires_at = Date.now() + (data.expires_in || 3600) * 1000;
             token.is_user_auth = true;
             pendingState = null;
+            pendingVerifier = null;
 
             console.log('\n✅ User Spotify account connected! Token valid for', Math.round((data.expires_in || 3600) / 60), 'minutes\n');
 
@@ -432,7 +463,7 @@ const server = http.createServer(async (req, res) => {
 
     // ── GET / (Setup / Dashboard UI) ─────────────────────────────────────────
     if (pathname === '/') {
-        const isConfigured = !!(clientId && clientSecret);
+        const isConfigured = !!clientId;
         const hasToken = !!token.access_token;
 
         html(res, `<!DOCTYPE html>
@@ -488,16 +519,8 @@ const server = http.createServer(async (req, res) => {
       justify-content: center;
       font-size: 24px;
     }
-    h1 {
-      margin: 0;
-      font-size: 20px;
-      font-weight: 700;
-    }
-    .subtitle {
-      color: var(--text-muted);
-      font-size: 13px;
-      margin-top: 2px;
-    }
+    h1 { margin: 0; font-size: 20px; font-weight: 700; }
+    .subtitle { color: var(--text-muted); font-size: 13px; margin-top: 2px; }
     .badge {
       display: inline-flex;
       align-items: center;
@@ -567,9 +590,7 @@ const server = http.createServer(async (req, res) => {
       transition: all 0.15s;
     }
     .copy-btn:hover { background: rgba(255,255,255,0.2); }
-    .field {
-      margin-bottom: 14px;
-    }
+    .field { margin-bottom: 14px; }
     label {
       display: block;
       font-size: 12px;
@@ -610,10 +631,7 @@ const server = http.createServer(async (req, res) => {
       margin-top: 10px;
     }
     .btn-secondary:hover { background: rgba(255,255,255,0.15); }
-    .help-link {
-      color: var(--accent);
-      text-decoration: none;
-    }
+    .help-link { color: var(--accent); text-decoration: none; }
     .help-link:hover { text-decoration: underline; }
     .footer-text {
       text-align: center;
@@ -636,19 +654,18 @@ const server = http.createServer(async (req, res) => {
     ${isConfigured && hasToken ? `
       <div class="badge active">● Active & Ready — Search works for any artist or song</div>
       <p style="font-size:13px;color:#bbb;line-height:1.5">
-        Your Spotify credentials are saved locally in <code>spotify-credentials.local.json</code>.
-        The Chrome Home extension will automatically use this helper to play any song or artist.
+        Spotify is linked to Chrome Home! You can search and play any artist or song.
       </p>
       <div style="margin-top:20px;display:flex;flex-direction:column;gap:8px;">
-        <button class="btn" onclick="openLogin()">Connect User Spotify Account (Optional)</button>
+        <button class="btn" onclick="openLogin()">Re-authenticate with Spotify</button>
         <button class="btn btn-secondary" onclick="location.href='/?edit=1'">Edit Credentials</button>
       </div>
     ` : `
-      <div class="badge pending">● Setup Required — 2 quick steps</div>
+      <div class="badge pending">● Setup Required</div>
 
       <div class="step-box">
         <div class="step-title"><span class="step-num">1</span> Spotify Dashboard Setup</div>
-        <div>Go to <a class="help-link" href="https://developer.spotify.com/dashboard" target="_blank">developer.spotify.com/dashboard</a>, open your app settings, and add this Redirect URI:</div>
+        <div>In your Spotify app settings, add this Redirect URI:</div>
         <div class="code-box">
           <code id="uri">${REDIRECT_URI}</code>
           <button class="copy-btn" type="button" onclick="navigator.clipboard.writeText('${REDIRECT_URI}');this.textContent='Copied!'">Copy</button>
@@ -656,15 +673,15 @@ const server = http.createServer(async (req, res) => {
       </div>
 
       <div class="step-box">
-        <div class="step-title"><span class="step-num">2</span> Enter Your Spotify Credentials</div>
+        <div class="step-title"><span class="step-num">2</span> Enter Your Spotify Client ID</div>
         <form action="/config" method="GET">
           <div class="field">
-            <label for="clientId">Client ID</label>
-            <input type="text" id="clientId" name="clientId" placeholder="Paste your 32-character Client ID" required value="${clientId || ''}">
+            <label for="clientId">Client ID (Required)</label>
+            <input type="text" id="clientId" name="clientId" placeholder="Paste your Client ID" required value="${clientId || ''}">
           </div>
           <div class="field">
-            <label for="clientSecret">Client Secret</label>
-            <input type="password" id="clientSecret" name="clientSecret" placeholder="Paste your 32-character Client Secret" required value="${clientSecret || ''}">
+            <label for="clientSecret">Client Secret (Optional — click "View client secret" in dashboard)</label>
+            <input type="password" id="clientSecret" name="clientSecret" placeholder="Optional" value="${clientSecret || ''}">
           </div>
           <button type="submit" class="btn">Save & Connect</button>
         </form>
@@ -672,7 +689,7 @@ const server = http.createServer(async (req, res) => {
     `}
 
     <div class="footer-text">
-      Running locally on 127.0.0.1:8888 · Zero external trackers · Credentials never committed to Git
+      Running locally on 127.0.0.1:8888 · Zero external trackers · Saved locally
     </div>
   </div>
 
@@ -697,10 +714,11 @@ server.listen(PORT, '127.0.0.1', () => {
     console.log('\n🎵 Chrome Home Spotify Server running');
     console.log(`   Local URL:    http://127.0.0.1:${PORT}`);
     console.log(`   Redirect URI: ${REDIRECT_URI}`);
-    if (clientId && clientSecret) {
+    if (clientId) {
         console.log('   Status:       ✅ Configured & Ready');
-        // Pre-fetch token in background
-        getValidToken().catch(err => console.warn('⚠ Initial token fetch:', err.message));
+        if (clientSecret) {
+            getValidToken().catch(err => console.warn('⚠ Initial token fetch:', err.message));
+        }
     } else {
         console.log('   Status:       ⚡ Setup needed: open http://127.0.0.1:8888 or use Chrome Home widget');
     }
@@ -709,7 +727,7 @@ server.listen(PORT, '127.0.0.1', () => {
 
 server.on('error', err => {
     if (err.code === 'EADDRINUSE') {
-        console.log(`\nℹ️ Port ${PORT} is already in use.`);
+        console.log(`\nℹ️ Port ${PORT} is already running.`);
         console.log('   The Spotify helper server is already active!\n');
     } else {
         console.error('Server error:', err);
