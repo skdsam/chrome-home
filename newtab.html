@@ -365,20 +365,18 @@
                 <button id="spotify-disconnect-btn" class="spotify-auth-action-btn disconnect">Disconnect</button>
             </div>
             <div id="spotify-auth-setup">
-                <p class="spotify-auth-instructions">
-                    <strong>One-time setup</strong> — takes 2 minutes:
-                </p>
+                <p class="spotify-auth-instructions"><strong>Step 1 — Copy your Redirect URI</strong> (paste this into Spotify dashboard):</p>
+                <div class="spotify-redirect-uri-box prominent">
+                    <code id="spotify-redirect-uri-display">http://127.0.0.1</code>
+                    <button type="button" id="spotify-copy-redirect" class="spotify-copy-btn" title="Copy Redirect URI">📋 Copy</button>
+                </div>
+                <p class="spotify-auth-instructions" style="margin-top:8px"><strong>Step 2 — Create your free Spotify app:</strong></p>
                 <ol class="spotify-auth-steps">
                     <li>Go to <strong>developer.spotify.com/dashboard</strong> → <em>Create app</em></li>
-                    <li>Any name/description. Under <strong>Redirect URIs</strong> add exactly:</li>
+                    <li>Any name &amp; description. Paste the URI above into <strong>Redirect URIs</strong></li>
+                    <li>Set APIs to <strong>Web API</strong> → Save → copy your <strong>Client ID</strong></li>
                 </ol>
-                <div class="spotify-redirect-uri-box">
-                    <code id="spotify-redirect-uri-display">Loading…</code>
-                    <button type="button" id="spotify-copy-redirect" title="Copy">📋</button>
-                </div>
-                <ol class="spotify-auth-steps" start="3">
-                    <li>Set APIs to <strong>Web API</strong>, save the app, then copy the <strong>Client ID</strong>:</li>
-                </ol>
+                <p class="spotify-auth-instructions"><strong>Step 3 — Paste Client ID &amp; connect:</strong></p>
                 <div class="spotify-auth-input-row">
                     <input type="text" id="spotify-client-id-input" placeholder="Paste Client ID here…" autocomplete="off" spellcheck="false">
                     <button type="button" id="spotify-connect-btn" class="spotify-auth-action-btn connect">Connect</button>

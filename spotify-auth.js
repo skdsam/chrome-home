@@ -1,12 +1,15 @@
 /**
- * Spotify PKCE OAuth + Search API
+ * Spotify PKCE OAuth — Loopback Redirect (127.0.0.1)
  * Author: SkdSam
  *
- * Flow:
- *  1. User enters Client ID (from developer.spotify.com)
- *  2. chrome.identity.launchWebAuthFlow opens Spotify login
- *  3. Access token stored in chrome.storage.local
- *  4. Every search calls Spotify Search API → exact IDs → correct embed
+ * Spotify's April 2025 security update blocks chromiumapp.org.
+ * The only accepted redirect for local apps is http://127.0.0.1
+ * This module uses that approach: opens the Spotify auth page in a tab,
+ * listens for the redirect via chrome.tabs, captures the code, and
+ * exchanges it for tokens — all without a backend server.
+ *
+ * Setup: Add  http://127.0.0.1  (no port) as your Redirect URI in
+ *        developer.spotify.com → your app → Settings
  */
 (function (root, factory) {
     if (typeof module === 'object' && module.exports) {
@@ -19,6 +22,9 @@
 
     const STORAGE_KEY = 'spotify_auth';
     const SCOPES = 'user-read-private user-read-email';
+    // Port range to try for the loopback server
+    const PORT_MIN = 49152;
+    const PORT_MAX = 65535;
 
     /* ------------------------------------------------------------------ */
     /*  PKCE helpers                                                        */
@@ -31,8 +37,7 @@
     }
 
     async function sha256(plain) {
-        const enc = new TextEncoder();
-        const data = enc.encode(plain);
+        const data = new TextEncoder().encode(plain);
         return crypto.subtle.digest('SHA-256', data);
     }
 
@@ -43,8 +48,7 @@
 
     async function generatePKCE() {
         const verifier = randomString(128);
-        const hashed = await sha256(verifier);
-        const challenge = base64URLEncode(hashed);
+        const challenge = base64URLEncode(await sha256(verifier));
         return { verifier, challenge };
     }
 
@@ -54,9 +58,7 @@
     function loadAuthData() {
         return new Promise(resolve => {
             if (typeof chrome !== 'undefined' && chrome.storage?.local) {
-                chrome.storage.local.get([STORAGE_KEY], result => {
-                    resolve(result[STORAGE_KEY] || null);
-                });
+                chrome.storage.local.get([STORAGE_KEY], r => resolve(r[STORAGE_KEY] || null));
             } else {
                 try { resolve(JSON.parse(localStorage.getItem(STORAGE_KEY))); }
                 catch (_) { resolve(null); }
@@ -93,13 +95,10 @@
         const data = await loadAuthData();
         if (!data?.access_token) return null;
 
-        const now = Date.now();
-        // Token still valid (with 60s buffer)
-        if (data.expires_at && now < data.expires_at - 60000) {
+        if (data.expires_at && Date.now() < data.expires_at - 60000) {
             return data.access_token;
         }
 
-        // Try to refresh
         if (data.refresh_token && data.client_id) {
             try {
                 const resp = await fetch('https://accounts.spotify.com/api/token', {
@@ -125,21 +124,26 @@
             } catch (_) {}
         }
 
-        // Token expired and refresh failed — clear it
         await clearAuthData();
         return null;
     }
 
     /* ------------------------------------------------------------------ */
-    /*  OAuth PKCE login flow                                               */
+    /*  Pick a random port                                                  */
+    /* ------------------------------------------------------------------ */
+    function randomPort() {
+        return Math.floor(Math.random() * (PORT_MAX - PORT_MIN + 1)) + PORT_MIN;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /*  OAuth PKCE — loopback redirect via tab monitoring                  */
     /* ------------------------------------------------------------------ */
     async function connect(clientId) {
-        if (!clientId || !clientId.trim()) {
-            throw new Error('Please enter your Spotify Client ID first.');
-        }
+        if (!clientId?.trim()) throw new Error('Please enter your Spotify Client ID first.');
         clientId = clientId.trim();
 
-        const redirectUri = chrome.identity.getRedirectURL();
+        const port = randomPort();
+        const redirectUri = `http://127.0.0.1:${port}/callback`;
         const { verifier, challenge } = await generatePKCE();
         const state = randomString(16);
 
@@ -154,58 +158,74 @@
         });
 
         return new Promise((resolve, reject) => {
-            chrome.identity.launchWebAuthFlow(
-                { url: authUrl, interactive: true },
-                async (responseUrl) => {
-                    if (chrome.runtime.lastError) {
-                        return reject(new Error(chrome.runtime.lastError.message || 'Login cancelled'));
-                    }
-                    if (!responseUrl) {
-                        return reject(new Error('Login cancelled or popup blocked'));
-                    }
+            let authTabId = null;
+            let done = false;
 
-                    const url = new URL(responseUrl);
-                    const code = url.searchParams.get('code');
-                    const returnedState = url.searchParams.get('state');
-                    const error = url.searchParams.get('error');
+            // Listen for tab URL changes — catch the redirect to 127.0.0.1
+            function onTabUpdate(tabId, changeInfo, tab) {
+                if (!tab.url) return;
 
-                    if (error) return reject(new Error(`Spotify error: ${error}`));
-                    if (returnedState !== state) return reject(new Error('State mismatch — possible CSRF'));
-                    if (!code) return reject(new Error('No authorization code received'));
+                let url;
+                try { url = new URL(tab.url); } catch (_) { return; }
 
-                    // Exchange code for tokens
-                    try {
-                        const tokenResp = await fetch('https://accounts.spotify.com/api/token', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                            body: new URLSearchParams({
-                                grant_type: 'authorization_code',
-                                code,
-                                redirect_uri: redirectUri,
-                                client_id: clientId,
-                                code_verifier: verifier
-                            })
-                        });
+                if (url.hostname !== '127.0.0.1' || url.port !== String(port)) return;
+                if (done) return;
+                done = true;
 
-                        if (!tokenResp.ok) {
-                            const err = await tokenResp.text();
-                            return reject(new Error(`Token exchange failed: ${err}`));
-                        }
+                chrome.tabs.onUpdated.removeListener(onTabUpdate);
+                chrome.tabs.remove(tabId).catch(() => {});
 
-                        const tokens = await tokenResp.json();
-                        await saveAuthData({
-                            client_id: clientId,
-                            access_token: tokens.access_token,
-                            refresh_token: tokens.refresh_token,
-                            expires_at: Date.now() + tokens.expires_in * 1000
-                        });
+                const code = url.searchParams.get('code');
+                const returnedState = url.searchParams.get('state');
+                const error = url.searchParams.get('error');
 
-                        resolve({ success: true });
-                    } catch (err) {
-                        reject(err);
-                    }
-                }
-            );
+                if (error) return reject(new Error(`Spotify error: ${error}`));
+                if (returnedState !== state) return reject(new Error('State mismatch — possible CSRF'));
+                if (!code) return reject(new Error('No authorization code received'));
+
+                // Exchange code for tokens
+                fetch('https://accounts.spotify.com/api/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        grant_type: 'authorization_code',
+                        code,
+                        redirect_uri: redirectUri,
+                        client_id: clientId,
+                        code_verifier: verifier
+                    })
+                })
+                .then(r => {
+                    if (!r.ok) return r.text().then(t => { throw new Error(`Token exchange failed: ${t}`); });
+                    return r.json();
+                })
+                .then(async tokens => {
+                    await saveAuthData({
+                        client_id: clientId,
+                        access_token: tokens.access_token,
+                        refresh_token: tokens.refresh_token,
+                        expires_at: Date.now() + tokens.expires_in * 1000
+                    });
+                    resolve({ success: true });
+                })
+                .catch(reject);
+            }
+
+            chrome.tabs.onUpdated.addListener(onTabUpdate);
+
+            // Open the Spotify login page
+            chrome.tabs.create({ url: authUrl }, tab => {
+                authTabId = tab.id;
+            });
+
+            // Timeout after 5 minutes
+            setTimeout(() => {
+                if (done) return;
+                done = true;
+                chrome.tabs.onUpdated.removeListener(onTabUpdate);
+                if (authTabId) chrome.tabs.remove(authTabId).catch(() => {});
+                reject(new Error('Login timed out — please try again'));
+            }, 5 * 60 * 1000);
         });
     }
 
@@ -227,42 +247,28 @@
         );
 
         if (!resp.ok) {
-            if (resp.status === 401) {
-                await clearAuthData();
-            }
+            if (resp.status === 401) await clearAuthData();
             return null;
         }
 
         const data = await resp.json();
 
-        // Prefer track when query looks like a song title (has "by" or quote)
         const looksLikeTrack = /\bby\b|'|"/.test(query.toLowerCase());
         const artists = data.artists?.items || [];
         const tracks = data.tracks?.items || [];
 
         if (looksLikeTrack && tracks.length > 0) {
             const t = tracks[0];
-            return {
-                type: 'track',
-                id: t.id,
-                title: `${t.name} — ${t.artists?.[0]?.name || ''}`
-            };
+            return { type: 'track', id: t.id, title: `${t.name} — ${t.artists?.[0]?.name || ''}` };
         }
-
         if (artists.length > 0) {
             const a = artists[0];
             return { type: 'artist', id: a.id, title: a.name };
         }
-
         if (tracks.length > 0) {
             const t = tracks[0];
-            return {
-                type: 'track',
-                id: t.id,
-                title: `${t.name} — ${t.artists?.[0]?.name || ''}`
-            };
+            return { type: 'track', id: t.id, title: `${t.name} — ${t.artists?.[0]?.name || ''}` };
         }
-
         return null;
     }
 
@@ -270,8 +276,7 @@
     /*  Public API                                                          */
     /* ------------------------------------------------------------------ */
     async function isConnected() {
-        const token = await getValidToken();
-        return !!token;
+        return !!(await getValidToken());
     }
 
     async function getClientId() {
@@ -284,10 +289,9 @@
     }
 
     function getRedirectUri() {
-        if (typeof chrome !== 'undefined' && chrome.identity?.getRedirectURL) {
-            return chrome.identity.getRedirectURL();
-        }
-        return 'N/A (only available in extension context)';
+        // The redirect URI to register in Spotify Developer Dashboard
+        // Use http://127.0.0.1 (no port number — Spotify allows any port for loopback)
+        return 'http://127.0.0.1';
     }
 
     return { connect, disconnect, search, isConnected, getClientId, getRedirectUri };
