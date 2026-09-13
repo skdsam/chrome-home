@@ -20,8 +20,6 @@
             <div class="blob blob-2"></div>
             <div class="blob blob-3"></div>
         </div>
-        <!-- Media Backgrounds -->
-        <div id="media-bg" class="media-bg hidden"></div>
         <!-- WebGL Gradient Container -->
         <div id="webgl-gradient-container" class="webgl-gradient-container hidden"></div>
         <!-- Overlay for Rain/Snow/Clouds -->
@@ -680,16 +678,17 @@
             <h2 id="settings-modal-title">Settings</h2>
 
             <!-- Tabs Header -->
-            <div class="settings-tabs">
-                <div class="tab-item active" data-tab="tab-general">General</div>
-                <div class="tab-item" data-tab="tab-appearance">Appearance</div>
-                <div class="tab-item" data-tab="tab-avatar">Avatar</div>
-                <div class="tab-item" data-tab="tab-background">Background</div>
-                <div class="tab-item" data-tab="tab-sidebar">Sidebar</div>
-                <div class="tab-item" data-tab="tab-data">Data</div>
+            <div class="settings-tabs" role="tablist" aria-label="Settings sections">
+                <button type="button" class="tab-item active" data-tab="tab-general" role="tab" id="settings-general" aria-controls="tab-general" aria-selected="true">General</button>
+                <button type="button" class="tab-item" data-tab="tab-about" role="tab" id="settings-about" aria-controls="tab-about" aria-selected="false" tabindex="-1">About me</button>
+                <button type="button" class="tab-item" data-tab="tab-appearance" role="tab" id="settings-appearance" aria-controls="tab-appearance" aria-selected="false" tabindex="-1">Appearance</button>
+                <button type="button" class="tab-item" data-tab="tab-avatar" role="tab" id="settings-avatar" aria-controls="tab-avatar" aria-selected="false" tabindex="-1">Avatar</button>
+                <button type="button" class="tab-item" data-tab="tab-background" role="tab" id="settings-background" aria-controls="tab-background" aria-selected="false" tabindex="-1">Background</button>
+                <button type="button" class="tab-item" data-tab="tab-sidebar" role="tab" id="settings-sidebar" aria-controls="tab-sidebar" aria-selected="false" tabindex="-1">Sidebar</button>
+                <button type="button" class="tab-item" data-tab="tab-data" role="tab" id="settings-data" aria-controls="tab-data" aria-selected="false" tabindex="-1">Data</button>
             </div>
 
-            <div class="modal-content" style="padding-top: 15px;">
+            <div class="modal-content">
 
                 <!-- Tab: General -->
                 <div id="tab-general" class="tab-content active">
@@ -713,6 +712,51 @@
                             <span class="slider round"></span>
                         </label>
                     </div>
+                </div>
+
+                <div id="tab-about" class="tab-content">
+                    <p class="profile-hint">Help Pip get to know you. Save a few details, then ask “Who am I?”, “What do I like?” or “What sites might I like?”. Every field is optional.</p>
+                    <form id="pip-profile-form">
+                        <fieldset id="pip-profile-fields" class="profile-fields" disabled>
+                            <legend class="sr-only">About me</legend>
+                            <div class="profile-grid">
+                                <div class="settings-group">
+                                    <label for="profile-name">Your name</label>
+                                    <input id="profile-name" name="name" type="text" maxlength="80" autocomplete="given-name" placeholder="What should Pip call you?">
+                                </div>
+                                <div class="settings-group">
+                                    <label for="profile-location">Location</label>
+                                    <input id="profile-location" name="location" type="text" maxlength="120" autocomplete="address-level2" placeholder="City or region (optional)">
+                                </div>
+                            </div>
+                            <div class="settings-group">
+                                <label for="profile-occupation">What you do</label>
+                                <input id="profile-occupation" name="occupation" type="text" maxlength="120" placeholder="Work, studies or a favourite project">
+                            </div>
+                            <div class="settings-group">
+                                <label for="profile-interests">Likes and interests</label>
+                                <textarea id="profile-interests" name="interests" maxlength="400" rows="3" placeholder="For example: Blender, coding, indie music, hiking"></textarea>
+                            </div>
+                            <div class="settings-group">
+                                <label for="profile-dislikes">Things to avoid</label>
+                                <textarea id="profile-dislikes" name="dislikes" maxlength="300" rows="2" placeholder="Topics or recommendations you dislike"></textarea>
+                            </div>
+                            <div class="settings-group">
+                                <label for="profile-favorites">Favourite sites</label>
+                                <textarea id="profile-favorites" name="favorites" maxlength="400" rows="2" placeholder="Website names or links you enjoy"></textarea>
+                            </div>
+                            <div class="settings-group">
+                                <label for="profile-about">Anything else about you</label>
+                                <textarea id="profile-about" name="about" maxlength="600" rows="3" placeholder="Goals, preferences, or how you like to be helped"></textarea>
+                            </div>
+                            <p class="profile-hint">Saved with your extension settings, including Google Sync when enabled and exported backups. Pip uses these details locally. With Web lookup on, site suggestions can search your likes and interests.</p>
+                            <div class="profile-actions">
+                                <button type="submit" class="btn-primary">Save profile</button>
+                                <button id="pip-profile-clear" type="button" class="btn-secondary">Clear profile</button>
+                            </div>
+                        </fieldset>
+                        <p id="pip-profile-status" class="profile-status" role="status" aria-live="polite">Loading your profile…</p>
+                    </form>
                 </div>
 
                 <div id="tab-appearance" class="tab-content">
@@ -802,20 +846,11 @@
                         <label for="bg-type-select">Background Type</label>
                         <select id="bg-type-select" class="football-select" style="width: 100%; margin-top: 5px;">
                             <option value="weather">Dynamic Weather</option>
-                            <option value="image">Unsplash Image</option>
                             <option value="gradient">Gradient Pattern</option>
                         </select>
                     </div>
-                    <!-- Note: The ID bg-query-group is used in JS to toggle visibility. 
-                         We keep it here. The logic in newtab.js might need to check if we are in this tab, 
-                         but visibility toggling usually works on the element itself independently. 
-                    -->
-                    <div id="bg-query-group" class="settings-group hidden">
-                        <label for="bg-query-input" id="bg-query-label">Search Query</label>
-                        <input type="text" id="bg-query-input" placeholder="e.g. Nature, Space, Minimal"
-                            style="width: 100%; margin-top: 5px;">
-
-                        <label for="bg-interval-input" style="display: block; margin-top: 10px;">Rotation Interval
+                    <div id="bg-interval-group" class="settings-group hidden">
+                        <label for="bg-interval-input">Gradient Colour Interval
                             (Seconds)</label>
                         <input type="number" id="bg-interval-input" min="10" max="3600" value="60"
                             style="width: 100%; margin-top: 5px;">
@@ -982,6 +1017,7 @@
         <form id="ask-pip-form"><label id="pip-compose-label" class="ask-pip-hint" for="ask-pip-input">Ask a question, add a task or note, or save a website.</label><div class="ask-pip-compose"><input id="ask-pip-input" maxlength="500" placeholder="Try: add buy milk" autocomplete="off" required><button id="pip-compose-submit" type="submit">Ask</button></div></form>
         <div id="ask-pip-answer" class="ask-pip-answer" role="status" aria-live="polite" aria-atomic="true"></div>
     </dialog>
+    <script src="pip-profile.js"></script>
     <script src="pip-web-search.js"></script>
     <script src="pip-local-ai.js"></script>
     <script src="ask-pip.js"></script>

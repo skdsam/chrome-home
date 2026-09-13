@@ -102,7 +102,7 @@ class WeatherManager {
 
         // Check background config
         const bgStored = await window.storageManager.get('bgConfig');
-        const bgType = (bgStored.bgConfig && bgStored.bgConfig.type) || 'weather';
+        const bgType = bgStored.bgConfig?.type === 'gradient' ? 'gradient' : 'weather';
 
         // Reset
         if (bgType === 'weather') {

@@ -42,10 +42,19 @@
         const addition = parseAddition(text);
         if (addition) return addition;
         const raw = String(text || '').trim();
-        const cleanText = raw.replace(/^(?:hey\s+)?(?:pip[,:]?\s+)?(?:can\s+you\s+|could\s+you\s+|please\s+)?/i, '')
+        const cleanText = raw.replace(/^(?:hey\s+)?(?:pip[,:]?\s+)?(?:(?:can\s+you|could\s+you|please)\s+)*/i, '')
+                             .replace(/\s+please[?.!]*$/i, '')
+                             .replace(/\u2019/g, "'")
                              .replace(/[?.!]+$/, '')
                              .trim();
 
+        if (/^(?:who am i|what do you (?:know|remember) about me|tell me (?:about myself|what you know about me)|(?:show|read) my profile)$/i.test(cleanText)) return { type: 'profile', action: 'summary' };
+        if (/^(?:what(?:'s| is) my name|(?:do you (?:know|remember)) my name)$/i.test(cleanText)) return { type: 'profile', action: 'name' };
+        if (/^(?:what do i (?:like|enjoy|love)|what are my (?:likes|interests|hobbies)|(?:do you know|tell me) what i like)$/i.test(cleanText)) return { type: 'profile', action: 'interests' };
+        if (/^(?:what do i (?:dislike|hate)|what are my dislikes)$/i.test(cleanText)) return { type: 'profile', action: 'dislikes' };
+        if (/^(?:where do i live|where am i (?:from|based))$/i.test(cleanText)) return { type: 'profile', action: 'location' };
+        if (/^(?:what do i do(?: for (?:work|a living))?|what(?:'s| is) my (?:job|occupation))$/i.test(cleanText)) return { type: 'profile', action: 'occupation' };
+        if (/^(?:what are my favou?rite (?:websites|sites)|what (?:websites|sites) do i like)$/i.test(cleanText)) return { type: 'profile', action: 'favorites' };
         // Route explicit play commands before bookmark keywords in music titles.
         const spotifyPlayMatch = cleanText.match(/^(?:please\s+)?(?:play|put\s*on|listen\s*to)\s+(.+)$/i);
         if (spotifyPlayMatch) {
@@ -61,6 +70,12 @@
             return { type: 'bookmarks', query: cleanText.toLowerCase()
                 .replace(/\b(find|search|show|look|for|up|my|me|the|all|please|can|you|could|bookmarks?|saved|sites?|links?)\b/g, ' ')
                 .replace(/[^\p{L}\p{N}\s.-]/gu, ' ').replace(/\s+/g, ' ').trim() };
+        }
+
+        if (/\b(?:websites?|sites?)\b/i.test(cleanText) &&
+            (/\b(?:recommend|suggest|recommendations|suggestions)\b/i.test(cleanText) ||
+                /\b(?:might|may|would|should|could) i (?:like|enjoy|visit|try|use)\b/i.test(cleanText))) {
+            return { type: 'profile', action: 'recommend' };
         }
 
         if (/\b(?:clear|remove|delete)\s+completed\s+(?:tasks?|todos?)\b/i.test(cleanText)) {
@@ -210,13 +225,13 @@
         return { mood: 'curious', text: 'Unknown widget command.' };
     }
 
-    function renderSources(container, sources) {
+    function renderSources(container, sources, heading = 'Sources') {
         if (!container || !sources || !sources.length) return;
         const sec = document.createElement('div');
         sec.className = 'pip-sources-container';
         const title = document.createElement('div');
         title.className = 'pip-sources-title';
-        title.textContent = 'Sources';
+        title.textContent = heading;
         sec.append(title);
         const list = document.createElement('ul');
         list.className = 'pip-sources-list';
@@ -303,6 +318,17 @@
         mood('listening');
         stopButton?.classList?.add('hidden');
     }
+    window.addEventListener?.('pip-profile-changed', () => {
+        requestId += 1;
+        stopAI();
+        cancelAmbient();
+        if (localAI) localAI.history = [];
+        if (ambientAI) ambientAI.history = [];
+        if (dialog.open) {
+            answer.textContent = 'Your profile changed. Ask me again to use your latest details.';
+            setStatus('Pip is ready with your updated profile.');
+        }
+    });
     function setComposeMode(mode, focus = true) {
         composeMode = ['todo', 'note'].includes(mode) ? mode : 'chat';
         requestId += 1;
@@ -420,7 +446,33 @@
             setStatus(res.followUp ? 'Waiting for the website address.' : res.failed ? 'The change could not be saved.' : 'Pip handled your widget request.');
             return;
         }
-        const useWeb = Boolean(webSearchToggle?.checked && webSearch && request.type !== 'bookmarks');
+        let profile = {};
+        if (request.type !== 'bookmarks' && window.PipProfile) {
+            try { profile = await window.PipProfile.load(); }
+            catch (_) {
+                if (token !== requestId || !dialog.open) return;
+                answer.textContent = 'I could not load your About me profile. Please try again.';
+                return;
+            }
+            if (token !== requestId || !dialog.open) return;
+        }
+        if (request.type === 'profile' && request.action !== 'recommend') {
+            answer.textContent = window.PipProfile?.reply(request.action, profile) || 'Add your details in Settings > About me.';
+            mood('nod');
+            setStatus('Pip answered from your saved About me profile.');
+            return;
+        }
+        const recommending = request.type === 'profile' && request.action === 'recommend';
+        const suggestions = recommending ? window.PipProfile?.recommend(profile) : null;
+        if (recommending && !profile.interests && !profile.favorites) {
+            answer.textContent = suggestions?.text || 'Add your likes in Settings > About me first.';
+            mood('curious');
+            setStatus('Pip needs your preferences to suggest sites.');
+            return;
+        }
+        // Only recommendation lookups add saved interests. Identity answers stay local.
+        const searchText = recommending ? window.PipProfile?.searchQuery(profile) : text;
+        const useWeb = Boolean(webSearchToggle?.checked && webSearch && request.type !== 'bookmarks' && searchText);
         if (aiToggle?.checked && localAI && request.type !== 'bookmarks') {
             answer.textContent = useWeb ? 'Searching the web and preparing your reply...' : 'Preparing your local reply...';
             mood('thinking');
@@ -430,13 +482,13 @@
                 let sources = [];
                 if (useWeb) {
                     setStatus('Searching DuckDuckGo & Wikipedia...');
-                    const searchResult = await webSearch.search(text);
+                    const searchResult = await webSearch.search(searchText);
                     if (token !== requestId || !dialog.open) return;
                     webContext = searchResult.contextText;
                     sources = searchResult.sources;
                 }
                 const response = await localAI.ask(text, '',
-                    message => { if (token === requestId) setStatus(message); }, webContext);
+                    message => { if (token === requestId) setStatus(message); }, webContext, window.PipProfile?.context(profile) || '');
                 if (token !== requestId || !dialog.open) return;
                 const expression = parseExpression(response);
                 answer.textContent = expression.text;
@@ -452,22 +504,35 @@
                 stopButton?.classList?.add('hidden');
             }
         }
+        if (recommending && suggestions?.sources.length) {
+            answer.textContent = suggestions.text;
+            renderSources(answer, suggestions.sources, 'Suggested sites');
+            mood('nod');
+            setStatus('Suggestions based on your saved preferences.');
+            return;
+        }
         if (request.type !== 'bookmarks') {
             if (useWeb) {
                 answer.textContent = 'Searching the web for you...';
                 mood('thinking');
                 setStatus('Searching DuckDuckGo & Wikipedia...');
                 try {
-                    const searchResult = await webSearch.search(text);
+                    const searchResult = await webSearch.search(searchText);
                     if (token !== requestId || !dialog.open) return;
                     if (searchResult.sources && searchResult.sources.length) {
-                        answer.textContent = `Here is what I found for "${text}":`;
+                        answer.textContent = recommending ? 'Here are web results related to your saved interests:' : `Here is what I found for "${text}":`;
                         renderSources(answer, searchResult.sources);
                         mood('nod');
                         setStatus('Found web results via DuckDuckGo & Wikipedia.');
                         return;
                     }
                 } catch (_) { /* fallback below */ }
+            }
+            if (recommending) {
+                answer.textContent = suggestions?.text || 'Add your likes in Settings > About me for personalised suggestions.';
+                mood('curious');
+                setStatus('No matching site suggestions found.');
+                return;
             }
             answer.textContent = 'I can control your widgets, add tasks and notes, save websites, search the web, and find bookmarks. Try “open tasks”, “add buy milk”, or ask a question.';
             return;

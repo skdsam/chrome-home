@@ -100,34 +100,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
     transition: background 1s ease;
 }
 
-.media-bg {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: -5;
-    /* remove transition on container, handle in children */
-}
-
-.media-bg .bg-slide {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-size: cover;
-    background-position: center;
-    opacity: 0;
-    transition: opacity 1.5s ease-in-out;
-}
-
-@media (max-aspect-ratio: 16/9) {
-    .youtube-bg {
-        width: 177.78vh;
-    }
-}
-
 /* Gradient Mesh Background */
 .gradient-bg {
     position: absolute;
@@ -142,10 +114,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
     0% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
-}
-
-.media-bg .bg-slide.active {
-    opacity: 1;
 }
 
 /* Interactive Gradient Styles */
@@ -198,20 +166,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
     left: 0;
     width: 100% !important;
     height: 100% !important;
-}
-
-.media-bg video {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    position: absolute;
-    top: 0; left: 0;
-    opacity: 0;
-    transition: opacity 1s ease;
-}
-
-.media-bg video.active {
-    opacity: 1;
 }
 
 .bg-overlay {
@@ -1075,6 +1029,70 @@ input[type="text"] {
 .modal-content {
     /* Ensure content flows properly */
     overflow-y: visible;
+}
+
+/* Keep Settings navigation and Close visible while long sections scroll. */
+#settings-modal-overlay {
+    padding: 12px;
+}
+
+#settings-modal-overlay .modal {
+    width: 560px;
+    max-width: 100%;
+    max-height: min(80vh, calc(100dvh - 24px));
+    min-height: 0;
+    padding: clamp(16px, 4vw, 30px);
+    overflow: hidden;
+}
+
+#settings-modal-title,
+#settings-modal-overlay .modal-actions {
+    flex-shrink: 0;
+}
+
+#settings-modal-overlay .modal-content {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    padding: 18px 6px 0 0;
+}
+
+#settings-modal-overlay .modal-actions { padding-top: 16px; }
+#settings-modal-overlay .switch { flex-shrink: 0; }
+.avatar-range-row input { min-width: 0; }
+
+.profile-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.profile-fields legend { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.profile-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr)); gap: 0 16px; }
+.profile-fields input,
+.profile-fields textarea {
+    width: 100%;
+    min-width: 0;
+    padding: 10px 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--glass-border);
+    border-radius: 6px;
+    color: #fff;
+    font: inherit;
+    font-size: .9rem;
+}
+.profile-fields textarea { resize: vertical; min-height: 74px; }
+.profile-fields input:focus-visible,
+.profile-fields textarea:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 2px; }
+.profile-hint { color: #aaa; font-size: .85rem; line-height: 1.5; margin: 0 0 18px; }
+.profile-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.profile-status { min-height: 1.5em; margin: 10px 0 4px; color: #bbb; font-size: .85rem; }
+.profile-fields:disabled { opacity: .6; }
+
+@media (max-width: 380px) {
+    .avatar-settings-actions { grid-template-columns: 1fr; }
+}
+
+@media (max-height: 500px) {
+    #settings-modal-overlay .modal { max-height: calc(100dvh - 24px); padding-block: 12px; }
+    #settings-modal-overlay .modal-actions { padding-top: 8px; }
 }
 
 .form-group {

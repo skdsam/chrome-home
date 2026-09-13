@@ -13,6 +13,7 @@ We collect and process the following information to provide the core features of
 *   **Top Sites (TopSites Permission):** We use this to populate the default shortcuts on your new tab page for a better initial experience.
 *   **Storage (Storage Permission):** We use Chrome Sync storage to keep your shortcuts and settings consistent across your devices.
 *   **Avatar Preferences:** The optional 3D companion stores its settings, action counts, recently used dialogue, and a short cache of public feed snippets locally. This information is not sent with feed requests.
+*   **About Me Profile:** Optional details you enter, such as your name, location, interests, favourite sites, and preferences, are saved with your extension settings. They are synced through Chrome when Google Sync is enabled and included in exported backups. Pip uses these details for personal answers and recommendations. You can edit or clear the profile in Settings > About me.
 
 ## 2. How We Use Your Data
 
@@ -29,11 +30,10 @@ All data processing (like history and top sites) happens locally on your compute
 
 Our extension interacts with the following third-party services:
 *   **OpenWeatherMap/Weather APIs:** For weather information.
-*   **Unsplash:** For background images (if selected).
 *   **AI Providers (Gemini, ChatGPT, etc.):** Only if you choose to interact with them via the sidebar.
 *   **DummyJSON and JokeAPI:** For optional random quotes and family-safe jokes spoken by the avatar. Requests contain no browsing history, location, or personal settings.
 *   **Hacker News and TheSportsDB:** For optional public headlines, fixtures, and score updates. The avatar reuses visible widget data where possible and otherwise makes a direct public-feed request without attaching personal information.
-*   **DuckDuckGo and Wikipedia:** For optional web search lookups requested through Ask Pip. Search queries contain only the question you submitted without personal identity, browsing history, or cookies.
+*   **DuckDuckGo and Wikipedia:** For optional web search lookups requested through Ask Pip. Normal lookups send the submitted question. Personalised site lookups can send the likes and interests you saved in About me. The extension does not append your name, location, other profile fields, or browsing history to those queries. Direct profile questions such as “Who am I?” are answered locally without a web lookup.
 
 ## 5. Security
 
@@ -53,8 +53,8 @@ If you have questions about this policy, please contact us via our GitHub reposi
 
 ### Optional local AI (Ask Pip)
 
-When you enable Local AI and submit a request, Chrome may download Gemini Nano. Questions, the current daily focus, and a short in-memory conversation are processed through Chrome's on-device Prompt API, not sent to a hosted chat service by this extension. Closing Ask Pip clears its AI conversation history. The Local AI preference is stored locally. Chrome manages model downloads and model storage. Bookmark lookup remains local and does not send the bookmark library to the model.
+When you enable Local AI and submit a request, Chrome may download Gemini Nano. Questions, your saved About me profile, and a short in-memory conversation are processed through Chrome's on-device Prompt API, not sent to a hosted chat service by this extension. Closing Ask Pip or changing your profile clears its AI conversation history. The Local AI preference is stored locally. Chrome manages model downloads and model storage. Bookmark lookup remains local and does not send the bookmark library to the model.
 
-When Web lookup is enabled, Pip retrieves public search summaries from DuckDuckGo and Wikipedia to provide factual context to the local model. Search queries do not contain personal data. You can toggle Web lookup off at any time in the Ask Pip dialog.
+When Web lookup is enabled, Pip retrieves public search summaries from DuckDuckGo and Wikipedia to provide factual context to the local model, using the query rules above. You can toggle Web lookup off at any time in the Ask Pip dialog.
 
-When Local AI and occasional AI comments are both enabled, Pip may also generate brief local comments while the page is visible and he is idle. These use the daily focus and a short in-memory history; they require the model to be already available. You can disable comments in Ask Pip or disable Pip with the top-right control.
+When Local AI and occasional AI comments are both enabled, Pip may also generate brief local comments while the page is visible and he is idle. These use a short in-memory history and require the model to be already available. You can disable comments in Ask Pip or disable Pip with the top-right control.

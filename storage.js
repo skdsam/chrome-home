@@ -50,13 +50,14 @@ class ExtensionStorage {
         return false;
     }
 
-    async get(keys) {
+    async get(keys, { strict = false } = {}) {
         const sync = await this.isSyncEnabled();
         const storage = sync ? chrome.storage.sync : chrome.storage.local;
         return new Promise((resolve, reject) => {
             storage.get(keys, (res) => {
                 if (this.handleError()) {
-                    resolve({}); // Return empty on error to prevent total breakage
+                    if (strict) reject(new Error(chrome.runtime.lastError.message));
+                    else resolve({}); // Return empty on error to prevent total breakage
                 } else {
                     resolve(res);
                 }

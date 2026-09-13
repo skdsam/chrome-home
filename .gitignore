@@ -83,3 +83,4 @@ tests/*
 !tests/spotify.test.js
 !tests/spotify-server.test.js
 !tests/pip-additions.test.js
+!tests/pip-profile.test.js

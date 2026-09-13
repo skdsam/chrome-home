@@ -589,22 +589,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // --- Tab Switching Logic ---
-    const tabs = document.querySelectorAll('.tab-item');
-    const tabContents = document.querySelectorAll('.tab-content');
+    const tabs = [...settingsModalOverlay.querySelectorAll('.tab-item')];
+    const tabContents = settingsModalOverlay.querySelectorAll('.tab-content');
+    const settingsContent = settingsModalOverlay.querySelector('.modal-content');
 
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            // Remove active from all
-            tabs.forEach(t => t.classList.remove('active'));
-            tabContents.forEach(c => c.classList.remove('active'));
+    function selectSettingsTab(tab) {
+        tabs.forEach(item => {
+            const selected = item === tab;
+            item.classList.toggle('active', selected);
+            item.setAttribute('aria-selected', String(selected));
+            item.tabIndex = selected ? 0 : -1;
+        });
+        tabContents.forEach(panel => panel.classList.toggle('active', panel.id === tab.dataset.tab));
+        settingsContent.scrollTop = 0;
+    }
 
-            // Set active
-            tab.classList.add('active');
-            const targetId = tab.getAttribute('data-tab');
-            const targetContent = document.getElementById(targetId);
-            if (targetContent) {
-                targetContent.classList.add('active');
-            }
+    tabs.forEach((tab, index) => {
+        const panel = document.getElementById(tab.dataset.tab);
+        panel.setAttribute('role', 'tabpanel');
+        panel.setAttribute('aria-labelledby', tab.id);
+        tab.addEventListener('click', () => selectSettingsTab(tab));
+        tab.addEventListener('keydown', event => {
+            const next = event.key === 'ArrowRight' ? (index + 1) % tabs.length :
+                event.key === 'ArrowLeft' ? (index + tabs.length - 1) % tabs.length :
+                event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : -1;
+            if (next < 0) return;
+            event.preventDefault();
+            selectSettingsTab(tabs[next]);
+            tabs[next].focus();
         });
     });
 
@@ -736,11 +748,8 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
     class BackgroundManager {
         constructor() {
             this.bgTypeSelect = document.getElementById('bg-type-select');
-            this.bgQueryGroup = document.getElementById('bg-query-group');
-            this.bgQueryLabel = document.getElementById('bg-query-label');
-            this.bgQueryInput = document.getElementById('bg-query-input');
+            this.bgIntervalGroup = document.getElementById('bg-interval-group');
             this.bgIntervalInput = document.getElementById('bg-interval-input');
-            this.mediaBg = document.getElementById('media-bg');
             this.weatherBlobs = document.getElementById('weather-blobs');
             this.bgOverlay = document.getElementById('bg-overlay');
             this.gradientColorsGroup = document.getElementById('gradient-colors-group');
@@ -751,11 +760,9 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
 
             this.state = {
                 type: 'weather',
-                query: 'Nature',
                 interval: 60 // Default 60 seconds
             };
             this.rotationInterval = null;
-            this.currentSlideIndex = 0;
 
             // Interactive Gradient Properties
             this.mousePos = {
@@ -772,22 +779,29 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
 
         async init() {
             const stored = await window.storageManager.get('bgConfig');
-            if (stored.bgConfig) {
-                this.state = {
-                    ...this.state,
-                    ...stored.bgConfig
-                };
-            }
+            this.state = this.normalizeState(stored.bgConfig);
 
             this.applyState();
             this.setupListeners();
+            // Retire saved image backgrounds and their topic, including imported backups.
+            if (stored.bgConfig && JSON.stringify(stored.bgConfig) !== JSON.stringify(this.state)) {
+                window.storageManager.set({ bgConfig: this.state }).catch(error => console.warn('Background settings migration failed:', error));
+            }
+        }
+
+        normalizeState(config) {
+            const interval = parseInt(config?.interval, 10);
+            return {
+                type: config?.type === 'gradient' ? 'gradient' : 'weather',
+                interval: Number.isFinite(interval) ? Math.min(3600, Math.max(10, interval)) : 60
+            };
         }
 
         setupListeners() {
             if (this.bgTypeSelect) {
                 this.bgTypeSelect.addEventListener('change', () => {
                     this.state.type = this.bgTypeSelect.value;
-                    this.updateQueryVisibility();
+                    this.updateControlsVisibility();
                     this.saveAndApply();
                     // If switching back to weather, trigger weather update to restore blobs/state
                     if (this.state.type === 'weather') {
@@ -819,69 +833,21 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
                 this.mousePos.y = e.clientY;
             });
 
-            if (this.bgQueryInput) {
-                this.bgQueryInput.addEventListener('change', () => {
-                    this.state.query = this.bgQueryInput.value.trim() || 'Nature';
-                    this.saveAndApply();
-                });
-            }
-
             if (this.bgIntervalInput) {
                 this.bgIntervalInput.addEventListener('change', () => {
                     let val = parseInt(this.bgIntervalInput.value);
-                    if (isNaN(val) || val < 10) val = 10; // Minimum 10s safety
+                    if (isNaN(val)) val = 60;
+                    val = Math.min(3600, Math.max(10, val));
                     this.state.interval = val;
                     this.saveAndApply();
-
-                    // Restart rotation immediately with new speed if we are in image or gradient mode
-                    if (this.state.type === 'image' || this.state.type === 'gradient') {
-                        this.stopRotation();
-                        const intervalMs = this.state.interval * 1000;
-                        this.rotationInterval = setInterval(() => {
-                            if (this.state.type === 'image') this.rotateImage();
-                            if (this.state.type === 'gradient') this.loadRandomGradient();
-                        }, intervalMs);
-                    }
                 });
             }
         }
 
-        updateQueryVisibility() {
-            if (!this.bgQueryGroup) return;
-            if (this.state.type === 'weather') {
-                this.bgQueryGroup.classList.add('hidden');
-            } else if (this.state.type === 'gradient') {
-                this.bgQueryGroup.classList.remove('hidden'); // Show group so we can show interval
-
-                // Hide Query Input parts
-                this.bgQueryLabel.style.display = 'none';
-                this.bgQueryInput.style.display = 'none';
-
-                // Show Interval parts
-                if (this.bgIntervalInput) {
-                    this.bgIntervalInput.style.display = 'block';
-                    this.bgIntervalInput.previousElementSibling.style.display = 'block';
-                }
-
-                if (this.gradientColorsGroup) {
-                    this.gradientColorsGroup.classList.remove('hidden');
-                }
-            } else {
-                this.bgQueryGroup.classList.remove('hidden');
-                if (this.gradientColorsGroup) {
-                    this.gradientColorsGroup.classList.add('hidden');
-                }
-
-                // Show Query Input parts
-                this.bgQueryLabel.style.display = 'block';
-                this.bgQueryInput.style.display = 'block';
-                this.bgQueryLabel.textContent = 'Image Topic';
-
-                if (this.bgIntervalInput) {
-                    this.bgIntervalInput.style.display = 'block';
-                    this.bgIntervalInput.previousElementSibling.style.display = 'block';
-                }
-            }
+        updateControlsVisibility() {
+            const isGradient = this.state.type === 'gradient';
+            this.bgIntervalGroup?.classList.toggle('hidden', !isGradient);
+            this.gradientColorsGroup?.classList.toggle('hidden', !isGradient);
         }
 
         async saveAndApply() {
@@ -892,21 +858,18 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
         }
 
         applyState() {
+            this.state = this.normalizeState(this.state);
             if (this.bgTypeSelect) this.bgTypeSelect.value = this.state.type;
-            if (this.bgQueryInput) this.bgQueryInput.value = this.state.query;
             if (this.bgIntervalInput) this.bgIntervalInput.value = this.state.interval || 60;
 
-            this.updateQueryVisibility();
+            this.updateControlsVisibility();
 
             if (this.state.type === 'weather') {
-                this.mediaBg.classList.add('hidden');
                 this.weatherBlobs.classList.remove('hidden');
                 this.bgOverlay.style.background = 'rgba(0,0,0,0.1)';
                 this.stopRotation();
                 this.stopInteractiveGradient();
-                this.mediaBg.innerHTML = ''; // Clean up media
             } else if (this.state.type === 'gradient') {
-                this.mediaBg.classList.remove('hidden');
                 this.weatherBlobs.classList.add('hidden');
                 this.bgOverlay.style.background = 'rgba(0,0,0,0.1)';
 
@@ -926,17 +889,6 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
                 this.rotationInterval = setInterval(() => {
                     this.updateInteractiveColors();
                 }, intervalMs);
-            } else {
-                this.mediaBg.classList.remove('hidden');
-                this.weatherBlobs.classList.add('hidden');
-                this.bgOverlay.style.background = 'rgba(0,0,0,0.3)';
-
-                // Bug Fix: Ensure weather effects are cleared when switching to image
-                const effects = document.getElementById('weather-effects');
-                if (effects) effects.innerHTML = '';
-
-                this.stopInteractiveGradient();
-                this.loadMedia();
             }
         }
 
@@ -947,38 +899,8 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
             }
         }
 
-        async loadMedia() {
-            this.stopRotation();
-            this.mediaBg.innerHTML = ''; // Reset container
-
-            if (this.state.type === 'image') {
-                // Create two slides for cross-fading
-                const slide1 = document.createElement('div');
-                slide1.className = 'bg-slide active';
-                const slide2 = document.createElement('div');
-                slide2.className = 'bg-slide';
-
-                this.mediaBg.appendChild(slide1);
-                this.mediaBg.appendChild(slide2);
-
-                this.currentSlideIndex = 0; // 0 means slide1 is visible, target slide2 next
-
-                // Initial Load
-                await this.loadImageToSlide(slide1);
-
-                // Start Rotation (use stored interval or default 60s)
-                const intervalMs = (this.state.interval || 60) * 1000;
-
-                this.rotationInterval = setInterval(() => {
-                    this.rotateImage();
-                }, intervalMs);
-            }
-        }
-
         initInteractiveGradient() {
             this.stopInteractiveGradient();
-            this.mediaBg.innerHTML = '';
-            this.mediaBg.classList.add('hidden');
 
             // Show & initialize WebGL gradient container
             this.webglGradientContainer = document.getElementById('webgl-gradient-container');
@@ -1023,10 +945,6 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
                     swatches[i].title = color; // Show hex on hover
                 }
             });
-        }
-
-        loadRandomGradient() {
-            // Not used for WebGL gradient
         }
 
         exportColors(format) {
@@ -1074,44 +992,6 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
             URL.revokeObjectURL(url);
         }
 
-        async loadImageToSlide(slideElement) {
-            const timestamp = new Date().getTime();
-            // Using loremflickr with a lock for consistency per request but variety per timestamp
-            const randomUrl = `https://loremflickr.com/1920/1080/${encodeURIComponent(this.state.query)}?lock=${timestamp}`;
-
-            return new Promise((resolve) => {
-                const img = new Image();
-                img.onload = () => {
-                    slideElement.style.backgroundImage = `url('${randomUrl}')`;
-                    resolve();
-                };
-                // Fallback in case of error
-                img.onerror = () => {
-                    console.error("Failed to load image");
-                    resolve(); // Resolve anyway to not break the chain
-                };
-                img.src = randomUrl;
-            });
-        }
-
-        async rotateImage() {
-            const slides = this.mediaBg.querySelectorAll('.bg-slide');
-            if (slides.length < 2) return;
-
-            const current = slides[this.currentSlideIndex];
-            const nextIndex = (this.currentSlideIndex + 1) % slides.length;
-            const next = slides[nextIndex];
-
-            // Load new image into 'next' (hidden) slide
-            await this.loadImageToSlide(next);
-
-            // Swap opacity
-            next.classList.add('active');
-            current.classList.remove('active');
-
-            // Update index
-            this.currentSlideIndex = nextIndex;
-        }
     }
 
     const bgManager = new BackgroundManager();
@@ -1122,8 +1002,10 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
     chrome.storage.onChanged.addListener(async (changes, namespace) => {
         // Background Config Sync
         if (changes.bgConfig) {
+            const previousType = bgManager.state.type;
             bgManager.state = changes.bgConfig.newValue;
             bgManager.applyState();
+            if (previousType !== 'weather' && bgManager.state.type === 'weather') weatherManager.init();
         }
 
         // Recent Sites Limit Sync

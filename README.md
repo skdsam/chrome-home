@@ -6,6 +6,9 @@
 
 ## Recent changes
 
+- **Background images removed:** Settings offers Dynamic Weather and Gradient Pattern. Previously saved image backgrounds fall back to Dynamic Weather.
+- **Responsive Settings:** section tabs wrap onto additional rows. Long sections such as Avatar scroll beneath the tabs while Close stays visible.
+- **About me:** save your name, interests, favourite sites, things to avoid, and other details in **Settings > About me**. Pip can answer “Who am I?” and “What do I like?” without Local AI, suggest sites from saved interests, and use the profile in local AI replies. Save updates or clear the profile at any time. It follows your Google Sync setting and is included in data backups.
 - **Pip quick-entry buttons:** choose **Add to-do** or **Add quick note**, type your text, and press Enter or the add button. Choose **Chat** to return to normal requests.
 - **Natural addition commands:** Pip can add tasks, append quick notes, create shortcuts, and save links to My Sites. Missing website addresses prompt a follow-up; duplicate URLs are detected within each collection.
 - **Spotify matching corrected:** artist names and playlist intent are preserved. Ambiguous names and playlists offer choices with creator information. Failed searches keep the current music instead of substituting an unrelated playlist.
@@ -40,7 +43,7 @@
 
 These existing screenshots may show an earlier layout; the feature descriptions reflect the current homepage.
 
-| Widgets & Productivity | Image Background Mode |
+| Widgets & Productivity | Earlier Background Preview |
 |---|---|
 | ![Widgets](screenshots/widgets-preview.png) | ![Background Mode](screenshots/dark-mode-preview.png) |
 
@@ -52,7 +55,6 @@ These existing screenshots may show an earlier layout; the feature descriptions 
 *   **Interactive Cursor Trail:** A smooth, responsive "mouse tail" effect that follows your cursor.
 *   **Dynamic Backgrounds:** Choose between:
     *   **Weather-Driven:** The background changes colors and adds effects (Rain, Snow, Clouds) based on your real-time local weather.
-    *   **Unsplash Integration:** High-quality photography that rotates on a customizable timer.
     *   **Interactive WebGL Gradients:** Smooth, pulsing patterns with a high-performance interactive shader. Includes tools to view color swatches and export palettes to JSON, CSV, or CSS.
 *   **Premium Typography:** Utilizing *Outfit* and *Inter* fonts for a professional look.
 
@@ -80,7 +82,7 @@ These existing screenshots may show an earlier layout; the feature descriptions 
 *   **Local Processing:** Your browsing history and "Top Sites" are processed entirely on your machine. We never see your data.
 *   **Minimal Permissions:** We only ask for what is necessary to make the features work (e.g., Geolocation for weather).
 *   **Local Extension Scripts:** The extension uses Manifest V3 and loads its own scripts from the project.
-*   **Network Features:** Web lookup, Spotify, online widgets, image services, and AI sidebar services contact their respective providers. Direct task/note/site additions do not require an AI service.
+*   **Network Features:** Web lookup, Spotify, online widgets, and AI sidebar services contact their respective providers. Direct task/note/site additions do not require an AI service.
 
 ---
 

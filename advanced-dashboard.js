@@ -358,7 +358,6 @@
         chrome.storage.sync.remove('workspaceProfiles');
         chrome.storage.local.remove(['agenda', 'bookmarkInbox']);
         chrome.storage.sync.remove(['agenda', 'bookmarkInbox']);
-        $('utility-close').addEventListener('click', () => drawer.classList.add('hidden'));
 
         const widgetIds = ['spotify-widget','football-widget','todo-widget','notes-widget','tech-news-widget','github-repos-widget','blender-dev-widget','movies-widget'];
         $('reset-layout').addEventListener('click', () => widgetIds.forEach(id => { const el = $(id); el.style.left = ''; el.style.top = ''; el.style.width = ''; }));
