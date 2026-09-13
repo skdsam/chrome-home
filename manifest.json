@@ -13,7 +13,8 @@
     "topSites",
     "history",
     "bookmarks",
-    "tabs"
+    "tabs",
+    "identity"
   ],
   "host_permissions": [
     "https://api.github.com/*",
@@ -45,7 +46,10 @@
     "https://api.duckduckgo.com/*",
     "https://html.duckduckgo.com/*",
     "https://open.spotify.com/*",
-    "https://en.wikipedia.org/*"
+    "https://accounts.spotify.com/*",
+    "https://api.spotify.com/*",
+    "https://en.wikipedia.org/*",
+    "https://itunes.apple.com/*"
   ],
   "chrome_url_overrides": {
     "newtab": "newtab.html"

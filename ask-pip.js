@@ -4,7 +4,9 @@
 
     function parseRequest(text) {
         const raw = String(text || '').trim();
-        const cleanText = raw.replace(/^(?:hey\s+)?(?:pip[,:]?\s+)/i, '').trim();
+        const cleanText = raw.replace(/^(?:hey\s+)?(?:pip[,:]?\s+)?(?:can\s+you\s+|could\s+you\s+|please\s+)?/i, '')
+                             .replace(/[?.!]+$/, '')
+                             .trim();
 
         if (/\b(bookmarks?|saved (sites?|links?))\b/i.test(cleanText)) {
             return { type: 'bookmarks', query: cleanText.toLowerCase()
@@ -17,7 +19,11 @@
         const spotifyPlayMatch = cleanText.match(/\b(?:play|put\s*on|listen\s*to)\s+(.+)$/i);
         if (spotifyPlayMatch && spotifyPlayMatch[1]) {
             let query = spotifyPlayMatch[1].trim();
-            query = query.replace(/\s+(?:on|in)\s+spotify$/i, '')
+            query = query.replace(/[?.!]+$/, '')
+                         .replace(/\s+please$/i, '')
+                         .replace(/\s+(?:on|in)\s+spotify$/i, '')
+                         .replace(/\s+please$/i, '')
+                         .replace(/[?.!]+$/, '')
                          .replace(/^(?:some|the)\s+/i, '')
                          .replace(/\s+(?:music|tracks?|songs?|playlist)$/i, '')
                          .trim();

@@ -1842,6 +1842,124 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
     const spotifyHeader = document.getElementById('spotify-header');
     const spotifyMinimizeBtn = document.getElementById('spotify-minimize');
     const spotifyEditBtn = document.getElementById('spotify-edit');
+    const spotifySearchToggle = document.getElementById('spotify-search-toggle');
+    const spotifySearchBar = document.getElementById('spotify-search-bar');
+    const spotifySearchForm = document.getElementById('spotify-search-form');
+    const spotifySearchInput = document.getElementById('spotify-search-input');
+    const spotifySearchStatus = document.getElementById('spotify-search-status');
+
+    // --- Spotify Auth UI Elements ---
+    const spotifyAuthBtn = document.getElementById('spotify-auth-btn');
+    const spotifyAuthPanel = document.getElementById('spotify-auth-panel');
+    const spotifyAuthConnected = document.getElementById('spotify-auth-connected');
+    const spotifyAuthSetup = document.getElementById('spotify-auth-setup');
+    const spotifyConnectBtn = document.getElementById('spotify-connect-btn');
+    const spotifyDisconnectBtn = document.getElementById('spotify-disconnect-btn');
+    const spotifyClientIdInput = document.getElementById('spotify-client-id-input');
+    const spotifyRedirectUriDisplay = document.getElementById('spotify-redirect-uri-display');
+    const spotifyCopyRedirect = document.getElementById('spotify-copy-redirect');
+    const spotifyAuthError = document.getElementById('spotify-auth-error');
+
+    // Populate redirect URI (only works in extension context)
+    if (spotifyRedirectUriDisplay && window.SpotifyAuth) {
+        try {
+            const uri = window.SpotifyAuth.getRedirectUri();
+            spotifyRedirectUriDisplay.textContent = uri;
+        } catch (_) {
+            spotifyRedirectUriDisplay.textContent = 'Load extension to see URI';
+        }
+    }
+
+    // Copy redirect URI button
+    spotifyCopyRedirect?.addEventListener('click', () => {
+        const uri = spotifyRedirectUriDisplay?.textContent;
+        if (uri && uri !== 'Loading…') {
+            navigator.clipboard.writeText(uri).then(() => {
+                spotifyCopyRedirect.textContent = '✅';
+                setTimeout(() => { spotifyCopyRedirect.textContent = '📋'; }, 1500);
+            });
+        }
+    });
+
+    // Refresh auth panel state
+    async function refreshSpotifyAuthUI() {
+        if (!window.SpotifyAuth) return;
+        const connected = await window.SpotifyAuth.isConnected();
+        if (connected) {
+            spotifyAuthBtn.textContent = '✅ Spotify';
+            spotifyAuthBtn.title = 'Spotify Connected — Click to manage';
+            spotifyAuthBtn.style.color = '#1db954';
+            if (spotifyAuthConnected) spotifyAuthConnected.classList.remove('hidden');
+            if (spotifyAuthSetup) spotifyAuthSetup.classList.add('hidden');
+        } else {
+            spotifyAuthBtn.textContent = '🔗 Connect';
+            spotifyAuthBtn.title = 'Connect Spotify Account';
+            spotifyAuthBtn.style.color = '';
+            if (spotifyAuthConnected) spotifyAuthConnected.classList.add('hidden');
+            if (spotifyAuthSetup) spotifyAuthSetup.classList.remove('hidden');
+            // Pre-fill saved client ID if any
+            const savedId = await window.SpotifyAuth.getClientId();
+            if (savedId && spotifyClientIdInput) spotifyClientIdInput.value = savedId;
+        }
+    }
+
+    // Toggle auth panel
+    spotifyAuthBtn?.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        bringToFront(spotifyWidget);
+        spotifyState.zIndex = maxZIndex;
+        if (spotifyAuthPanel) {
+            const isOpen = !spotifyAuthPanel.classList.contains('hidden');
+            spotifyAuthPanel.classList.toggle('hidden', isOpen);
+            if (!isOpen) await refreshSpotifyAuthUI();
+        }
+    });
+
+    // Connect button
+    spotifyConnectBtn?.addEventListener('click', async () => {
+        const clientId = spotifyClientIdInput?.value?.trim();
+        if (!clientId) {
+            if (spotifyAuthError) {
+                spotifyAuthError.textContent = '⚠ Please paste your Client ID first.';
+                spotifyAuthError.classList.remove('hidden');
+            }
+            return;
+        }
+        if (spotifyAuthError) spotifyAuthError.classList.add('hidden');
+        spotifyConnectBtn.textContent = 'Connecting…';
+        spotifyConnectBtn.disabled = true;
+        try {
+            await window.SpotifyAuth.connect(clientId);
+            await refreshSpotifyAuthUI();
+            if (spotifySearchStatus) {
+                spotifySearchStatus.textContent = '✅ Spotify connected — search now finds any artist or song!';
+                spotifySearchStatus.classList.remove('hidden');
+            }
+            // Hide auth panel after success
+            setTimeout(() => spotifyAuthPanel?.classList.add('hidden'), 1500);
+        } catch (err) {
+            if (spotifyAuthError) {
+                spotifyAuthError.textContent = `⚠ ${err.message}`;
+                spotifyAuthError.classList.remove('hidden');
+            }
+        } finally {
+            spotifyConnectBtn.textContent = 'Connect';
+            spotifyConnectBtn.disabled = false;
+        }
+    });
+
+    // Disconnect button
+    spotifyDisconnectBtn?.addEventListener('click', async () => {
+        await window.SpotifyAuth?.disconnect();
+        await refreshSpotifyAuthUI();
+        if (spotifySearchStatus) {
+            spotifySearchStatus.textContent = 'Disconnected from Spotify.';
+            spotifySearchStatus.classList.remove('hidden');
+        }
+    });
+
+    // Init auth UI on load
+    refreshSpotifyAuthUI();
 
     // --- Z-Index Management ---
     let maxZIndex = 100;
@@ -1995,6 +2113,89 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
             saveSpotifyState();
         }
     });
+
+    // --- Spotify Search Bar & Genre Chips Logic ---
+    spotifySearchToggle?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        bringToFront(spotifyWidget);
+        spotifyState.zIndex = maxZIndex;
+        if (spotifySearchBar) {
+            spotifySearchBar.classList.toggle('hidden');
+            if (!spotifySearchBar.classList.contains('hidden') && spotifySearchInput) {
+                spotifySearchInput.focus();
+            }
+        }
+    });
+
+    spotifySearchForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const query = spotifySearchInput ? spotifySearchInput.value.trim() : '';
+        if (!query) return;
+
+        bringToFront(spotifyWidget);
+        spotifyState.zIndex = maxZIndex;
+
+        if (spotifySearchStatus) {
+            spotifySearchStatus.textContent = `🔍 Searching Spotify for "${query}"...`;
+            spotifySearchStatus.classList.remove('hidden');
+        }
+
+        try {
+            const res = await playSpotify(query);
+            if (spotifySearchStatus) {
+                spotifySearchStatus.textContent = `Playing: ${res.title}`;
+            }
+        } catch (err) {
+            if (spotifySearchStatus) {
+                spotifySearchStatus.textContent = `Could not find "${query}".`;
+            }
+        }
+    });
+
+
+    async function playSpotify(query) {
+        let targetUrl = null;
+        let targetTitle = null;
+        const raw = String(query || '').trim().replace(/^["'`]+|["'`]+$/g, '').trim();
+
+        if (window.SpotifyCatalog?.resolveSpotifyQuery) {
+            const resolved = await window.SpotifyCatalog.resolveSpotifyQuery(raw);
+            if (resolved) {
+                targetUrl = resolved.embedUrl;
+                targetTitle = resolved.title;
+            }
+        }
+
+        if (!targetUrl) {
+            targetUrl = 'https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M?utm_source=generator';
+            targetTitle = raw ? `Top Hits (for "${raw}")` : "Today's Top Hits";
+        }
+
+        spotifyState.isOpen = true;
+        spotifyState.isMinimized = false;
+        spotifyState.embedUrl = targetUrl;
+        if (spotifyWidget) {
+            bringToFront(spotifyWidget);
+            spotifyState.zIndex = maxZIndex;
+        }
+        applySpotifyState();
+        saveSpotifyState();
+
+        if (spotifySearchInput) {
+            spotifySearchInput.value = raw;
+        }
+        if (spotifySearchStatus) {
+            spotifySearchStatus.textContent = `Playing: ${targetTitle}`;
+            spotifySearchStatus.classList.remove('hidden');
+        }
+
+        return {
+            success: true,
+            title: targetTitle,
+            embedUrl: targetUrl,
+            id: 'spotify-widget'
+        };
+    }
 
     // Drag Logic
     let isDragging = false;
@@ -4894,137 +5095,7 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
                 .map(w => ({ name: w.name, isMinimized: w.getState().isMinimized, id: w.id }));
         },
         resolveWidget,
-        async playSpotify(query) {
-            const SPOTIFY_GENRES = {
-                'rap': { title: 'RapCaviar', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX0XUsuxWHRQd?utm_source=generator' },
-                'hiphop': { title: 'RapCaviar', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX0XUsuxWHRQd?utm_source=generator' },
-                'hip hop': { title: 'RapCaviar', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX0XUsuxWHRQd?utm_source=generator' },
-                'lofi': { title: 'Lofi Beats', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXdLEN7aqioXM?utm_source=generator' },
-                'study': { title: 'Lofi Beats', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXdLEN7aqioXM?utm_source=generator' },
-                'chill': { title: 'Chill Hits', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4WYpdgoIcn6?utm_source=generator' },
-                'relax': { title: 'Chill Hits', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4WYpdgoIcn6?utm_source=generator' },
-                'rock': { title: 'Rock Classics', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWXRqgorJj26U?utm_source=generator' },
-                'classicrock': { title: 'Rock Classics', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWXRqgorJj26U?utm_source=generator' },
-                'pop': { title: "Today's Top Hits", url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M?utm_source=generator' },
-                'hits': { title: "Today's Top Hits", url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M?utm_source=generator' },
-                'tophits': { title: "Today's Top Hits", url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M?utm_source=generator' },
-                'jazz': { title: 'Jazz Classics', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXbITWG1ZJKYt?utm_source=generator' },
-                'classical': { title: 'Classical Essentials', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWWEJlAGA9gs0?utm_source=generator' },
-                'workout': { title: 'Beast Mode', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX76t638V648v?utm_source=generator' },
-                'gym': { title: 'Beast Mode', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX76t638V648v?utm_source=generator' },
-                'gaming': { title: 'Top Gaming Tracks', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWTyiBJ6yEqeu?utm_source=generator' },
-                'dance': { title: 'mint', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4dyzvuaRJ0n?utm_source=generator' },
-                'edm': { title: 'mint', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4dyzvuaRJ0n?utm_source=generator' },
-                'electronic': { title: 'mint', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4dyzvuaRJ0n?utm_source=generator' },
-                'piano': { title: 'Peaceful Piano', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4sWSpwq3LiO?utm_source=generator' },
-                'sleep': { title: 'Peaceful Piano', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4sWSpwq3LiO?utm_source=generator' },
-                'metal': { title: 'Kickass Metal', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX9qNs32fujYe?utm_source=generator' },
-                'country': { title: 'Hot Country', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX1lVhptIYRda?utm_source=generator' },
-                'rnb': { title: 'Are & Be', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4SBhb3fqAp5?utm_source=generator' },
-                'r&b': { title: 'Are & Be', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4SBhb3fqAp5?utm_source=generator' },
-                'indie': { title: 'Ultimate Indie', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX2Nc3B70tvx0?utm_source=generator' },
-                'alt': { title: 'Ultimate Indie', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX2Nc3B70tvx0?utm_source=generator' }
-            };
-
-            let targetUrl = null;
-            let targetTitle = null;
-            const raw = String(query || '').trim();
-            const lower = raw.toLowerCase();
-            const cleaned = lower.replace(/[^a-z0-9&]/g, '');
-
-            if (!raw) {
-                targetUrl = spotifyState.embedUrl || SPOTIFY_GENRES['pop'].url;
-                targetTitle = "Today's Top Hits";
-            } else if (raw.includes('spotify.com')) {
-                let embedUrl = raw;
-                try {
-                    const urlObj = new URL(raw);
-                    if (urlObj.hostname.includes('spotify.com') && !urlObj.pathname.includes('/embed')) {
-                        embedUrl = `https://${urlObj.hostname}/embed${urlObj.pathname}${urlObj.search}`;
-                    }
-                } catch (_) {}
-                targetUrl = embedUrl;
-                targetTitle = 'Spotify Item';
-            } else if (SPOTIFY_GENRES[lower] || SPOTIFY_GENRES[cleaned]) {
-                const matched = SPOTIFY_GENRES[lower] || SPOTIFY_GENRES[cleaned];
-                targetUrl = matched.url;
-                targetTitle = matched.title;
-            } else {
-                // Online search for specific artists, tracks, or albums
-                try {
-                    let searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(raw + ' site:open.spotify.com')}`;
-                    const ctrl = new AbortController();
-                    const t = setTimeout(() => ctrl.abort(), 4000);
-                    let res = await fetch(searchUrl, {
-                        signal: ctrl.signal,
-                        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
-                    });
-                    let text = await res.text();
-                    let matches = [...text.matchAll(/https%3A%2F%2Fopen\.spotify\.com%2F(artist|track|album|playlist)%2F([a-zA-Z0-9]+)/g)];
-                    if (!matches.length) {
-                        searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(raw + ' spotify')}`;
-                        res = await fetch(searchUrl, {
-                            signal: ctrl.signal,
-                            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
-                        });
-                        text = await res.text();
-                        matches = [...text.matchAll(/https%3A%2F%2Fopen\.spotify\.com%2F(artist|track|album|playlist)%2F([a-zA-Z0-9]+)/g)];
-                    }
-                    clearTimeout(t);
-
-                    if (matches.length) {
-                        const type = matches[0][1];
-                        const id = matches[0][2];
-                        const canonicalUrl = `https://open.spotify.com/${type}/${id}`;
-                        targetUrl = `https://open.spotify.com/embed/${type}/${id}?utm_source=generator`;
-                        targetTitle = raw;
-                        try {
-                            const oCtrl = new AbortController();
-                            const ot = setTimeout(() => oCtrl.abort(), 2000);
-                            const oRes = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(canonicalUrl)}`, { signal: oCtrl.signal });
-                            clearTimeout(ot);
-                            if (oRes.ok) {
-                                const oJson = await oRes.json();
-                                if (oJson.title) targetTitle = oJson.title;
-                            }
-                        } catch (_) {}
-                    }
-                } catch (_) { /* Fallback to genre or default */ }
-
-                // Fallback to strict word-boundary genre match
-                if (!targetUrl) {
-                    for (const [k, v] of Object.entries(SPOTIFY_GENRES)) {
-                        if (new RegExp(`\\b${k}\\b`, 'i').test(raw)) {
-                            targetUrl = v.url;
-                            targetTitle = `${v.title} (${raw})`;
-                            break;
-                        }
-                    }
-                }
-
-                // Final fallback if offline and unknown
-                if (!targetUrl) {
-                    targetUrl = `https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M?utm_source=generator`;
-                    targetTitle = `Top Hits for "${raw}"`;
-                }
-            }
-
-            spotifyState.isOpen = true;
-            spotifyState.isMinimized = false;
-            spotifyState.embedUrl = targetUrl;
-            if (spotifyWidget) {
-                bringToFront(spotifyWidget);
-                spotifyState.zIndex = maxZIndex;
-            }
-            applySpotifyState();
-            saveSpotifyState();
-            return {
-                success: true,
-                title: targetTitle,
-                embedUrl: targetUrl,
-                id: 'spotify-widget'
-            };
-        },
+        playSpotify,
         addTodo(text) {
             const trimmed = String(text || '').trim();
             if (!trimmed) return null;

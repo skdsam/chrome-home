@@ -350,10 +350,49 @@
         <div class="spotify-header" id="spotify-header">
             <span class="spotify-title">Spotify</span>
             <div class="spotify-controls">
-                <button id="spotify-edit" title="Change Playlist">✎</button>
+                <button id="spotify-auth-btn" title="Connect Spotify Account" style="font-size:11px;padding:2px 7px;">🔗 Connect</button>
+                <button id="spotify-search-toggle" title="Search Artist or Song">🔍</button>
+                <button id="spotify-edit" title="Change Playlist URL">✎</button>
                 <button id="spotify-minimize">-</button>
                 <button type="button" class="widget-close" title="Close widget" aria-label="Close widget">×</button>
             </div>
+        </div>
+
+        <!-- Auth Setup Panel (hidden by default) -->
+        <div id="spotify-auth-panel" class="spotify-auth-panel hidden">
+            <div id="spotify-auth-connected" class="hidden">
+                <div class="spotify-auth-status connected">✅ Connected to Spotify — search works for any artist or song.</div>
+                <button id="spotify-disconnect-btn" class="spotify-auth-action-btn disconnect">Disconnect</button>
+            </div>
+            <div id="spotify-auth-setup">
+                <p class="spotify-auth-instructions">
+                    <strong>One-time setup</strong> — takes 2 minutes:
+                </p>
+                <ol class="spotify-auth-steps">
+                    <li>Go to <strong>developer.spotify.com/dashboard</strong> → <em>Create app</em></li>
+                    <li>Any name/description. Under <strong>Redirect URIs</strong> add exactly:</li>
+                </ol>
+                <div class="spotify-redirect-uri-box">
+                    <code id="spotify-redirect-uri-display">Loading…</code>
+                    <button type="button" id="spotify-copy-redirect" title="Copy">📋</button>
+                </div>
+                <ol class="spotify-auth-steps" start="3">
+                    <li>Set APIs to <strong>Web API</strong>, save the app, then copy the <strong>Client ID</strong>:</li>
+                </ol>
+                <div class="spotify-auth-input-row">
+                    <input type="text" id="spotify-client-id-input" placeholder="Paste Client ID here…" autocomplete="off" spellcheck="false">
+                    <button type="button" id="spotify-connect-btn" class="spotify-auth-action-btn connect">Connect</button>
+                </div>
+                <div id="spotify-auth-error" class="spotify-auth-error hidden"></div>
+            </div>
+        </div>
+
+        <div class="spotify-search-bar" id="spotify-search-bar">
+            <form id="spotify-search-form" class="spotify-search-form">
+                <input type="text" id="spotify-search-input" class="spotify-search-input" placeholder="Search artist, song, or genre..." autocomplete="off">
+                <button type="submit" id="spotify-search-submit" class="spotify-search-btn" title="Search">Search</button>
+            </form>
+            <div id="spotify-search-status" class="spotify-search-status hidden" role="status"></div>
         </div>
         <div class="spotify-content" id="spotify-content">
             <!-- Spotify Embed -->
@@ -887,6 +926,8 @@
     <script src="weather.js"></script>
     <script src="gradient-bg.js"></script>
     <script src="cursor-trail.js"></script>
+    <script src="spotify-auth.js"></script>
+    <script src="spotify-catalog.js"></script>
     <script src="newtab.js"></script>
     <script src="advanced-dashboard.js"></script>
     <dialog id="ask-pip" class="ask-pip" aria-labelledby="ask-pip-title">
@@ -899,7 +940,7 @@
         <label class="ask-pip-hint"><input id="pip-web-search" type="checkbox" checked> Web lookup &middot; DuckDuckGo &amp; Wikipedia</label>
         <p id="pip-ai-status" class="ask-pip-hint" role="status" aria-live="polite">Local AI is off. Widget control, web lookup, bookmark search, and simple planning are available.</p>
         <button id="pip-ai-stop" type="button" class="hidden">Stop</button>
-        <div class="ask-pip-examples"><button type="button" data-pip-prompt="Play rap on Spotify">Play rap</button><button type="button" data-pip-prompt="Open my tasks">Open tasks</button><button type="button" data-pip-prompt="Tidy up my screen">Tidy screen</button><button type="button" data-pip-prompt="Find my design bookmarks">Find design bookmarks</button><button type="button" data-pip-prompt="Help me plan today">Plan today</button><button type="button" data-pip-prompt="What is the James Webb Space Telescope?">Search the web</button></div>
+        <div class="ask-pip-examples"><button type="button" data-pip-prompt="Open my tasks">Open tasks</button><button type="button" data-pip-prompt="Tidy up my screen">Tidy screen</button><button type="button" data-pip-prompt="Find my design bookmarks">Find design bookmarks</button><button type="button" data-pip-prompt="Help me plan today">Plan today</button><button type="button" data-pip-prompt="What is the James Webb Space Telescope?">Search the web</button></div>
         <form id="ask-pip-form"><label class="ask-pip-hint" for="ask-pip-input">What can I help with?</label><div class="ask-pip-compose"><input id="ask-pip-input" maxlength="500" placeholder="Ask me anything..." autocomplete="off" required><button type="submit">Ask</button></div></form>
         <div id="ask-pip-answer" class="ask-pip-answer" role="status" aria-live="polite" aria-atomic="true"></div>
     </dialog>
