@@ -17,7 +17,38 @@
         return { mood: match ? match[1].toLowerCase() : 'nod', text: match ? text.slice(match[0].length) : text };
     }
 
-    if (typeof module !== 'undefined') module.exports = { parseRequest, parseExpression };
+    function renderSources(container, sources) {
+        if (!container || !sources || !sources.length) return;
+        const sec = document.createElement('div');
+        sec.className = 'pip-sources-container';
+        const title = document.createElement('div');
+        title.className = 'pip-sources-title';
+        title.textContent = 'Sources';
+        sec.append(title);
+        const list = document.createElement('ul');
+        list.className = 'pip-sources-list';
+        sources.forEach(s => {
+            const item = document.createElement('li');
+            item.className = 'pip-source-item';
+            const link = document.createElement('a');
+            link.href = s.url;
+            link.textContent = s.title || s.url;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            item.append(link);
+            if (s.snippet) {
+                const snippet = document.createElement('span');
+                snippet.className = 'pip-source-snippet';
+                snippet.textContent = s.snippet.length > 120 ? s.snippet.slice(0, 117) + '...' : s.snippet;
+                item.append(snippet);
+            }
+            list.append(item);
+        });
+        sec.append(list);
+        container.append(sec);
+    }
+
+    if (typeof module !== 'undefined') module.exports = { parseRequest, parseExpression, renderSources };
     if (typeof document === 'undefined') return;
 
     const dialog = document.getElementById('ask-pip');
@@ -26,7 +57,9 @@
     let requestId = 0;
     let awaitingFocus = false;
     const localAI = window.PipLocalAI ? new window.PipLocalAI() : null;
+    const webSearch = window.PipWebSearch ? new window.PipWebSearch() : null;
     const aiToggle = document.getElementById('pip-local-ai');
+    const webSearchToggle = document.getElementById('pip-web-search');
     const aiStatus = document.getElementById('pip-ai-status');
     const stopButton = document.getElementById('pip-ai-stop');
     let statusVersion = 0;
@@ -35,6 +68,12 @@
     const chatter = document.getElementById('pip-ai-chatter');
     let nextComment = Date.now() + 90000;
     const mood = name => window.pageCompanion?.setChatMood(name);
+    if (webSearchToggle) {
+        try { webSearchToggle.checked = localStorage.getItem('pipWebSearch') !== 'false'; } catch (_) {}
+        webSearchToggle.addEventListener('change', () => {
+            try { localStorage.setItem('pipWebSearch', String(webSearchToggle.checked)); } catch (_) {}
+        });
+    }
     if (chatter) {
         try { chatter.checked = localStorage.getItem('pipAIChatter') !== 'false'; } catch (_) {}
         chatter.addEventListener('change', () => {
@@ -65,12 +104,12 @@
     function stopAI() {
         localAI?.cancel();
         mood('listening');
-        stopButton?.classList.add('hidden');
+        stopButton?.classList?.add('hidden');
     }
     async function checkAI() {
         const version = ++statusVersion;
         if (!aiToggle?.checked) {
-            setStatus('Local AI is off. Bookmark search and simple planning are available.');
+            setStatus('Local AI is off. Web lookup, bookmark search, and simple planning are available.');
             return;
         }
         setStatus('Checking Gemini Nano availability...');
@@ -158,26 +197,37 @@
         cancelAmbient();
         const request = parseRequest(text);
         input.value = '';
+        const useWeb = Boolean(webSearchToggle?.checked && webSearch && request.type !== 'bookmarks');
         if (aiToggle?.checked && localAI && request.type !== 'bookmarks') {
             awaitingFocus = false;
-            answer.textContent = 'Preparing your local reply...';
+            answer.textContent = useWeb ? 'Searching the web and preparing your reply...' : 'Preparing your local reply...';
             mood('thinking');
-            stopButton?.classList.remove('hidden');
+            stopButton?.classList?.remove('hidden');
             try {
+                let webContext = '';
+                let sources = [];
+                if (useWeb) {
+                    setStatus('Searching DuckDuckGo & Wikipedia...');
+                    const searchResult = await webSearch.search(text);
+                    if (token !== requestId || !dialog.open) return;
+                    webContext = searchResult.contextText;
+                    sources = searchResult.sources;
+                }
                 const response = await localAI.ask(text, document.getElementById('daily-intention')?.value,
-                    message => { if (token === requestId) setStatus(message); });
+                    message => { if (token === requestId) setStatus(message); }, webContext);
                 if (token !== requestId || !dialog.open) return;
                 const expression = parseExpression(response);
                 answer.textContent = expression.text;
+                renderSources(answer, sources);
                 mood(expression.mood);
-                setStatus('Pip replied using local AI.');
-                stopButton?.classList.add('hidden');
+                setStatus(sources.length ? 'Pip replied using local AI with web search.' : 'Pip replied using local AI.');
+                stopButton?.classList?.add('hidden');
                 return;
             } catch (_) {
                 if (token !== requestId || !dialog.open) return;
                 mood('curious');
                 setStatus('Gemini Nano could not complete this request. Using the basic helper; try again to retry local AI.');
-                stopButton?.classList.add('hidden');
+                stopButton?.classList?.add('hidden');
             }
         }
         if (awaitingFocus && request.type === 'unknown') {
@@ -197,7 +247,23 @@
             return;
         }
         if (request.type !== 'bookmarks') {
-            answer.textContent = 'I can currently search your bookmarks and make a simple daily plan. Try “find my design bookmarks” or “help me plan today”. General AI chat isn’t connected yet.';
+            if (useWeb) {
+                answer.textContent = 'Searching the web for you...';
+                mood('thinking');
+                setStatus('Searching DuckDuckGo & Wikipedia...');
+                try {
+                    const searchResult = await webSearch.search(text);
+                    if (token !== requestId || !dialog.open) return;
+                    if (searchResult.sources && searchResult.sources.length) {
+                        answer.textContent = `Here is what I found for "${text}":`;
+                        renderSources(answer, searchResult.sources);
+                        mood('nod');
+                        setStatus('Found web results via DuckDuckGo & Wikipedia.');
+                        return;
+                    }
+                } catch (_) { /* fallback below */ }
+            }
+            answer.textContent = 'I can currently search the web, find your bookmarks, and make a simple daily plan. Try asking a question or “find my design bookmarks”.';
             return;
         }
         answer.textContent = 'Looking through your bookmarks…';

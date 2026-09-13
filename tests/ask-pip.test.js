@@ -7,16 +7,31 @@ assert.deepStrictEqual(parseExpression('[dance] Tiny celebration!'), {mood: 'dan
 assert.deepStrictEqual(parseExpression('Hello there'), {mood: 'nod', text: 'Hello there'});
 assert.equal(parseExpression('[execute] something').mood, 'nod');
 class Element {
-    constructor() { this.listeners = {}; this.children = []; this.value = ''; this.dataset = {}; }
+    constructor() {
+        this.listeners = {};
+        this.children = [];
+        this.value = '';
+        this.dataset = {};
+        this.classList = { add() {}, remove() {}, contains() { return false; } };
+    }
     addEventListener(type, fn) { this.listeners[type] = fn; }
     append(child) { this.children.push(child); }
     querySelectorAll() { return []; }
     focus() {}
     show() { this.open = true; }
 }
-const ids = Object.fromEntries(['ask-pip', 'ask-pip-input', 'ask-pip-answer', 'ask-pip-close', 'ask-pip-form', 'daily-intention'].map(id => [id, new Element()]));
+const ids = Object.fromEntries(['ask-pip', 'ask-pip-input', 'ask-pip-answer', 'ask-pip-close', 'ask-pip-form', 'daily-intention', 'pip-web-search', 'pip-local-ai', 'pip-ai-status', 'pip-ai-stop'].map(id => [id, new Element()]));
 global.document = { getElementById: id => ids[id], createElement: () => new Element() };
-global.window = {};
+global.window = {
+    PipWebSearch: class {
+        async search(query) {
+            return {
+                contextText: `Context for ${query}`,
+                sources: [{ title: 'JWST Article', url: 'https://en.wikipedia.org/wiki/JWST', snippet: 'A space telescope.' }]
+            };
+        }
+    }
+};
 global.chrome = { runtime: {}, bookmarks: { getTree(callback) { callback([{title: 'Design', children: [{ title: 'Portfolio', url: 'https://example.com' }, { title: 'Unsafe', url: 'javascript:alert(1)' }]}]); } } };
 delete require.cache[require.resolve('../ask-pip')];
 require('../ask-pip');
@@ -32,5 +47,14 @@ require('../ask-pip');
     ids['ask-pip-input'].value = 'Finish my portfolio';
     await ids['ask-pip-form'].listeners.submit({preventDefault() {}});
     assert(ids['ask-pip-answer'].textContent.includes('Finish my portfolio'));
+
+    // Test web search lookup
+    ids['pip-web-search'].checked = true;
+    ids['ask-pip-input'].value = 'What is the JWST?';
+    await ids['ask-pip-form'].listeners.submit({preventDefault() {}});
+    assert(ids['ask-pip-answer'].textContent.includes('Here is what I found for "What is the JWST?"'));
+    assert(ids['ask-pip-answer'].children.length > 0);
+
     console.log('Ask Pip tests passed');
 })().catch(error => { console.error(error); process.exitCode = 1; });
+

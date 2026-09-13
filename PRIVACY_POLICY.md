@@ -33,6 +33,7 @@ Our extension interacts with the following third-party services:
 *   **AI Providers (Gemini, ChatGPT, etc.):** Only if you choose to interact with them via the sidebar.
 *   **DummyJSON and JokeAPI:** For optional random quotes and family-safe jokes spoken by the avatar. Requests contain no browsing history, location, or personal settings.
 *   **Hacker News and TheSportsDB:** For optional public headlines, fixtures, and score updates. The avatar reuses visible widget data where possible and otherwise makes a direct public-feed request without attaching personal information.
+*   **DuckDuckGo and Wikipedia:** For optional web search lookups requested through Ask Pip. Search queries contain only the question you submitted without personal identity, browsing history, or cookies.
 
 ## 5. Security
 
@@ -53,5 +54,7 @@ If you have questions about this policy, please contact us via our GitHub reposi
 ### Optional local AI (Ask Pip)
 
 When you enable Local AI and submit a request, Chrome may download Gemini Nano. Questions, the current daily focus, and a short in-memory conversation are processed through Chrome's on-device Prompt API, not sent to a hosted chat service by this extension. Closing Ask Pip clears its AI conversation history. The Local AI preference is stored locally. Chrome manages model downloads and model storage. Bookmark lookup remains local and does not send the bookmark library to the model.
+
+When Web lookup is enabled, Pip retrieves public search summaries from DuckDuckGo and Wikipedia to provide factual context to the local model. Search queries do not contain personal data. You can toggle Web lookup off at any time in the Ask Pip dialog.
 
 When Local AI and occasional AI comments are both enabled, Pip may also generate brief local comments while the page is visible and he is idle. These use the daily focus and a short in-memory history; they require the model to be already available. You can disable comments in Ask Pip or disable Pip with the top-right control.

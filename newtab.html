@@ -896,12 +896,14 @@
         <label class="ask-pip-hint"><input id="pip-local-ai" type="checkbox"> Local AI &middot; Gemini Nano</label>
         <p class="ask-pip-hint">Optional download managed by Chrome. Replies run on your device. The first request may download the model.</p>
         <label class="ask-pip-hint"><input id="pip-ai-chatter" type="checkbox" checked> Occasional AI comments while Pip explores</label>
+        <label class="ask-pip-hint"><input id="pip-web-search" type="checkbox" checked> Web lookup &middot; DuckDuckGo &amp; Wikipedia</label>
         <p id="pip-ai-status" class="ask-pip-hint" role="status" aria-live="polite">Local AI is off. Bookmark search and simple planning are available.</p>
         <button id="pip-ai-stop" type="button" class="hidden">Stop</button>
-        <div class="ask-pip-examples"><button type="button" data-pip-prompt="Find my design bookmarks">Find design bookmarks</button><button type="button" data-pip-prompt="Help me plan today">Plan today</button></div>
+        <div class="ask-pip-examples"><button type="button" data-pip-prompt="Find my design bookmarks">Find design bookmarks</button><button type="button" data-pip-prompt="Help me plan today">Plan today</button><button type="button" data-pip-prompt="What is the James Webb Space Telescope?">Search the web</button></div>
         <form id="ask-pip-form"><label class="ask-pip-hint" for="ask-pip-input">What can I help with?</label><div class="ask-pip-compose"><input id="ask-pip-input" maxlength="500" placeholder="Ask me anything..." autocomplete="off" required><button type="submit">Ask</button></div></form>
         <div id="ask-pip-answer" class="ask-pip-answer" role="status" aria-live="polite" aria-atomic="true"></div>
     </dialog>
+    <script src="pip-web-search.js"></script>
     <script src="pip-local-ai.js"></script>
     <script src="ask-pip.js"></script>
     <script src="avatar.js"></script>

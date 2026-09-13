@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "Chrome Home Extension Packager",
   "scripts": {
-    "check": "node --check newtab.js && node --check advanced-dashboard.js && node --check avatar.js && node --check weather.js && node --check storage.js && node --check notifications.js && node --check ask-pip.js && node --check pip-local-ai.js",
-    "test": "node tests/smoke.test.js && node tests/ask-pip.test.js && node tests/pip-local-ai.test.js",
+    "check": "node --check newtab.js && node --check advanced-dashboard.js && node --check avatar.js && node --check weather.js && node --check storage.js && node --check notifications.js && node --check pip-web-search.js && node --check ask-pip.js && node --check pip-local-ai.js",
+    "test": "node tests/smoke.test.js && node tests/ask-pip.test.js && node tests/pip-local-ai.test.js && node tests/pip-web-search.test.js",
     "zip": "powershell Compress-Archive -Path manifest.json, avatar-dialogue.json, *.html, *.js, *.css, icons, icon.png -DestinationPath chrome-home.zip -Force"
   }
 }

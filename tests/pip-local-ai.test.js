@@ -45,5 +45,15 @@ const { PipLocalAI } = require('../pip-local-ai');
     client.cancel();
     await assert.rejects(generating, {name: 'AbortError'});
     assert.equal(destroyed, 4);
+
+    let lastPrompt = '';
+    client.api.create = async () => ({
+        prompt: async promptText => { lastPrompt = promptText; return 'Synthesized answer.'; },
+        destroy() { destroyed++; }
+    });
+    const webAnswer = await client.ask('What is JWST?', '', () => {}, 'Web Context: JWST launched in 2021');
+    assert.equal(webAnswer, 'Synthesized answer.');
+    assert(lastPrompt.includes('Web Context: JWST launched in 2021'));
+
     console.log('Pip local AI lifecycle tests passed');
 })().catch(error => {console.error(error); process.exitCode = 1;});
