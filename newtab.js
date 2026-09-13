@@ -4894,10 +4894,11 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
                 .map(w => ({ name: w.name, isMinimized: w.getState().isMinimized, id: w.id }));
         },
         resolveWidget,
-        playSpotify(query) {
+        async playSpotify(query) {
             const SPOTIFY_GENRES = {
                 'rap': { title: 'RapCaviar', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX0XUsuxWHRQd?utm_source=generator' },
                 'hiphop': { title: 'RapCaviar', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX0XUsuxWHRQd?utm_source=generator' },
+                'hip hop': { title: 'RapCaviar', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX0XUsuxWHRQd?utm_source=generator' },
                 'lofi': { title: 'Lofi Beats', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXdLEN7aqioXM?utm_source=generator' },
                 'study': { title: 'Lofi Beats', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXdLEN7aqioXM?utm_source=generator' },
                 'chill': { title: 'Chill Hits', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4WYpdgoIcn6?utm_source=generator' },
@@ -4928,6 +4929,9 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
             let targetUrl = null;
             let targetTitle = null;
             const raw = String(query || '').trim();
+            const lower = raw.toLowerCase();
+            const cleaned = lower.replace(/[^a-z0-9&]/g, '');
+
             if (!raw) {
                 targetUrl = spotifyState.embedUrl || SPOTIFY_GENRES['pop'].url;
                 targetTitle = "Today's Top Hits";
@@ -4940,15 +4944,66 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
                     }
                 } catch (_) {}
                 targetUrl = embedUrl;
-                targetTitle = 'Spotify Playlist';
+                targetTitle = 'Spotify Item';
+            } else if (SPOTIFY_GENRES[lower] || SPOTIFY_GENRES[cleaned]) {
+                const matched = SPOTIFY_GENRES[lower] || SPOTIFY_GENRES[cleaned];
+                targetUrl = matched.url;
+                targetTitle = matched.title;
             } else {
-                const cleaned = raw.toLowerCase().replace(/[^a-z0-9&]/g, '').trim();
-                const matched = SPOTIFY_GENRES[cleaned] ||
-                    Object.entries(SPOTIFY_GENRES).find(([k]) => cleaned.includes(k))?.[1];
-                if (matched) {
-                    targetUrl = matched.url;
-                    targetTitle = `${matched.title} (${raw})`;
-                } else {
+                // Online search for specific artists, tracks, or albums
+                try {
+                    let searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(raw + ' site:open.spotify.com')}`;
+                    const ctrl = new AbortController();
+                    const t = setTimeout(() => ctrl.abort(), 4000);
+                    let res = await fetch(searchUrl, {
+                        signal: ctrl.signal,
+                        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+                    });
+                    let text = await res.text();
+                    let matches = [...text.matchAll(/https%3A%2F%2Fopen\.spotify\.com%2F(artist|track|album|playlist)%2F([a-zA-Z0-9]+)/g)];
+                    if (!matches.length) {
+                        searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(raw + ' spotify')}`;
+                        res = await fetch(searchUrl, {
+                            signal: ctrl.signal,
+                            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+                        });
+                        text = await res.text();
+                        matches = [...text.matchAll(/https%3A%2F%2Fopen\.spotify\.com%2F(artist|track|album|playlist)%2F([a-zA-Z0-9]+)/g)];
+                    }
+                    clearTimeout(t);
+
+                    if (matches.length) {
+                        const type = matches[0][1];
+                        const id = matches[0][2];
+                        const canonicalUrl = `https://open.spotify.com/${type}/${id}`;
+                        targetUrl = `https://open.spotify.com/embed/${type}/${id}?utm_source=generator`;
+                        targetTitle = raw;
+                        try {
+                            const oCtrl = new AbortController();
+                            const ot = setTimeout(() => oCtrl.abort(), 2000);
+                            const oRes = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(canonicalUrl)}`, { signal: oCtrl.signal });
+                            clearTimeout(ot);
+                            if (oRes.ok) {
+                                const oJson = await oRes.json();
+                                if (oJson.title) targetTitle = oJson.title;
+                            }
+                        } catch (_) {}
+                    }
+                } catch (_) { /* Fallback to genre or default */ }
+
+                // Fallback to strict word-boundary genre match
+                if (!targetUrl) {
+                    for (const [k, v] of Object.entries(SPOTIFY_GENRES)) {
+                        if (new RegExp(`\\b${k}\\b`, 'i').test(raw)) {
+                            targetUrl = v.url;
+                            targetTitle = `${v.title} (${raw})`;
+                            break;
+                        }
+                    }
+                }
+
+                // Final fallback if offline and unknown
+                if (!targetUrl) {
                     targetUrl = `https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M?utm_source=generator`;
                     targetTitle = `Top Hits for "${raw}"`;
                 }

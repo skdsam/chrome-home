@@ -14,13 +14,14 @@
         if (/\b(plan|planning|focus|prioriti[sz]e)\b/i.test(cleanText)) return { type: 'plan' };
 
         // Desktop widget controls - Deep Actions
-        const spotifyPlayMatch = cleanText.match(/\b(?:play|put\s*on|listen\s*to)\s+(.+?)(?:\s+on\s+spotify|\s+in\s+spotify|\s+playlist)?$/i);
+        const spotifyPlayMatch = cleanText.match(/\b(?:play|put\s*on|listen\s*to)\s+(.+)$/i);
         if (spotifyPlayMatch && spotifyPlayMatch[1]) {
             let query = spotifyPlayMatch[1].trim();
-            query = query.replace(/^(?:some|the)\s+/i, '').replace(/\s+(?:music|tracks?|songs?|playlist)$/i, '').trim();
-            if (/spotify/i.test(cleanText) ||
-                /\b(rap|hip\s*hop|lofi|study|chill|relax|rock|pop|hits|jazz|classical|workout|gym|gaming|dance|edm|electronic|piano|sleep|metal|country|rnb|r&b|indie|alt)\b/i.test(query) ||
-                query.includes('spotify.com')) {
+            query = query.replace(/\s+(?:on|in)\s+spotify$/i, '')
+                         .replace(/^(?:some|the)\s+/i, '')
+                         .replace(/\s+(?:music|tracks?|songs?|playlist)$/i, '')
+                         .trim();
+            if (query && !/^(?:with|around|a\s+game|games?)\b/i.test(query)) {
                 return { type: 'widget', action: 'spotify_play', query };
             }
         }
@@ -72,13 +73,13 @@
         return { mood: match ? match[1].toLowerCase() : 'nod', text: match ? text.slice(match[0].length) : text };
     }
 
-    function handleWidgetRequest(request) {
+    async function handleWidgetRequest(request) {
         const mgr = window.chromeHomeWidgets;
         if (!mgr) return { mood: 'curious', text: 'Widget controller is not available right now.' };
 
         if (request.action === 'spotify_play') {
             if (!mgr.playSpotify) return { mood: 'curious', text: 'Spotify controller is not ready.' };
-            const res = mgr.playSpotify(request.query);
+            const res = await mgr.playSpotify(request.query);
             window.pageCompanion?.targetWidget?.('spotify-widget');
             return {
                 mood: 'dance',
@@ -348,7 +349,13 @@
         input.value = '';
         if (request.type === 'widget') {
             awaitingFocus = false;
-            const res = handleWidgetRequest(request);
+            if (request.action === 'spotify_play') {
+                answer.textContent = `Finding "${request.query}" on Spotify...`;
+                mood('thinking');
+                setStatus('Searching Spotify for requested music...');
+            }
+            const res = await handleWidgetRequest(request);
+            if (token !== requestId || !dialog.open) return;
             answer.textContent = res.text;
             mood(res.mood);
             setStatus('Pip adjusted your desktop widgets.');
