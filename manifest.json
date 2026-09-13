@@ -50,7 +50,8 @@
     "https://accounts.spotify.com/*",
     "https://api.spotify.com/*",
     "https://en.wikipedia.org/*",
-    "https://itunes.apple.com/*"
+    "https://itunes.apple.com/*",
+    "https://musicbrainz.org/*"
   ],
   "chrome_url_overrides": {
     "newtab": "newtab.html"

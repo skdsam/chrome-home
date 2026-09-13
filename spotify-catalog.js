@@ -136,7 +136,8 @@
         'lana del rey': { title: 'Lana Del Rey', id: '00FQb4jTyendSlQ1GKgTJ9' },
         'harry styles': { title: 'Harry Styles', id: '6KImCVD70vtIoJWnq6nGn3' },
         'adele': { title: 'Adele', id: '4dpARuHxo51G3z768sgnrY' },
-        '2pac': { title: '2Pac', id: '1ZwdS5xdx1W2beuo97JND3' },
+        '2pac': { title: '2Pac', id: '1ZwdS5xdxEREPySFridCfh' },
+        'counting crows': { title: 'Counting Crows', id: '0vEsuISMWAKNctLlUAhSZC' },
         'notorious big': { title: 'The Notorious B.I.G.', id: '5me0Irg2ANcsBD93oaqw30' },
         'jay z': { title: 'JAY-Z', id: '3nFkdlSjzX9mRTtwJOzDYB' },
         'snoop dogg': { title: 'Snoop Dogg', id: '7hJcb9fa4alzcPaHfUvRa1' },
@@ -171,7 +172,6 @@
         'charli xcx': { title: 'Charli xcx', id: '25uiPmTg16RbhZWAqwLBy5' },
         'chappell roan': { title: 'Chappell Roan', id: '7GlBOeep6PqTfFi59PTJUt' },
         'sabrina carpenter': { title: 'Sabrina Carpenter', id: '74KM79TiuVKeVCqs8QtB0B' },
-        'counting crows': { title: 'Counting Crows', id: '0XNa1vTidXlvJ2gHSsRi4k' },
         'the cure': { title: 'The Cure', id: '6gOFZsnjdBCOYEVFSnfzIk' },
         'the smiths': { title: 'The Smiths', id: '3yY2gUcIsjMr8hjo51PoJ8' },
         'depeche mode': { title: 'Depeche Mode', id: '762310PdDnwsDxAQxzQkfR' },
@@ -326,7 +326,11 @@
     const SPOTIFY_ALIASES = {
         'rhcp': 'red hot chili peppers',
         'chili peppers': 'red hot chili peppers',
+        'chilli peppers': 'red hot chili peppers',
         'red hot chilli peppers': 'red hot chili peppers',
+        'red hot chillier peppers': 'red hot chili peppers',
+        'counting crowes': 'counting crows',
+        'counting crow': 'counting crows',
         'freddie mercury': 'queen',
         'beatles': 'the beatles',
         'slim shady': 'eminem',
@@ -342,7 +346,10 @@
         'weeknd': 'the weeknd',
         'mj': 'michael jackson',
         'the boss': 'bruce springsteen',
+        '2 pac': '2pac',
         'tupac': '2pac',
+        'tupac shakur': '2pac',
+        '2pac shakur': '2pac',
         'biggie': 'notorious big',
         'notorious b.i.g': 'notorious big',
         'the notorious big': 'notorious big',
@@ -477,6 +484,42 @@
     }
 
     /* ------------------------------------------------------------------ */
+    /*  MUSICBRAINZ RESOLVER — Free global encyclopedia of artist URLs    */
+    /* ------------------------------------------------------------------ */
+    async function musicBrainzArtist(query) {
+        try {
+            const url = `https://musicbrainz.org/ws/2/artist?query=${encodeURIComponent(query)}&fmt=json&limit=3`;
+            const ctrl = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), 4000);
+            const res = await fetch(url, {
+                signal: ctrl.signal,
+                headers: { 'User-Agent': 'ChromeHome/1.0 (skdsam)' }
+            });
+            clearTimeout(timer);
+            if (!res.ok) return null;
+            const data = await res.json();
+            const artists = data.artists || [];
+            for (const artist of artists.slice(0, 3)) {
+                try {
+                    const relUrl = `https://musicbrainz.org/ws/2/artist/${artist.id}?inc=url-rels&fmt=json`;
+                    const relRes = await fetch(relUrl, {
+                        headers: { 'User-Agent': 'ChromeHome/1.0 (skdsam)' }
+                    });
+                    if (!relRes.ok) continue;
+                    const relData = await relRes.json();
+                    const spotify = relData.relations?.find(r => r.url?.resource?.includes('open.spotify.com/artist/'));
+                    if (spotify) {
+                        const parts = spotify.url.resource.split('/');
+                        const id = parts[parts.length - 1].split('?')[0];
+                        if (id) return { type: 'artist', id, title: artist.name };
+                    }
+                } catch (_) {}
+            }
+        } catch (_) {}
+        return null;
+    }
+
+    /* ------------------------------------------------------------------ */
     /*  MAIN RESOLVER                                                       */
     /* ------------------------------------------------------------------ */
     async function resolveSpotifyQuery(query) {
@@ -550,8 +593,16 @@
             }
         }
 
-        // 7. LIVE Spotify search (any artist or song — no catalog needed)
-        // Decide whether to prefer track or artist based on phrasing
+        // 7. Live MusicBrainz artist search (works for ANY artist with real Spotify links!)
+        const mbArtist = await musicBrainzArtist(raw);
+        if (mbArtist) {
+            return {
+                title: mbArtist.title,
+                embedUrl: makeEmbedUrl('artist', mbArtist.id)
+            };
+        }
+
+        // 8. LIVE Spotify SSR search fallback
         const looksLikeTrack = /\bsong\b|\btrack\b|\bplay\b/.test(normalized);
         const live = await liveSpotifySearch(raw, looksLikeTrack);
         if (live) {
@@ -561,7 +612,7 @@
             };
         }
 
-        // 8. iTunes fallback → try to resolve artist name → check catalog
+        // 9. iTunes fallback → try to resolve artist name → check catalog / MusicBrainz
         const itunes = await itunesFallback(raw);
         if (itunes) {
             const itArtist = normalizeText(itunes.artistName);
@@ -572,6 +623,14 @@
                 return {
                     title: `${a.title} — ${itunes.trackName}`,
                     embedUrl: makeEmbedUrl('artist', a.id)
+                };
+            }
+            // Check MusicBrainz for the iTunes artist name
+            const mbFromItunes = await musicBrainzArtist(itunes.artistName);
+            if (mbFromItunes) {
+                return {
+                    title: `${mbFromItunes.title} — ${itunes.trackName}`,
+                    embedUrl: makeEmbedUrl('artist', mbFromItunes.id)
                 };
             }
             // Genre hint from iTunes
@@ -586,14 +645,14 @@
             }
         }
 
-        // 9. Word-boundary genre fallback
+        // 10. Word-boundary genre fallback
         for (const [k, v] of Object.entries(SPOTIFY_GENRES)) {
             if (new RegExp(`\\b${k}\\b`, 'i').test(raw)) {
                 return { title: `${v.title} (${raw})`, embedUrl: v.url };
             }
         }
 
-        // 10. Last resort
+        // 11. Last resort
         return {
             title: `Top Hits (for "${raw}")`,
             embedUrl: SPOTIFY_GENRES['pop'].url

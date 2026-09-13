@@ -1904,8 +1904,8 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
 
         if (status.running) {
             if (spotifyNotRunningHelp) spotifyNotRunningHelp.classList.add('hidden');
-            if (status.connected || status.configured) {
-                // Connected / Configured and active!
+            if (status.connected) {
+                // Fully connected and token active!
                 spotifyAuthBtn.textContent = '✅ Spotify';
                 spotifyAuthBtn.title = 'Spotify Active — Search works for any artist or song';
                 spotifyAuthBtn.style.color = '#1db954';
@@ -1921,8 +1921,22 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
                         ? 'Re-authenticate'
                         : 'Login to Account (Optional)';
                 }
+            } else if (status.configured) {
+                // Client ID entered, but need login or secret
+                spotifyAuthBtn.textContent = '🔗 Connect';
+                spotifyAuthBtn.title = 'Complete Spotify Login';
+                spotifyAuthBtn.style.color = '#f59e0b';
+                if (spotifyAuthConnected) spotifyAuthConnected.classList.add('hidden');
+                if (spotifyAuthSetup) spotifyAuthSetup.classList.remove('hidden');
+                if (spotifyServerStatusText) {
+                    spotifyServerStatusText.innerHTML = '<span style="color:#f59e0b">● Client ID saved</span> — click Save & Connect below (or paste Client Secret)';
+                }
+                if (spotifySaveCredentialsBtn) {
+                    spotifySaveCredentialsBtn.disabled = false;
+                    spotifySaveCredentialsBtn.textContent = 'Save & Connect';
+                }
             } else {
-                // Server running, but needs Client ID & Secret
+                // Server running, but needs Client ID
                 spotifyAuthBtn.textContent = '🔗 Connect';
                 spotifyAuthBtn.title = 'Enter Spotify Credentials';
                 spotifyAuthBtn.style.color = '#f59e0b';
