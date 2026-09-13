@@ -4893,7 +4893,144 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
                 .filter(w => w.getState().isOpen)
                 .map(w => ({ name: w.name, isMinimized: w.getState().isMinimized, id: w.id }));
         },
-        resolveWidget
+        resolveWidget,
+        playSpotify(query) {
+            const SPOTIFY_GENRES = {
+                'rap': { title: 'RapCaviar', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX0XUsuxWHRQd?utm_source=generator' },
+                'hiphop': { title: 'RapCaviar', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX0XUsuxWHRQd?utm_source=generator' },
+                'lofi': { title: 'Lofi Beats', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXdLEN7aqioXM?utm_source=generator' },
+                'study': { title: 'Lofi Beats', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXdLEN7aqioXM?utm_source=generator' },
+                'chill': { title: 'Chill Hits', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4WYpdgoIcn6?utm_source=generator' },
+                'relax': { title: 'Chill Hits', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4WYpdgoIcn6?utm_source=generator' },
+                'rock': { title: 'Rock Classics', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWXRqgorJj26U?utm_source=generator' },
+                'classicrock': { title: 'Rock Classics', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWXRqgorJj26U?utm_source=generator' },
+                'pop': { title: "Today's Top Hits", url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M?utm_source=generator' },
+                'hits': { title: "Today's Top Hits", url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M?utm_source=generator' },
+                'tophits': { title: "Today's Top Hits", url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M?utm_source=generator' },
+                'jazz': { title: 'Jazz Classics', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DXbITWG1ZJKYt?utm_source=generator' },
+                'classical': { title: 'Classical Essentials', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWWEJlAGA9gs0?utm_source=generator' },
+                'workout': { title: 'Beast Mode', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX76t638V648v?utm_source=generator' },
+                'gym': { title: 'Beast Mode', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX76t638V648v?utm_source=generator' },
+                'gaming': { title: 'Top Gaming Tracks', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DWTyiBJ6yEqeu?utm_source=generator' },
+                'dance': { title: 'mint', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4dyzvuaRJ0n?utm_source=generator' },
+                'edm': { title: 'mint', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4dyzvuaRJ0n?utm_source=generator' },
+                'electronic': { title: 'mint', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4dyzvuaRJ0n?utm_source=generator' },
+                'piano': { title: 'Peaceful Piano', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4sWSpwq3LiO?utm_source=generator' },
+                'sleep': { title: 'Peaceful Piano', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4sWSpwq3LiO?utm_source=generator' },
+                'metal': { title: 'Kickass Metal', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX9qNs32fujYe?utm_source=generator' },
+                'country': { title: 'Hot Country', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX1lVhptIYRda?utm_source=generator' },
+                'rnb': { title: 'Are & Be', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4SBhb3fqAp5?utm_source=generator' },
+                'r&b': { title: 'Are & Be', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX4SBhb3fqAp5?utm_source=generator' },
+                'indie': { title: 'Ultimate Indie', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX2Nc3B70tvx0?utm_source=generator' },
+                'alt': { title: 'Ultimate Indie', url: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX2Nc3B70tvx0?utm_source=generator' }
+            };
+
+            let targetUrl = null;
+            let targetTitle = null;
+            const raw = String(query || '').trim();
+            if (!raw) {
+                targetUrl = spotifyState.embedUrl || SPOTIFY_GENRES['pop'].url;
+                targetTitle = "Today's Top Hits";
+            } else if (raw.includes('spotify.com')) {
+                let embedUrl = raw;
+                try {
+                    const urlObj = new URL(raw);
+                    if (urlObj.hostname.includes('spotify.com') && !urlObj.pathname.includes('/embed')) {
+                        embedUrl = `https://${urlObj.hostname}/embed${urlObj.pathname}${urlObj.search}`;
+                    }
+                } catch (_) {}
+                targetUrl = embedUrl;
+                targetTitle = 'Spotify Playlist';
+            } else {
+                const cleaned = raw.toLowerCase().replace(/[^a-z0-9&]/g, '').trim();
+                const matched = SPOTIFY_GENRES[cleaned] ||
+                    Object.entries(SPOTIFY_GENRES).find(([k]) => cleaned.includes(k))?.[1];
+                if (matched) {
+                    targetUrl = matched.url;
+                    targetTitle = `${matched.title} (${raw})`;
+                } else {
+                    targetUrl = `https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M?utm_source=generator`;
+                    targetTitle = `Top Hits for "${raw}"`;
+                }
+            }
+
+            spotifyState.isOpen = true;
+            spotifyState.isMinimized = false;
+            spotifyState.embedUrl = targetUrl;
+            if (spotifyWidget) {
+                bringToFront(spotifyWidget);
+                spotifyState.zIndex = maxZIndex;
+            }
+            applySpotifyState();
+            saveSpotifyState();
+            return {
+                success: true,
+                title: targetTitle,
+                embedUrl: targetUrl,
+                id: 'spotify-widget'
+            };
+        },
+        addTodo(text) {
+            const trimmed = String(text || '').trim();
+            if (!trimmed) return null;
+            const newTodo = {
+                id: Date.now(),
+                text: trimmed,
+                completed: false
+            };
+            todoState.list.push(newTodo);
+            todoState.isOpen = true;
+            todoState.isMinimized = false;
+            if (todoWidget) {
+                bringToFront(todoWidget);
+                todoState.zIndex = maxZIndex;
+            }
+            applyTodoState();
+            saveTodoState();
+            renderTodos();
+            return { success: true, text: newTodo.text, id: 'todo-widget' };
+        },
+        clearCompletedTodos() {
+            const prevCount = todoState.list.length;
+            todoState.list = todoState.list.filter(t => !t.completed);
+            const removed = prevCount - todoState.list.length;
+            saveTodoState();
+            renderTodos();
+            return removed;
+        },
+        addNote(text) {
+            const trimmed = String(text || '').trim();
+            if (!trimmed) return null;
+            if (!notesState.notes || notesState.notes.length === 0) {
+                const blank = notesMake();
+                blank.title = 'Note 1';
+                notesState.notes = [blank];
+                notesState.activeNoteId = blank.id;
+            }
+            let active = notesGetActive();
+            if (!active) {
+                active = notesState.notes[0];
+                notesState.activeNoteId = active.id;
+            }
+            const cleanSnippet = trimmed.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            if (active.content && active.content.trim()) {
+                active.content += `<br>• ${cleanSnippet}`;
+            } else {
+                active.content = `• ${cleanSnippet}`;
+            }
+            active.title = (active.content.replace(/<[^>]+>/g, '') || '').trim().slice(0, 22) || 'Note';
+            notesState.isOpen = true;
+            notesState.isMinimized = false;
+            if (notesWidget) {
+                bringToFront(notesWidget);
+                notesState.zIndex = maxZIndex;
+            }
+            applyNotesState();
+            notesRenderTabs();
+            notesRenderEditor();
+            notesSave();
+            return { success: true, text: trimmed, id: 'notes-widget' };
+        }
     };
 
 });

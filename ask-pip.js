@@ -3,35 +3,63 @@
     'use strict';
 
     function parseRequest(text) {
-        if (/\b(bookmarks?|saved (sites?|links?))\b/i.test(text)) {
-            return { type: 'bookmarks', query: text.toLowerCase()
+        const raw = String(text || '').trim();
+        const cleanText = raw.replace(/^(?:hey\s+)?(?:pip[,:]?\s+)/i, '').trim();
+
+        if (/\b(bookmarks?|saved (sites?|links?))\b/i.test(cleanText)) {
+            return { type: 'bookmarks', query: cleanText.toLowerCase()
                 .replace(/\b(find|search|show|look|for|up|my|me|the|all|please|can|you|could|bookmarks?|saved|sites?|links?)\b/g, ' ')
                 .replace(/[^\p{L}\p{N}\s.-]/gu, ' ').replace(/\s+/g, ' ').trim() };
         }
-        if (/\b(plan|planning|focus|prioriti[sz]e)\b/i.test(text)) return { type: 'plan' };
+        if (/\b(plan|planning|focus|prioriti[sz]e)\b/i.test(cleanText)) return { type: 'plan' };
 
-        // Desktop widget controls
-        if (/\b(tidy\s*(up|screen)?|clean\s*(screen|desktop|workspace)?|close\s*all\s*widgets?|hide\s*all\s*widgets?)\b/i.test(text)) {
+        // Desktop widget controls - Deep Actions
+        const spotifyPlayMatch = cleanText.match(/\b(?:play|put\s*on|listen\s*to)\s+(.+?)(?:\s+on\s+spotify|\s+in\s+spotify|\s+playlist)?$/i);
+        if (spotifyPlayMatch && spotifyPlayMatch[1]) {
+            let query = spotifyPlayMatch[1].trim();
+            query = query.replace(/^(?:some|the)\s+/i, '').replace(/\s+(?:music|tracks?|songs?|playlist)$/i, '').trim();
+            if (/spotify/i.test(cleanText) ||
+                /\b(rap|hip\s*hop|lofi|study|chill|relax|rock|pop|hits|jazz|classical|workout|gym|gaming|dance|edm|electronic|piano|sleep|metal|country|rnb|r&b|indie|alt)\b/i.test(query) ||
+                query.includes('spotify.com')) {
+                return { type: 'widget', action: 'spotify_play', query };
+            }
+        }
+
+        const addTaskMatch = cleanText.match(/\b(?:add\s+task|add\s+todo|create\s+task|new\s+task)\s+(.+)$/i);
+        if (addTaskMatch && addTaskMatch[1]) {
+            return { type: 'widget', action: 'todo_add', text: addTaskMatch[1].trim() };
+        }
+        if (/\b(?:clear|remove|delete)\s+completed\s+(?:tasks?|todos?)\b/i.test(cleanText)) {
+            return { type: 'widget', action: 'todo_clear_completed' };
+        }
+
+        const addNoteMatch = cleanText.match(/\b(?:add\s+note|take\s+(?:a\s+)?note|write\s+note)\s*[:\-]?\s*(.+)$/i);
+        if (addNoteMatch && addNoteMatch[1]) {
+            return { type: 'widget', action: 'notes_add', text: addNoteMatch[1].trim() };
+        }
+
+        // Desktop widget controls - State & Arrangement
+        if (/\b(tidy\s*(up|screen)?|clean\s*(screen|desktop|workspace)?|close\s*all\s*widgets?|hide\s*all\s*widgets?)\b/i.test(cleanText)) {
             return { type: 'widget', action: 'closeAll' };
         }
-        if (/\b(minimize\s*all\s*widgets?|collapse\s*all\s*widgets?)\b/i.test(text)) {
+        if (/\b(minimize\s*all\s*widgets?|collapse\s*all\s*widgets?)\b/i.test(cleanText)) {
             return { type: 'widget', action: 'minimizeAll' };
         }
-        if (/\b(reset\s*(layout|widgets?|screen)|arrange\s*widgets?|realign\s*widgets?)\b/i.test(text)) {
+        if (/\b(reset\s*(layout|widgets?|screen)|arrange\s*widgets?|realign\s*widgets?)\b/i.test(cleanText)) {
             return { type: 'widget', action: 'resetLayout' };
         }
-        if (/\b(what\s*widgets\s*(are\s*open|do\s*i\s*have)|open\s*widgets|list\s*widgets)\b/i.test(text)) {
+        if (/\b(what\s*widgets\s*(are\s*open|do\s*i\s*have)|open\s*widgets|list\s*widgets)\b/i.test(cleanText)) {
             return { type: 'widget', action: 'list' };
         }
-        const openMatch = text.match(/\b(?:open|show|launch|start|display)\s+(?:the\s+)?(?:my\s+)?(spotify|music|player|songs?|todo|tasks?|checklist|todos?|todolist|notes?|quick\s*notes?|notepad|scratchpad|sports?|football|scores?|matches?|tech\s*news|news|github|repos?|repositories|blender|blender\s*dev|movies?|cinema|films?)\b/i);
+        const openMatch = cleanText.match(/\b(?:open|show|launch|start|display)\s+(?:the\s+)?(?:my\s+)?(spotify|music|player|songs?|todo|tasks?|checklist|todos?|todolist|notes?|quick\s*notes?|notepad|scratchpad|sports?|football|scores?|matches?|tech\s*news|news|github|repos?|repositories|blender|blender\s*dev|movies?|cinema|films?)\b/i);
         if (openMatch) {
             return { type: 'widget', action: 'open', target: openMatch[1].trim() };
         }
-        const closeMatch = text.match(/\b(?:close|hide|dismiss)\s+(?:the\s+)?(?:my\s+)?(spotify|music|player|songs?|todo|tasks?|checklist|todos?|todolist|notes?|quick\s*notes?|notepad|scratchpad|sports?|football|scores?|matches?|tech\s*news|news|github|repos?|repositories|blender|blender\s*dev|movies?|cinema|films?)\b/i);
+        const closeMatch = cleanText.match(/\b(?:close|hide|dismiss)\s+(?:the\s+)?(?:my\s+)?(spotify|music|player|songs?|todo|tasks?|checklist|todos?|todolist|notes?|quick\s*notes?|notepad|scratchpad|sports?|football|scores?|matches?|tech\s*news|news|github|repos?|repositories|blender|blender\s*dev|movies?|cinema|films?)\b/i);
         if (closeMatch) {
             return { type: 'widget', action: 'close', target: closeMatch[1].trim() };
         }
-        const minMatch = text.match(/\b(?:minimize|collapse)\s+(?:the\s+)?(?:my\s+)?(spotify|music|player|songs?|todo|tasks?|checklist|todos?|todolist|notes?|quick\s*notes?|notepad|scratchpad|sports?|football|scores?|matches?|tech\s*news|news|github|repos?|repositories|blender|blender\s*dev|movies?|cinema|films?)\b/i);
+        const minMatch = cleanText.match(/\b(?:minimize|collapse)\s+(?:the\s+)?(?:my\s+)?(spotify|music|player|songs?|todo|tasks?|checklist|todos?|todolist|notes?|quick\s*notes?|notepad|scratchpad|sports?|football|scores?|matches?|tech\s*news|news|github|repos?|repositories|blender|blender\s*dev|movies?|cinema|films?)\b/i);
         if (minMatch) {
             return { type: 'widget', action: 'minimize', target: minMatch[1].trim() };
         }
@@ -47,6 +75,42 @@
     function handleWidgetRequest(request) {
         const mgr = window.chromeHomeWidgets;
         if (!mgr) return { mood: 'curious', text: 'Widget controller is not available right now.' };
+
+        if (request.action === 'spotify_play') {
+            if (!mgr.playSpotify) return { mood: 'curious', text: 'Spotify controller is not ready.' };
+            const res = mgr.playSpotify(request.query);
+            window.pageCompanion?.targetWidget?.('spotify-widget');
+            return {
+                mood: 'dance',
+                text: `Switched Spotify to ${res.title}! Hit play in the widget to listen.`
+            };
+        }
+        if (request.action === 'todo_add') {
+            if (!mgr.addTodo) return { mood: 'curious', text: 'Tasks manager is not ready.' };
+            const res = mgr.addTodo(request.text);
+            window.pageCompanion?.targetWidget?.('todo-widget');
+            return {
+                mood: 'nod',
+                text: `Added "${res.text}" to your tasks!`
+            };
+        }
+        if (request.action === 'todo_clear_completed') {
+            if (!mgr.clearCompletedTodos) return { mood: 'curious', text: 'Tasks manager is not ready.' };
+            const count = mgr.clearCompletedTodos();
+            return {
+                mood: 'dance',
+                text: count > 0 ? `Cleared ${count} completed task${count === 1 ? '' : 's'}!` : 'No completed tasks found to clear.'
+            };
+        }
+        if (request.action === 'notes_add') {
+            if (!mgr.addNote) return { mood: 'curious', text: 'Notes manager is not ready.' };
+            const res = mgr.addNote(request.text);
+            window.pageCompanion?.targetWidget?.('notes-widget');
+            return {
+                mood: 'nod',
+                text: `Added note: "${res.text}" to Quick Notes!`
+            };
+        }
 
         if (request.action === 'closeAll') {
             const count = mgr.closeAll();

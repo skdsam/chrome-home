@@ -3,3 +3,11 @@
 
 # Generated local visual-test captures
 screenshots/upgrade-preview.png
+
+# Test files and test directories
+tests/
+test/
+*.test.js
+*.spec.js
+coverage/
+.nyc_output/
