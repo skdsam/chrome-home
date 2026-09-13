@@ -56,6 +56,18 @@
 *Created with ❤️ for a better browsing experience.*
 
 
+### Spotify search
+
+Start `start-spotify.bat` (or `npm run spotify`), then open the Spotify widget and connect your account. A Client ID alone requires Spotify login; a Client ID and Secret can search the public catalogue without user login. The helper keeps login tokens in memory. After restarting it, reconnect if you use a Client ID alone.
+
+Search by name or paste a full `https://open.spotify.com/...` link or `spotify:...` URI. Use the result-type selector to narrow searches to artists, songs, albums or playlists. Pip uses the same search: for example, `play Beach House`, `play Queen playlist`, `play Hello by Adele`, or `play my playlist Summer`. Artist names and playlist intent are preserved.
+
+Exact, unambiguous artist/song/album matches load the player. Ambiguous matches and playlists show choices with their creator and available artwork. Genre searches offer live playlist suggestions. Failed searches keep the current music and display the reason; they never substitute a default playlist. Full links and favourites bypass name matching. **Save favourite** remembers the selected Spotify ID (up to 20 favourites), and **Show other matches** lets you choose another result. Loading a selection does not start playback: press play in the Spotify embed.
+
+**My playlists** searches all pages of the signed-in user's owned/followed playlists. Existing users should reconnect to grant playlist access. Public searches default to the GB market; set `SPOTIFY_MARKET` to another two-letter country code before starting the helper if needed. Spotify's account country takes precedence for user tokens. [Spotify Search API](https://developer.spotify.com/documentation/web-api/reference/search).
+
+Run the matching, request-ordering, auth and helper regression tests with `node --test tests/spotify.test.js tests/spotify-server.test.js`. Live searches additionally require a configured helper and Spotify access.
+
 ### Ask Pip with local AI
 
 Click Pip and enable **Local AI ? Gemini Nano**, then submit a question. Chrome checks device support and may download its on-device model on the first request; progress appears in Ask Pip. No API key or separate model server is needed. If unavailable, bookmark search and basic planning remain usable.

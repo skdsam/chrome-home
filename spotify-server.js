@@ -21,7 +21,8 @@ const os = require('os');
 // ── Configuration & Paths ───────────────────────────────────────────────────
 const PORT = 8888;
 const REDIRECT_URI = `http://127.0.0.1:${PORT}/callback`;
-const SCOPES = 'user-read-private user-read-email';
+const SCOPES = 'user-read-private playlist-read-private playlist-read-collaborative';
+const SEARCH_MARKET = /^[A-Z]{2}$/.test(process.env.SPOTIFY_MARKET || '') ? process.env.SPOTIFY_MARKET : 'GB';
 const CONFIG_FILE = path.join(__dirname, 'spotify-credentials.local.json');
 
 let clientId = process.argv[2] || process.env.SPOTIFY_CLIENT_ID || null;
@@ -127,6 +128,8 @@ function spotifyAccountsRequest(requestPath, params) {
         });
 
         req.on('error', reject);
+        const deadline = setTimeout(() => req.destroy(Object.assign(new Error('Spotify timed out'), { code: 'ETIMEDOUT' })), 10000);
+        req.on('close', () => clearTimeout(deadline));
         req.write(postData);
         req.end();
     });
@@ -144,8 +147,10 @@ async function refreshAccessToken() {
         refresh_token: token.refresh_token
     });
     if (data.error) {
-        if (clientSecret) return fetchClientCredentialsToken();
-        throw new Error(data.error_description || data.error);
+        token.access_token = null;
+        token.refresh_token = null;
+        token.is_user_auth = false;
+        throw new Error('Not authenticated');
     }
     token.access_token = data.access_token;
     if (data.refresh_token) token.refresh_token = data.refresh_token;
@@ -173,24 +178,25 @@ async function fetchClientCredentialsToken() {
     return token.access_token;
 }
 
+let pendingToken = null;
 async function getValidToken() {
     if (!clientId) return null;
     if (token.access_token && Date.now() < token.expires_at - 60000) {
         return token.access_token;
     }
-    if (token.refresh_token) {
-        return refreshAccessToken();
-    }
-    if (clientSecret) {
-        return fetchClientCredentialsToken();
-    }
-    return null;
+    if (pendingToken) return pendingToken;
+    const operation = token.refresh_token ? refreshAccessToken : clientSecret ? fetchClientCredentialsToken : null;
+    if (!operation) return null;
+    pendingToken = operation();
+    try { return await pendingToken; }
+    finally { pendingToken = null; }
 }
 
-function spotifyAPIRequest(requestPath) {
+function spotifyAPIRequest(requestPath, requireUser = false) {
     return new Promise((resolve, reject) => {
         getValidToken().then(accessToken => {
             if (!accessToken) return reject(new Error('Not authenticated'));
+            if (requireUser && !token.is_user_auth) return reject(new Error('User login required'));
             const options = {
                 hostname: 'api.spotify.com',
                 path: requestPath,
@@ -204,13 +210,15 @@ function spotifyAPIRequest(requestPath) {
                 res.on('data', chunk => data += chunk);
                 res.on('end', () => {
                     try {
-                        resolve({ status: res.statusCode, body: JSON.parse(data) });
+                        resolve({ status: res.statusCode, body: JSON.parse(data), retryAfter: res.headers['retry-after'] });
                     } catch (e) {
                         reject(new Error('Parse error from Spotify API'));
                     }
                 });
             });
             req.on('error', reject);
+            const deadline = setTimeout(() => req.destroy(Object.assign(new Error('Spotify timed out'), { code: 'ETIMEDOUT' })), 10000);
+            req.on('close', () => clearTimeout(deadline));
         }).catch(reject);
     });
 }
@@ -220,12 +228,42 @@ function cors(res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Expose-Headers', 'Retry-After');
 }
 
 function json(res, status, data) {
     cors(res);
+    res.setHeader('Cache-Control', 'no-store');
     res.writeHead(status, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(data));
+}
+
+let rateLimitUntil = 0;
+async function forwardSpotify(res, requestPath, requireUser = false) {
+    if (Date.now() < rateLimitUntil) {
+        res.setHeader('Retry-After', String(Math.ceil((rateLimitUntil - Date.now()) / 1000)));
+        json(res, 429, { error: 'rate_limited' });
+        return;
+    }
+    try {
+        let result = await spotifyAPIRequest(requestPath, requireUser);
+        if (result.status === 401) {
+            token.expires_at = 0;
+            result = await spotifyAPIRequest(requestPath, requireUser);
+        }
+        if (result.status === 429) {
+            const seconds = Math.max(1, Number(result.retryAfter) || 30);
+            rateLimitUntil = Date.now() + seconds * 1000;
+            res.setHeader('Retry-After', String(seconds));
+        }
+        json(res, result.status, result.body);
+    } catch (error) {
+        if (error.message === 'Not authenticated' || error.message === 'User login required') {
+            json(res, 401, { error: requireUser ? 'user_login_required' : 'not_connected' });
+        } else {
+            json(res, error.code === 'ETIMEDOUT' ? 504 : 502, { error: 'spotify_unavailable' });
+        }
+    }
 }
 
 function html(res, content) {
@@ -275,7 +313,7 @@ const server = http.createServer(async (req, res) => {
     // ── GET /status ──────────────────────────────────────────────────────────
     if (pathname === '/status') {
         const configured = !!clientId;
-        const connected = !!token.access_token;
+        const connected = !!token.access_token && (Date.now() < token.expires_at || !!token.refresh_token || !!clientSecret);
         const maskedId = clientId ? (clientId.slice(0, 4) + '••••' + clientId.slice(-4)) : null;
         json(res, 200, {
             running: true,
@@ -311,6 +349,7 @@ const server = http.createServer(async (req, res) => {
             json(res, 500, { error: 'Could not save credentials to file.' });
             return;
         }
+        token = { access_token: null, refresh_token: null, expires_at: 0, is_user_auth: false };
 
         // If secret provided, test client credentials token immediately
         if (clientSecret) {
@@ -329,7 +368,7 @@ const server = http.createServer(async (req, res) => {
 
         json(res, 200, {
             success: true,
-            message: clientSecret ? 'Spotify credentials saved & search active!' : 'Client ID saved! Click Connect to authenticate via PKCE.',
+            message: token.access_token ? 'Spotify credentials saved & search active!' : 'Client ID saved. Connect your Spotify account to finish setup.',
             connected: !!token.access_token,
             has_secret: !!clientSecret
         });
@@ -349,19 +388,25 @@ const server = http.createServer(async (req, res) => {
             return;
         }
 
-        try {
-            const types = query.type || 'artist,track,playlist';
-            const result = await spotifyAPIRequest(
-                `/v1/search?${new URLSearchParams({ q, type: types, limit: 5 })}`
-            );
-            json(res, result.status, result.body);
-        } catch (err) {
-            if (err.message === 'Not authenticated') {
-                json(res, 401, { error: 'not_connected', message: 'Click Connect on the widget to log into Spotify.' });
-            } else {
-                json(res, 500, { error: err.message });
-            }
+        const types = query.type || 'artist,track,playlist,album';
+        const offset = Number(query.offset || 0);
+        if (!types.split(',').every(type => ['artist', 'track', 'playlist', 'album'].includes(type)) ||
+            !Number.isInteger(offset) || offset < 0 || offset > 1000 || q.length > 500) {
+            json(res, 400, { error: 'invalid_query' });
+            return;
         }
+        await forwardSpotify(res, `/v1/search?${new URLSearchParams({ q, type: types, limit: 10, offset, market: SEARCH_MARKET })}`);
+        return;
+    }
+
+    // Read the signed-in user's library, including private playlists when authorised.
+    if (pathname === '/playlists') {
+        const offset = Number(query.offset || 0);
+        if (!Number.isInteger(offset) || offset < 0 || offset > 100000) {
+            json(res, 400, { error: 'invalid_offset' });
+            return;
+        }
+        await forwardSpotify(res, `/v1/me/playlists?${new URLSearchParams({ limit: 50, offset })}`, true);
         return;
     }
 
@@ -655,14 +700,14 @@ const server = http.createServer(async (req, res) => {
       <div class="logo">🎵</div>
       <div>
         <h1>Chrome Home Spotify Helper</h1>
-        <div class="subtitle">Local search & auth helper for any artist or song</div>
+        <div class="subtitle">Local Spotify search & account helper</div>
       </div>
     </div>
 
     ${isConfigured && hasToken ? `
-      <div class="badge active">● Active & Ready — Search works for any artist or song</div>
+      <div class="badge active">● Spotify session available</div>
       <p style="font-size:13px;color:#bbb;line-height:1.5">
-        Spotify is linked to Chrome Home! You can search and play any artist or song.
+        Search Spotify from Chrome Home, choose a result, then press play in the widget.
       </p>
       <div style="margin-top:20px;display:flex;flex-direction:column;gap:8px;">
         <button class="btn" onclick="openLogin()">Re-authenticate with Spotify</button>

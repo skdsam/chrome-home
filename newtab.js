@@ -1847,6 +1847,11 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
     const spotifySearchForm = document.getElementById('spotify-search-form');
     const spotifySearchInput = document.getElementById('spotify-search-input');
     const spotifySearchStatus = document.getElementById('spotify-search-status');
+    const spotifySearchType = document.getElementById('spotify-search-type');
+    const spotifySearchResults = document.getElementById('spotify-search-results');
+    const spotifyFavourites = document.getElementById('spotify-favourites');
+    const spotifySaveFavourite = document.getElementById('spotify-save-favourite');
+    const spotifyOpenSelection = document.getElementById('spotify-open-selection');
 
     // --- Spotify Auth UI Elements ---
     const spotifyAuthBtn = document.getElementById('spotify-auth-btn');
@@ -1907,14 +1912,14 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
             if (status.connected) {
                 // Fully connected and token active!
                 spotifyAuthBtn.textContent = '✅ Spotify';
-                spotifyAuthBtn.title = 'Spotify Active — Search works for any artist or song';
+                spotifyAuthBtn.title = 'Spotify search connected';
                 spotifyAuthBtn.style.color = '#1db954';
                 if (spotifyAuthConnected) spotifyAuthConnected.classList.remove('hidden');
                 if (spotifyAuthSetup) spotifyAuthSetup.classList.add('hidden');
                 if (spotifyConnectedStatusText) {
                     spotifyConnectedStatusText.textContent = status.is_user_auth
-                        ? '✅ Spotify Account Connected — Search & personal library active.'
-                        : '✅ Spotify Search Active — Plays any artist or song!';
+                        ? '✅ Spotify account connected. Reconnect if My playlists needs access.'
+                        : '✅ Spotify search connected. Log in to search My playlists.';
                 }
                 if (spotifyConnectUserBtn) {
                     spotifyConnectUserBtn.textContent = status.is_user_auth
@@ -1953,7 +1958,7 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
         } else {
             // Server not running
             spotifyAuthBtn.textContent = '🔗 Connect';
-            spotifyAuthBtn.title = 'Start Spotify helper to search any song/artist';
+            spotifyAuthBtn.title = 'Start the Spotify helper to search for music';
             spotifyAuthBtn.style.color = '';
             if (spotifyAuthConnected) spotifyAuthConnected.classList.add('hidden');
             if (spotifyAuthSetup) spotifyAuthSetup.classList.remove('hidden');
@@ -2001,7 +2006,7 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
             const res = await window.SpotifyAuth.saveCredentials(cid, secret);
             if (secret) {
                 if (spotifySearchStatus) {
-                    spotifySearchStatus.textContent = '✅ Spotify active! You can now search any artist or song.';
+                    spotifySearchStatus.textContent = '✅ Spotify connected. Search for music above.';
                     spotifySearchStatus.classList.remove('hidden');
                 }
             } else {
@@ -2143,6 +2148,7 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
         if (iframe && iframe.src !== spotifyState.embedUrl) {
             iframe.src = spotifyState.embedUrl;
         }
+        renderSpotifyFavourites();
     }
 
     // Toggle Visibility
@@ -2199,22 +2205,20 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
         spotifyState.zIndex = maxZIndex;
 
         const current = spotifyState.embedUrl;
-        const newUrl = await window.customPrompt('Spotify Widget', 'Enter Spotify Playlist or Album URL:', current);
+        const newUrl = await window.customPrompt('Spotify Widget', 'Enter a full Spotify link or URI:', current);
 
         if (newUrl && newUrl !== current) {
-            let embedUrl = newUrl;
             try {
-                const urlObj = new URL(newUrl);
-                if (urlObj.hostname.includes('spotify.com') && !urlObj.pathname.includes('/embed')) {
-                    embedUrl = `https://${urlObj.hostname}/embed${urlObj.pathname}${urlObj.search}`;
-                }
+                if (!window.SpotifyCatalog.parseSpotifyLink(newUrl)) throw new Error('Enter a full Spotify link or URI.');
+                await playSpotify(newUrl);
             } catch (err) {
-                console.error("Invalid URL", err);
+                spotifySearchController.cancel();
+                spotifySearchResults.replaceChildren();
+                spotifySearchResults.classList.add('hidden');
+                spotifySearchBar.classList.remove('hidden');
+                spotifySearchStatus.textContent = err.message;
+                spotifySearchStatus.classList.remove('hidden');
             }
-
-            spotifyState.embedUrl = embedUrl;
-            applySpotifyState();
-            saveSpotifyState();
         }
     });
 
@@ -2231,75 +2235,133 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
         }
     });
 
-    spotifySearchForm?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const query = spotifySearchInput ? spotifySearchInput.value.trim() : '';
-        if (!query) return;
-
-        bringToFront(spotifyWidget);
-        spotifyState.zIndex = maxZIndex;
-
-        if (spotifySearchStatus) {
-            spotifySearchStatus.textContent = `🔍 Searching Spotify for "${query}"...`;
-            spotifySearchStatus.classList.remove('hidden');
+    function renderSpotifyFavourites() {
+        const favourites = Array.isArray(spotifyState.favourites) ? spotifyState.favourites : [];
+        spotifyFavourites.replaceChildren();
+        for (const favourite of favourites.slice(0, 20)) {
+            let candidate;
+            try { candidate = window.SpotifyCatalog.parseSpotifyLink(favourite.uri); } catch (_) { continue; }
+            if (!candidate) continue;
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.textContent = favourite.title || candidate.title;
+            button.title = `Load ${button.textContent}`;
+            button.addEventListener('click', () => playSpotify(candidate.uri));
+            spotifyFavourites.append(button);
         }
+        spotifyFavourites.classList.toggle('hidden', !spotifyFavourites.children.length);
+        const selected = spotifyState.selected;
+        spotifySaveFavourite.disabled = !selected;
+        spotifySaveFavourite.textContent = favourites.some(item => item.uri === selected?.uri) ? 'Remove favourite' : 'Save favourite';
+        if (selected) {
+            try {
+                const candidate = window.SpotifyCatalog.parseSpotifyLink(selected.uri);
+                if (candidate) {
+                    spotifyOpenSelection.href = candidate.externalUrl;
+                    spotifyOpenSelection.classList.remove('hidden');
+                }
+            } catch (_) { spotifyOpenSelection.classList.add('hidden'); }
+        } else spotifyOpenSelection.classList.add('hidden');
+    }
 
-        try {
-            const res = await playSpotify(query);
-            if (spotifySearchStatus) {
-                spotifySearchStatus.textContent = `Playing: ${res.title}`;
+    spotifySaveFavourite.addEventListener('click', () => {
+        const selected = spotifyState.selected;
+        if (!selected) return;
+        const favourites = Array.isArray(spotifyState.favourites) ? spotifyState.favourites : [];
+        spotifyState.favourites = favourites.some(item => item.uri === selected.uri)
+            ? favourites.filter(item => item.uri !== selected.uri)
+            : [{ uri: selected.uri, title: selected.title }, ...favourites].slice(0, 20);
+        renderSpotifyFavourites();
+        saveSpotifyState();
+    });
+
+    const spotifySearchController = window.SpotifySearch.createController({
+        resolve: (query, options) => window.SpotifyCatalog.resolveSpotifyQuery(query, options),
+        onSelect(candidate) {
+            const favourite = Array.isArray(spotifyState.favourites) && spotifyState.favourites.find(item => item.uri === candidate.uri);
+            const title = candidate.title.startsWith('Spotify ') && favourite ? favourite.title : candidate.title;
+            spotifyState.selected = { uri: candidate.uri, title };
+            spotifyState.embedUrl = candidate.embedUrl;
+            applySpotifyState();
+            saveSpotifyState();
+        },
+        onResult(result) {
+            spotifySearchResults.replaceChildren();
+            spotifySearchResults.classList.add('hidden');
+            spotifySearchStatus.classList.remove('hidden');
+            spotifySearchResults.setAttribute('aria-busy', String(result.status === 'searching'));
+            if (result.status === 'searching') {
+                spotifySearchStatus.textContent = `Searching Spotify for “${result.query}”…`;
+                return;
             }
-        } catch (err) {
-            if (spotifySearchStatus) {
-                spotifySearchStatus.textContent = `Could not find "${query}".`;
+            if (result.status === 'resolved') {
+                spotifySearchStatus.textContent = `Ready: ${spotifyState.selected.title}. Press play in the player.`;
+                if (!result.request.direct) {
+                    const chooseAgain = document.createElement('button');
+                    chooseAgain.type = 'button';
+                    chooseAgain.className = 'spotify-search-page';
+                    chooseAgain.textContent = 'Show other matches';
+                    chooseAgain.addEventListener('click', () => playSpotify(result.request.raw, { type: result.request.mine ? 'mine' : result.request.type, choose: true }));
+                    spotifySearchResults.append(chooseAgain);
+                    spotifySearchResults.classList.remove('hidden');
+                }
+                return;
             }
+            spotifySearchStatus.textContent = result.message;
+            for (const candidate of result.candidates || []) {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'spotify-result';
+                if (candidate.image) {
+                    const image = document.createElement('img');
+                    image.src = candidate.image;
+                    image.alt = '';
+                    image.loading = 'lazy';
+                    image.addEventListener('error', () => image.remove(), { once: true });
+                    button.append(image);
+                }
+                const text = document.createElement('span');
+                const name = document.createElement('strong');
+                const detail = document.createElement('small');
+                name.textContent = candidate.name;
+                detail.textContent = candidate.subtitle;
+                text.append(name, detail);
+                button.append(text);
+                button.addEventListener('click', () => spotifySearchController.choose(candidate.uri, result.version));
+                spotifySearchResults.append(button);
+            }
+            const addPageButton = (label, offset) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'spotify-search-page';
+                button.textContent = label;
+                button.addEventListener('click', () => playSpotify(result.request.raw, { type: result.request.type, offset, choose: true }));
+                spotifySearchResults.append(button);
+            };
+            if (result.offset > 0) addPageButton('Previous results', Math.max(0, result.offset - 10));
+            if (result.hasMore && result.nextOffset <= 1000) addPageButton('More results', result.nextOffset);
+            spotifySearchResults.classList.toggle('hidden', !spotifySearchResults.children.length);
         }
     });
 
-
-    async function playSpotify(query) {
-        let targetUrl = null;
-        let targetTitle = null;
-        const raw = String(query || '').trim().replace(/^["'`]+|["'`]+$/g, '').trim();
-
-        if (window.SpotifyCatalog?.resolveSpotifyQuery) {
-            const resolved = await window.SpotifyCatalog.resolveSpotifyQuery(raw);
-            if (resolved) {
-                targetUrl = resolved.embedUrl;
-                targetTitle = resolved.title;
-            }
-        }
-
-        if (!targetUrl) {
-            targetUrl = 'https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M?utm_source=generator';
-            targetTitle = raw ? `Top Hits (for "${raw}")` : "Today's Top Hits";
-        }
-
+    spotifySearchForm?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const query = spotifySearchInput.value.trim();
+        if (query) playSpotify(query, { type: spotifySearchType.value });
+    });
+    // Pip supplies its own intent; a previous dropdown selection must not change a spoken request.
+    async function playSpotify(query, options = {}) {
         spotifyState.isOpen = true;
         spotifyState.isMinimized = false;
-        spotifyState.embedUrl = targetUrl;
-        if (spotifyWidget) {
-            bringToFront(spotifyWidget);
-            spotifyState.zIndex = maxZIndex;
-        }
+        bringToFront(spotifyWidget);
+        spotifyState.zIndex = maxZIndex;
         applySpotifyState();
-        saveSpotifyState();
-
-        if (spotifySearchInput) {
-            spotifySearchInput.value = raw;
-        }
-        if (spotifySearchStatus) {
-            spotifySearchStatus.textContent = `Playing: ${targetTitle}`;
-            spotifySearchStatus.classList.remove('hidden');
-        }
-
-        return {
-            success: true,
-            title: targetTitle,
-            embedUrl: targetUrl,
-            id: 'spotify-widget'
-        };
+        spotifySearchBar.classList.remove('hidden');
+        spotifySearchInput.value = String(query || '').trim();
+        spotifySearchType.value = options.type || 'auto';
+        return spotifySearchController.search(query, options);
     }
+    window.addEventListener('pagehide', () => spotifySearchController.cancel());
 
     // Drag Logic
     let isDragging = false;

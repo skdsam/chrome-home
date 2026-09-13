@@ -1382,10 +1382,25 @@ input[type="text"] {
     font-size: 11px;
     color: #9da8b8;
     line-height: 1.3;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
 }
+
+.spotify-search-filter { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #b8c3d2; }
+.spotify-search-filter select { flex: 1; min-width: 0; padding: 4px 6px; border: 1px solid var(--glass-border); border-radius: 6px; background: #19202a; color: #edf3fa; }
+.spotify-search-results { max-height: 245px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
+.spotify-search-results.hidden, .spotify-favourites.hidden { display: none; }
+.spotify-result { display: flex; align-items: center; gap: 9px; width: 100%; padding: 7px; text-align: left; border: 1px solid var(--glass-border); border-radius: 7px; background: rgba(255,255,255,.04); color: #edf3fa; cursor: pointer; }
+.spotify-result:hover, .spotify-result:focus-visible { background: rgba(29,185,84,.15); border-color: #1db954; }
+.spotify-result img { width: 36px; height: 36px; object-fit: cover; border-radius: 4px; flex-shrink: 0; }
+.spotify-result span { min-width: 0; overflow-wrap: anywhere; }
+.spotify-result strong, .spotify-result small { display: block; font-size: 12px; }
+.spotify-result small { font-size: 10px; color: #b8c3d2; margin-top: 3px; }
+.spotify-selection-actions, .spotify-favourites { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.spotify-selection-actions button, .spotify-favourites button, .spotify-search-page { font: inherit; font-size: 11px; padding: 4px 7px; border: 1px solid var(--glass-border); border-radius: 6px; background: rgba(255,255,255,.06); color: #dce8f5; cursor: pointer; }
+.spotify-selection-actions button:disabled { opacity: .45; cursor: default; }
+.spotify-selection-actions a { color: #6ee79a; font-size: 11px; }
+.spotify-favourites { max-height: 72px; overflow-y: auto; }
+.spotify-favourites button { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .spotify-content {
     padding: 0;

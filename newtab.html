@@ -351,7 +351,7 @@
             <span class="spotify-title">Spotify</span>
             <div class="spotify-controls">
                 <button id="spotify-auth-btn" title="Connect Spotify Account" style="font-size:11px;padding:2px 7px;">🔗 Connect</button>
-                <button id="spotify-search-toggle" title="Search Artist or Song">🔍</button>
+                <button id="spotify-search-toggle" title="Search Spotify">🔍</button>
                 <button id="spotify-edit" title="Change Playlist URL">✎</button>
                 <button id="spotify-minimize">-</button>
                 <button type="button" class="widget-close" title="Close widget" aria-label="Close widget">×</button>
@@ -361,7 +361,7 @@
         <!-- Auth Setup Panel (hidden by default) -->
         <div id="spotify-auth-panel" class="spotify-auth-panel hidden">
             <div id="spotify-auth-connected" class="hidden">
-                <div class="spotify-auth-status connected" id="spotify-connected-status-text">✅ Spotify Active — Search works for any artist or song.</div>
+                <div class="spotify-auth-status connected" id="spotify-connected-status-text">✅ Spotify search connected.</div>
                 <div style="display:flex;gap:6px;margin-top:8px;">
                     <button type="button" id="spotify-connect-user-btn" class="spotify-auth-action-btn connect" style="flex:1;font-size:10px;padding:4px 8px;">Login to Account (Optional)</button>
                     <button type="button" id="spotify-disconnect-btn" class="spotify-auth-action-btn disconnect" style="margin-top:0;font-size:10px;padding:4px 8px;">Change Setup</button>
@@ -375,7 +375,7 @@
 
                 <div id="spotify-not-running-help" class="hidden" style="margin-bottom:10px;padding:8px 10px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:6px;font-size:11px;line-height:1.4;">
                     <div style="font-weight:600;color:#f59e0b;margin-bottom:3px;">⚡ Helper Server Not Started</div>
-                    <div style="color:#ccc;">To search any artist or song, start the local helper:</div>
+                    <div style="color:#ccc;">To search Spotify, start the local helper:</div>
                     <div style="margin-top:5px;display:flex;flex-direction:column;gap:3px;font-size:10.5px;">
                         <div>• Double-click <strong style="color:#1db954">start-spotify.bat</strong> in Chrome Home folder</div>
                         <div>• <em>Or</em> double-click <strong style="color:#1db954">install-autostart.bat</strong> to auto-start with Windows!</div>
@@ -409,10 +409,27 @@
 
         <div class="spotify-search-bar" id="spotify-search-bar">
             <form id="spotify-search-form" class="spotify-search-form">
-                <input type="text" id="spotify-search-input" class="spotify-search-input" placeholder="Search artist, song, or genre..." autocomplete="off">
+                <input type="text" id="spotify-search-input" class="spotify-search-input" placeholder="Artist, song, playlist or Spotify link" aria-label="Search Spotify" autocomplete="off">
                 <button type="submit" id="spotify-search-submit" class="spotify-search-btn" title="Search">Search</button>
             </form>
+            <label class="spotify-search-filter">Search in
+                <select id="spotify-search-type" aria-label="Spotify result type">
+                    <option value="auto">All music</option>
+                    <option value="artist">Artists</option>
+                    <option value="track">Songs</option>
+                    <option value="playlist">Playlists</option>
+                    <option value="mine">My playlists</option>
+                    <option value="album">Albums</option>
+                    <option value="genre">Genres &amp; moods</option>
+                </select>
+            </label>
             <div id="spotify-search-status" class="spotify-search-status hidden" role="status"></div>
+            <div id="spotify-search-results" class="spotify-search-results hidden" aria-label="Spotify search results"></div>
+            <div class="spotify-selection-actions">
+                <button type="button" id="spotify-save-favourite" disabled>Save favourite</button>
+                <a id="spotify-open-selection" class="hidden" target="_blank" rel="noopener noreferrer">Open in Spotify</a>
+            </div>
+            <div id="spotify-favourites" class="spotify-favourites hidden" aria-label="Spotify favourites"></div>
         </div>
         <div class="spotify-content" id="spotify-content">
             <!-- Spotify Embed -->
@@ -948,6 +965,7 @@
     <script src="cursor-trail.js"></script>
     <script src="spotify-auth.js"></script>
     <script src="spotify-catalog.js"></script>
+    <script src="spotify-search.js"></script>
     <script src="newtab.js"></script>
     <script src="advanced-dashboard.js"></script>
     <dialog id="ask-pip" class="ask-pip" aria-labelledby="ask-pip-title">

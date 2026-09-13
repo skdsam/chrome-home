@@ -76,3 +76,9 @@ coverage/
 
 # --- Generated local visual-test captures ---
 screenshots/upgrade-preview.png
+
+# Keep Spotify regression coverage reviewable.
+!tests/
+tests/*
+!tests/spotify.test.js
+!tests/spotify-server.test.js

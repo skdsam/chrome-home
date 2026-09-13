@@ -8,29 +8,23 @@
                              .replace(/[?.!]+$/, '')
                              .trim();
 
+        // Route explicit play commands before planning/bookmark keywords in music titles.
+        const spotifyPlayMatch = cleanText.match(/^(?:please\s+)?(?:play|put\s*on|listen\s*to)\s+(.+)$/i);
+        if (spotifyPlayMatch) {
+            const query = spotifyPlayMatch[1].replace(/\s+please[?.!]*$/i, '')
+                .replace(/\s+(?:on|in)\s+spotify[?.!]*$/i, '')
+                .replace(/\s+please$/i, '').replace(/^some\s+/i, '').trim();
+            if (query && !/^(?:with|around|a\s+game|games?)\b/i.test(query)) {
+                return { type: 'widget', action: 'spotify_play', query };
+            }
+        }
+
         if (/\b(bookmarks?|saved (sites?|links?))\b/i.test(cleanText)) {
             return { type: 'bookmarks', query: cleanText.toLowerCase()
                 .replace(/\b(find|search|show|look|for|up|my|me|the|all|please|can|you|could|bookmarks?|saved|sites?|links?)\b/g, ' ')
                 .replace(/[^\p{L}\p{N}\s.-]/gu, ' ').replace(/\s+/g, ' ').trim() };
         }
         if (/\b(plan|planning|focus|prioriti[sz]e)\b/i.test(cleanText)) return { type: 'plan' };
-
-        // Desktop widget controls - Deep Actions
-        const spotifyPlayMatch = cleanText.match(/\b(?:play|put\s*on|listen\s*to)\s+(.+)$/i);
-        if (spotifyPlayMatch && spotifyPlayMatch[1]) {
-            let query = spotifyPlayMatch[1].trim();
-            query = query.replace(/[?.!]+$/, '')
-                         .replace(/\s+please$/i, '')
-                         .replace(/\s+(?:on|in)\s+spotify$/i, '')
-                         .replace(/\s+please$/i, '')
-                         .replace(/[?.!]+$/, '')
-                         .replace(/^(?:some|the)\s+/i, '')
-                         .replace(/\s+(?:music|tracks?|songs?|playlist)$/i, '')
-                         .trim();
-            if (query && !/^(?:with|around|a\s+game|games?)\b/i.test(query)) {
-                return { type: 'widget', action: 'spotify_play', query };
-            }
-        }
 
         const addTaskMatch = cleanText.match(/\b(?:add\s+task|add\s+todo|create\s+task|new\s+task)\s+(.+)$/i);
         if (addTaskMatch && addTaskMatch[1]) {
@@ -87,6 +81,9 @@
             if (!mgr.playSpotify) return { mood: 'curious', text: 'Spotify controller is not ready.' };
             const res = await mgr.playSpotify(request.query);
             window.pageCompanion?.targetWidget?.('spotify-widget');
+            if (res.status === 'choices') return { mood: 'curious', text: 'Choose the artist, song or playlist you want from the results in the Spotify widget.' };
+            if (res.status === 'superseded') return { mood: 'nod', text: 'Spotify is handling your newer selection.' };
+            if (res.success === false) return { mood: 'curious', text: res.message || 'Spotify could not find that music. Try a more specific name.' };
             return {
                 mood: 'dance',
                 text: `Switched Spotify to ${res.title}! Hit play in the widget to listen.`
