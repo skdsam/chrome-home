@@ -1003,7 +1003,10 @@
                     return rect.width > 0 && rect.height > 0;
                 });
             if (visibleWidgets.length) {
-                const widget = visibleWidgets[Math.floor(this.random() * visibleWidgets.length)];
+                const widget = (this.preferredWidget && visibleWidgets.includes(this.preferredWidget))
+                    ? this.preferredWidget
+                    : visibleWidgets[Math.floor(this.random() * visibleWidgets.length)];
+                this.preferredWidget = null;
                 const rect = widget.getBoundingClientRect();
                 anchors.widget = {
                     element: widget,
@@ -1023,6 +1026,13 @@
                 };
             } else anchors.shortcut = null;
             return anchors;
+        }
+
+        targetWidget(widgetId) {
+            const el = document.getElementById(widgetId);
+            if (el) {
+                this.preferredWidget = el;
+            }
         }
 
         chooseRestDestination(preferSit) {

@@ -9,12 +9,97 @@
                 .replace(/[^\p{L}\p{N}\s.-]/gu, ' ').replace(/\s+/g, ' ').trim() };
         }
         if (/\b(plan|planning|focus|prioriti[sz]e)\b/i.test(text)) return { type: 'plan' };
+
+        // Desktop widget controls
+        if (/\b(tidy\s*(up|screen)?|clean\s*(screen|desktop|workspace)?|close\s*all\s*widgets?|hide\s*all\s*widgets?)\b/i.test(text)) {
+            return { type: 'widget', action: 'closeAll' };
+        }
+        if (/\b(minimize\s*all\s*widgets?|collapse\s*all\s*widgets?)\b/i.test(text)) {
+            return { type: 'widget', action: 'minimizeAll' };
+        }
+        if (/\b(reset\s*(layout|widgets?|screen)|arrange\s*widgets?|realign\s*widgets?)\b/i.test(text)) {
+            return { type: 'widget', action: 'resetLayout' };
+        }
+        if (/\b(what\s*widgets\s*(are\s*open|do\s*i\s*have)|open\s*widgets|list\s*widgets)\b/i.test(text)) {
+            return { type: 'widget', action: 'list' };
+        }
+        const openMatch = text.match(/\b(?:open|show|launch|start|display)\s+(?:the\s+)?(?:my\s+)?(spotify|music|player|songs?|todo|tasks?|checklist|todos?|todolist|notes?|quick\s*notes?|notepad|scratchpad|sports?|football|scores?|matches?|tech\s*news|news|github|repos?|repositories|blender|blender\s*dev|movies?|cinema|films?)\b/i);
+        if (openMatch) {
+            return { type: 'widget', action: 'open', target: openMatch[1].trim() };
+        }
+        const closeMatch = text.match(/\b(?:close|hide|dismiss)\s+(?:the\s+)?(?:my\s+)?(spotify|music|player|songs?|todo|tasks?|checklist|todos?|todolist|notes?|quick\s*notes?|notepad|scratchpad|sports?|football|scores?|matches?|tech\s*news|news|github|repos?|repositories|blender|blender\s*dev|movies?|cinema|films?)\b/i);
+        if (closeMatch) {
+            return { type: 'widget', action: 'close', target: closeMatch[1].trim() };
+        }
+        const minMatch = text.match(/\b(?:minimize|collapse)\s+(?:the\s+)?(?:my\s+)?(spotify|music|player|songs?|todo|tasks?|checklist|todos?|todolist|notes?|quick\s*notes?|notepad|scratchpad|sports?|football|scores?|matches?|tech\s*news|news|github|repos?|repositories|blender|blender\s*dev|movies?|cinema|films?)\b/i);
+        if (minMatch) {
+            return { type: 'widget', action: 'minimize', target: minMatch[1].trim() };
+        }
+
         return { type: 'unknown' };
     }
 
     function parseExpression(text) {
         const match = text.match(/^\s*\[(wave|nod|dance|curious)\]\s*/i);
         return { mood: match ? match[1].toLowerCase() : 'nod', text: match ? text.slice(match[0].length) : text };
+    }
+
+    function handleWidgetRequest(request) {
+        const mgr = window.chromeHomeWidgets;
+        if (!mgr) return { mood: 'curious', text: 'Widget controller is not available right now.' };
+
+        if (request.action === 'closeAll') {
+            const count = mgr.closeAll();
+            return {
+                mood: 'dance',
+                text: count > 0 ? `All tidy! Closed ${count} open widget${count === 1 ? '' : 's'}.` : 'All tidy! No widgets were open.'
+            };
+        }
+        if (request.action === 'minimizeAll') {
+            const count = mgr.minimizeAll();
+            return {
+                mood: 'nod',
+                text: count > 0 ? `Minimized ${count} widget${count === 1 ? '' : 's'} to their headers.` : 'No open widgets to minimize.'
+            };
+        }
+        if (request.action === 'resetLayout') {
+            mgr.resetLayout();
+            return {
+                mood: 'nod',
+                text: 'Widgets have been reset to their default positions.'
+            };
+        }
+        if (request.action === 'list') {
+            const open = mgr.getOpenWidgets();
+            if (!open.length) {
+                return { mood: 'wave', text: 'No widgets are currently open on your screen.' };
+            }
+            const names = open.map(w => `${w.name}${w.isMinimized ? ' (minimized)' : ''}`).join(', ');
+            return { mood: 'nod', text: `Currently open widgets: ${names}.` };
+        }
+        if (request.action === 'open') {
+            const res = mgr.open(request.target);
+            if (res) {
+                window.pageCompanion?.targetWidget?.(res.id);
+                return { mood: 'dance', text: `Opened ${res.name} for you!` };
+            }
+            return { mood: 'curious', text: `I couldn't find a widget matching "${request.target}". Try Spotify, Tasks, Notes, Sports, News, GitHub, Blender, or Movies.` };
+        }
+        if (request.action === 'close') {
+            const res = mgr.close(request.target);
+            if (res) {
+                return { mood: 'nod', text: `Closed ${res.name}.` };
+            }
+            return { mood: 'curious', text: `I couldn't find a widget matching "${request.target}".` };
+        }
+        if (request.action === 'minimize') {
+            const res = mgr.minimize(request.target, true);
+            if (res) {
+                return { mood: 'nod', text: `Minimized ${res.name}.` };
+            }
+            return { mood: 'curious', text: `I couldn't find a widget matching "${request.target}".` };
+        }
+        return { mood: 'curious', text: 'Unknown widget command.' };
     }
 
     function renderSources(container, sources) {
@@ -48,7 +133,7 @@
         container.append(sec);
     }
 
-    if (typeof module !== 'undefined') module.exports = { parseRequest, parseExpression, renderSources };
+    if (typeof module !== 'undefined') module.exports = { parseRequest, parseExpression, renderSources, handleWidgetRequest };
     if (typeof document === 'undefined') return;
 
     const dialog = document.getElementById('ask-pip');
@@ -109,7 +194,7 @@
     async function checkAI() {
         const version = ++statusVersion;
         if (!aiToggle?.checked) {
-            setStatus('Local AI is off. Web lookup, bookmark search, and simple planning are available.');
+            setStatus('Local AI is off. Widget control, web lookup, bookmark search, and simple planning are available.');
             return;
         }
         setStatus('Checking Gemini Nano availability...');
@@ -197,6 +282,14 @@
         cancelAmbient();
         const request = parseRequest(text);
         input.value = '';
+        if (request.type === 'widget') {
+            awaitingFocus = false;
+            const res = handleWidgetRequest(request);
+            answer.textContent = res.text;
+            mood(res.mood);
+            setStatus('Pip adjusted your desktop widgets.');
+            return;
+        }
         const useWeb = Boolean(webSearchToggle?.checked && webSearch && request.type !== 'bookmarks');
         if (aiToggle?.checked && localAI && request.type !== 'bookmarks') {
             awaitingFocus = false;
@@ -263,7 +356,7 @@
                     }
                 } catch (_) { /* fallback below */ }
             }
-            answer.textContent = 'I can currently search the web, find your bookmarks, and make a simple daily plan. Try asking a question or “find my design bookmarks”.';
+            answer.textContent = 'I can control your widgets, search the web, find bookmarks, and make a simple daily plan. Try “open tasks”, “tidy screen”, or ask a question.';
             return;
         }
         answer.textContent = 'Looking through your bookmarks…';

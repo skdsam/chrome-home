@@ -4781,4 +4781,119 @@ Sync Size: ${Math.round(info.syncDataSize / 1024 * 10) / 10} KB
         }
     });
 
+    // --- Pip & Global Widget Controller Bridge ---
+    const widgetMap = {
+        'spotify': { id: 'spotify-widget', name: 'Spotify', element: spotifyWidget, getState: () => spotifyState, apply: applySpotifyState, save: saveSpotifyState },
+        'football': { id: 'football-widget', name: 'Sports', element: footballWidget, getState: () => footballState, apply: applyFootballState, save: saveFootballState },
+        'todo': { id: 'todo-widget', name: 'Tasks', element: todoWidget, getState: () => todoState, apply: applyTodoState, save: saveTodoState },
+        'notes': { id: 'notes-widget', name: 'Quick Notes', element: notesWidget, getState: () => notesState, apply: applyNotesState, save: notesSave },
+        'technews': { id: 'tech-news-widget', name: 'Tech News', element: techNewsWidget, getState: () => techNewsState, apply: applyTechNewsState, save: saveTechNewsState },
+        'github': { id: 'github-repos-widget', name: 'GitHub Repos', element: githubReposWidget, getState: () => githubReposState, apply: applyGithubReposState, save: saveGithubReposState },
+        'blender': { id: 'blender-dev-widget', name: 'Blender Dev', element: blenderDevWidget, getState: () => blenderDevState, apply: applyBlenderDevState, save: saveBlenderDevState },
+        'movies': { id: 'movies-widget', name: 'Cinema Movies', element: moviesWidget, getState: () => moviesState, apply: applyMoviesState, save: saveMoviesState }
+    };
+
+    const widgetAliases = {
+        'spotify': 'spotify', 'music': 'spotify', 'player': 'spotify', 'songs': 'spotify',
+        'football': 'football', 'sports': 'football', 'scores': 'football', 'matches': 'football', 'soccer': 'football',
+        'todo': 'todo', 'tasks': 'todo', 'task': 'todo', 'checklist': 'todo', 'todos': 'todo', 'todolist': 'todo',
+        'notes': 'notes', 'note': 'notes', 'notepad': 'notes', 'quicknotes': 'notes', 'scratchpad': 'notes',
+        'technews': 'technews', 'news': 'technews', 'tech': 'technews', 'hackernews': 'technews', 'technews': 'technews',
+        'github': 'github', 'git': 'github', 'repos': 'github', 'repositories': 'github', 'githubrepos': 'github',
+        'blender': 'blender', 'blenderdev': 'blender', '3d': 'blender',
+        'movies': 'movies', 'cinema': 'movies', 'films': 'movies', 'movie': 'movies'
+    };
+
+    function resolveWidget(query) {
+        if (!query) return null;
+        const normalized = query.toLowerCase().replace(/[\s_-]+/g, '').trim();
+        const directKey = widgetAliases[normalized] || widgetAliases[query.toLowerCase().trim()];
+        if (directKey && widgetMap[directKey]) return widgetMap[directKey];
+        for (const [key, item] of Object.entries(widgetMap)) {
+            if (item.id === query || key === normalized) return item;
+        }
+        return null;
+    }
+
+    window.chromeHomeWidgets = {
+        open(name) {
+            const w = resolveWidget(name);
+            if (!w) return null;
+            const state = w.getState();
+            state.isOpen = true;
+            state.isMinimized = false;
+            if (w.element) {
+                bringToFront(w.element);
+                state.zIndex = maxZIndex;
+            }
+            w.apply();
+            w.save();
+            return w;
+        },
+        close(name) {
+            const w = resolveWidget(name);
+            if (!w) return null;
+            const state = w.getState();
+            state.isOpen = false;
+            w.apply();
+            w.save();
+            return w;
+        },
+        minimize(name, shouldMinimize) {
+            const w = resolveWidget(name);
+            if (!w) return null;
+            const state = w.getState();
+            state.isMinimized = typeof shouldMinimize === 'boolean' ? shouldMinimize : !state.isMinimized;
+            w.apply();
+            w.save();
+            return w;
+        },
+        closeAll() {
+            let count = 0;
+            for (const w of Object.values(widgetMap)) {
+                const state = w.getState();
+                if (state.isOpen) {
+                    state.isOpen = false;
+                    w.apply();
+                    w.save();
+                    count++;
+                }
+            }
+            return count;
+        },
+        minimizeAll() {
+            let count = 0;
+            for (const w of Object.values(widgetMap)) {
+                const state = w.getState();
+                if (state.isOpen && !state.isMinimized) {
+                    state.isMinimized = true;
+                    w.apply();
+                    w.save();
+                    count++;
+                }
+            }
+            return count;
+        },
+        resetLayout() {
+            const btn = document.getElementById('reset-layout');
+            if (btn) btn.click();
+            else {
+                for (const w of Object.values(widgetMap)) {
+                    if (w.element) {
+                        w.element.style.left = '';
+                        w.element.style.top = '';
+                        w.element.style.width = '';
+                    }
+                }
+            }
+            return true;
+        },
+        getOpenWidgets() {
+            return Object.values(widgetMap)
+                .filter(w => w.getState().isOpen)
+                .map(w => ({ name: w.name, isMinimized: w.getState().isMinimized, id: w.id }));
+        },
+        resolveWidget
+    };
+
 });
