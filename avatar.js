@@ -283,7 +283,7 @@
             this.torso.position.y = 28;
             root.add(this.torso);
             const body = this.mesh(new THREE.SphereGeometry(13.5, 30, 22), ceramic, this.torso, 'CeramicTorso');
-            body.scale.set(1, 1.16, .78);
+            body.scale.set(1.06, 1.06, .82);
             const belly = this.mesh(new THREE.SphereGeometry(7, 24, 16), graphiteSoft, this.torso, 'BellyPanel');
             belly.scale.set(1, .76, .3);
             belly.position.set(0, -1, 11);
@@ -295,7 +295,7 @@
             this.head.position.y = 53;
             root.add(this.head);
             const headShell = this.mesh(new THREE.SphereGeometry(18.2, 36, 26), ceramic, this.head, 'HeadShell');
-            headShell.scale.set(1, .78, .72);
+            headShell.scale.set(1.08, .86, .76);
             const face = this.mesh(new THREE.SphereGeometry(14.9, 32, 22), visor, this.head, 'FaceVisor');
             face.scale.set(1, .62, .3);
             face.position.set(0, -1, 12.1);
@@ -305,6 +305,15 @@
 
             this.leftEye = this.createEye(-6, cyan, this.head);
             this.rightEye = this.createEye(6, cyan, this.head);
+            const blush = this.material({ color: 0xffa5ac, roughness: .65, metalness: 0 });
+            [-10.3, 10.3].forEach(x => {
+                const cheek = this.mesh(new THREE.SphereGeometry(2.4, 16, 12), blush, this.head, 'RosyCheek');
+                cheek.scale.set(1, .48, .22);
+                cheek.position.set(x, -5, 15.5);
+            });
+            const smile = this.mesh(new THREE.TorusGeometry(2.5, .48, 8, 20, Math.PI), cyan, this.head, 'Smile');
+            smile.rotation.z = Math.PI;
+            smile.position.set(0, -4, 16.6);
             this.antenna = new THREE.Group();
             this.antenna.position.set(7, 12, 0);
             this.head.add(this.antenna);
@@ -314,30 +323,37 @@
             const antennaTip = this.mesh(new THREE.SphereGeometry(2, 16, 12), violet, this.antenna, 'AntennaTip');
             antennaTip.position.set(1.4, 7, 0);
 
-            this.leftArm = this.createLimb(-14, 37, ceramicDark, graphite, root, 'LeftArm');
-            this.rightArm = this.createLimb(14, 37, ceramicDark, graphite, root, 'RightArm');
+            this.leftArm = this.createLimb(-14, 37, ceramic, graphite, root, 'LeftArm');
+            this.rightArm = this.createLimb(14, 37, ceramic, graphite, root, 'RightArm');
             this.leftLeg = this.createLimb(-6.5, 18, ceramicDark, graphite, root, 'LeftLeg', true);
             this.rightLeg = this.createLimb(6.5, 18, ceramicDark, graphite, root, 'RightLeg', true);
 
             this.backpack = new THREE.Group();
             this.backpack.name = 'RocketBackpackModule';
-            this.backpack.position.set(0, 29, -8);
+            this.backpack.position.set(0, 36, -12);
             root.add(this.backpack);
             const pack = this.mesh(new THREE.SphereGeometry(10.5, 24, 18), graphite, this.backpack, 'RocketPack');
             pack.scale.set(1.08, 1.18, .65);
             const packLight = this.mesh(new THREE.SphereGeometry(2.1, 16, 12), violet, this.backpack, 'PackLight');
             packLight.position.set(0, 2, 8);
             this.flames = [];
-            [-12, 12].forEach(x => {
-                const thruster = this.mesh(new THREE.CylinderGeometry(3.3, 4.1, 11, 18), graphiteSoft, this.backpack, 'Thruster');
-                thruster.position.set(x, -7, 0);
+            // Outboard pods leave a visible gap beside the arms.
+            const rocketShell = this.material({ color: 0xffb69a, roughness: .42, metalness: .08 });
+            [-25, 25].forEach(x => {
+                const bridge = this.mesh(new THREE.BoxGeometry(14, 3, 4), graphite, this.backpack, 'PodMount');
+                bridge.position.set(x * .65, 1, -2);
+                const cap = this.mesh(new THREE.SphereGeometry(4.2, 20, 14), rocketShell, this.backpack, 'RocketNose');
+                cap.scale.y = 1.4;
+                cap.position.set(x, 8, 0);
+                const thruster = this.mesh(new THREE.CylinderGeometry(4.2, 4.2, 14, 18), rocketShell, this.backpack, 'Thruster');
+                thruster.position.set(x, 1, 0);
                 const nozzle = this.mesh(new THREE.CylinderGeometry(2.8, 1.9, 4, 16), ceramicDark, this.backpack, 'Nozzle');
-                nozzle.position.set(x, -13.2, 0);
+                nozzle.position.set(x, -8, 0);
                 const outerFlame = this.mesh(new THREE.ConeGeometry(3.2, 18, 16), flameViolet, this.backpack, 'OuterFlame');
-                outerFlame.position.set(x, -23.5, 0);
+                outerFlame.position.set(x, -19, 0);
                 outerFlame.rotation.z = Math.PI;
                 const innerFlame = this.mesh(new THREE.ConeGeometry(1.7, 13, 14), flameBlue, this.backpack, 'InnerFlame');
-                innerFlame.position.set(x, -20.8, 1);
+                innerFlame.position.set(x, -16.5, 1);
                 innerFlame.rotation.z = Math.PI;
                 this.flames.push(outerFlame, innerFlame);
             });
@@ -453,7 +469,7 @@
             const length = leg ? 13 : 15;
             const segment = this.mesh(new THREE.CylinderGeometry(3, 2.45, length, 16), shellMaterial, pivot, `${name}Segment`);
             segment.position.y = -length / 2;
-            const end = this.mesh(new THREE.SphereGeometry(3.55, 20, 14), jointMaterial, pivot, `${name}End`);
+            const end = this.mesh(new THREE.SphereGeometry(3.9, 20, 14), shellMaterial, pivot, `${name}End`);
             end.scale.set(leg ? 1.25 : 1, leg ? .65 : 1, .82);
             end.position.set(leg ? (x < 0 ? -1 : 1) : 0, -length - 1, leg ? 1.8 : 0);
             return pivot;
@@ -767,6 +783,7 @@
         }
 
         applySettings() {
+            if (!this.settings.speech) this.bubble.classList.add('hidden');
             if (!this.settings.enabled) {
                 this.stage.classList.add('hidden');
                 if (this.hitTarget) this.hitTarget.classList.add('hidden');
@@ -1663,11 +1680,17 @@
 
         updateSpeechPosition() {
             if (!this.bubble || this.bubble.classList.contains('hidden')) return;
-            const bubbleWidth = Math.min(220, this.bubble.offsetWidth || 180);
-            const left = clamp(this.screenPosition.x + 24, 12, this.viewport.width - bubbleWidth - 12);
-            const top = clamp(this.screenPosition.y - 112 * (this.settings.scale / 100), 12, this.viewport.height - 74);
-            this.bubble.style.left = `${left}px`;
-            this.bubble.style.top = `${top}px`;
+            // Keep the reserved panel clear when Pip crosses it.
+            const panel = document.getElementById('avatar-message-panel');
+            if (!panel) return;
+            const rect = panel.getBoundingClientRect();
+            const scale = this.settings.scale / 100;
+            const overlaps = this.screenPosition.x + 48 * scale > rect.left &&
+                this.screenPosition.x - 48 * scale < rect.right &&
+                this.screenPosition.y + 20 * scale > rect.top &&
+                this.screenPosition.y - 95 * scale < rect.bottom;
+            panel.style.visibility = overlaps ? 'hidden' : '';
+
         }
 
         rememberAction(action, anchor) {

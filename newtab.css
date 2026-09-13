@@ -593,37 +593,35 @@ body { font-size: calc(16px * var(--ui-scale)); }
 .avatar-hit-target.is-dragging { cursor: grabbing; }
 .avatar-hit-target.is-disabled { pointer-events: none; }
 
+/* Reserve space even between messages, avoiding layout jumps. */
+.avatar-message-panel {
+    width: min(100%, 600px);
+    height: 100px;
+    flex-shrink: 0;
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    border: 1px solid var(--glass-border);
+    border-radius: 18px;
+    background: var(--glass-bg);
+}
+.avatar-message-label {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--text-color);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
+}
 .avatar-speech {
-    position: fixed;
-    z-index: 1102;
-    max-width: min(220px, calc(100vw - 28px));
-    padding: 9px 12px;
-    border: 1px solid rgba(255, 255, 255, .2);
-    border-radius: 14px 14px 14px 5px;
-    color: #f7fbff;
-    background: linear-gradient(145deg, rgba(18, 25, 38, .94), rgba(24, 19, 43, .92));
-    box-shadow: 0 12px 34px rgba(0, 0, 0, .3), inset 0 1px rgba(255, 255, 255, .08);
-    backdrop-filter: blur(12px);
-    font-size: 12px;
-    line-height: 1.35;
-    letter-spacing: .01em;
-    pointer-events: none;
-    transform-origin: left bottom;
-    animation: avatar-bubble-in .24s cubic-bezier(.2, .8, .2, 1) both;
+    max-height: 52px;
+    overflow-y: auto;
+    overflow-wrap: anywhere;
+    color: var(--text-color);
+    font-size: 13px;
+    line-height: 1.5;
+    animation: avatar-bubble-in .24s ease both;
 }
-
-.avatar-speech::after {
-    content: "";
-    position: absolute;
-    left: 10px;
-    bottom: -7px;
-    width: 12px;
-    height: 12px;
-    background: rgba(22, 23, 39, .94);
-    border-right: 1px solid rgba(255, 255, 255, .18);
-    border-bottom: 1px solid rgba(255, 255, 255, .18);
-    transform: rotate(45deg);
-}
+.avatar-message-panel:has(.avatar-speech.hidden) { visibility: hidden; }
 
 @keyframes avatar-bubble-in {
     from { opacity: 0; transform: translateY(5px) scale(.92); }

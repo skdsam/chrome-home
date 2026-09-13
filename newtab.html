@@ -37,7 +37,6 @@
         <div id="avatar-anchor-debug" class="avatar-anchor-debug hidden"></div>
     </div>
     <button id="avatar-hit-target" class="avatar-hit-target hidden" type="button" aria-label="Drag Pip, or click to make Pip wave" title="Drag Pip · Click to wave"></button>
-    <div id="avatar-speech" class="avatar-speech hidden" role="status" aria-live="polite"></div>
     <div id="avatar-diagnostics" class="avatar-diagnostics hidden" aria-live="polite"></div>
 
     <section id="daily-focus" class="daily-focus" aria-label="Daily focus">
@@ -270,6 +269,10 @@
 
     <!-- Main Container -->
     <main class="container">
+        <aside id="avatar-message-panel" class="avatar-message-panel" aria-label="Pip messages">
+            <span class="avatar-message-label">Pip ?</span>
+            <div id="avatar-speech" class="avatar-speech hidden" role="status" aria-live="polite" aria-atomic="true" tabindex="0"></div>
+        </aside>
         <!-- Google Search -->
         <div class="search-container">
             <!-- Logo Removed -->
@@ -687,7 +690,7 @@
                         <div class="avatar-range-row"><input id="avatar-scale" type="range" min="80" max="130" value="100"><output id="avatar-scale-output">100%</output></div>
                     </div>
                     <div class="avatar-setting-row settings-group">
-                        <div><label for="avatar-speech-enabled">Speech bubbles</label><p>Short contextual comments, with repeat protection.</p></div>
+                        <div><label for="avatar-speech-enabled">Pip messages</label><p>Comments in a dedicated panel above search.</p></div>
                         <label class="switch"><input id="avatar-speech-enabled" type="checkbox" checked><span class="slider round"></span></label>
                     </div>
                     <div class="avatar-setting-row settings-group">
